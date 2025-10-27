@@ -1,11 +1,25 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:hive_flutter/hive_flutter.dart';
 import 'product_model.dart';
 
 class SearchService {
   final String baseUrl;
 
-  SearchService({this.baseUrl = 'http://localhost:8080'});
+  SearchService({String? baseUrl}) : baseUrl = baseUrl ?? _resolveBackendBase();
+
+  static String _resolveBackendBase() {
+    String backend = 'http://localhost:8080';
+    try {
+      if (Hive.isBoxOpen('settings')) {
+        final box = Hive.box('settings');
+        final String? b = box.get('backend_base') as String?;
+        if (b != null && b.trim().isNotEmpty) return b.trim();
+      }
+    } catch (_) {}
+    return Platform.environment['BACKEND_BASE'] ?? backend;
+  }
 
   Future<List<ProductModel>> search(String query, {int page = 1, int pageSize = 20, String? platform}) async {
     final uri = Uri.parse('$baseUrl/api/products/search?query=${Uri.encodeComponent(query)}&page_no=$page&page_size=$pageSize' + (platform != null ? '&platform=${Uri.encodeComponent(platform)}' : ''));

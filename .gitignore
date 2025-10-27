@@ -76,3 +76,4 @@ app.*.map.json
 server/.venv/
 __pycache__/
 *.pyc
+server/.env

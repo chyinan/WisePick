@@ -111,10 +111,14 @@ class ProductService {
     // read backend base from Hive settings if available, else default to localhost
     String backend = 'http://localhost:8080';
     try {
-      if (!await _ensureHiveOpen()) {}
-      final box = await Hive.openBox('settings');
-      final String? b = box.get('backend_base') as String?;
-      if (b != null && b.trim().isNotEmpty) backend = b.trim();
+      if (await _ensureHiveOpen()) {
+        final box = Hive.box('settings');
+        final String? b = box.get('backend_base') as String?;
+        if (b != null && b.trim().isNotEmpty) backend = b.trim();
+        else backend = const String.fromEnvironment('BACKEND_BASE', defaultValue: 'http://localhost:8080');
+      } else {
+        backend = const String.fromEnvironment('BACKEND_BASE', defaultValue: 'http://localhost:8080');
+      }
     } catch (_) {}
 
     try {
@@ -296,9 +300,10 @@ class ProductService {
             } catch (_) {}
           }
 
-          // extract common fields
+          // extract common fields; prefer coupon_share_url, then clickURL, then tpwd
           String? link;
-          if (m['clickURL'] != null && (m['clickURL'] as String).isNotEmpty) link = m['clickURL'] as String;
+          if (m['coupon_share_url'] != null && (m['coupon_share_url'] as String).isNotEmpty) link = m['coupon_share_url'] as String;
+          if ((link == null || link.isEmpty) && m['clickURL'] != null && (m['clickURL'] as String).isNotEmpty) link = m['clickURL'] as String;
           if ((link == null || link.isEmpty) && m['tpwd'] != null) link = m['tpwd'] as String?;
 
           if (link != null && link.isNotEmpty) {

@@ -181,20 +181,35 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Text(product.title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, fontSize: 22)),
-            // debug: show product JSON for quick inspection (only visible during development)
+            // debug: show product JSON for quick inspection, controlled by admin setting
             Align(
               alignment: Alignment.topRight,
-              child: TextButton(
-                onPressed: () {
-                  showDialog<void>(context: context, builder: (ctx) {
-                    return AlertDialog(
-                      title: const Text('Product JSON'),
-                      content: SingleChildScrollView(child: SelectableText(jsonEncode(product.toMap()))),
-                      actions: [TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('关闭'))],
-                    );
-                  });
+              child: FutureBuilder<bool>(
+                future: () async {
+                  try {
+                    if (!Hive.isBoxOpen('settings')) await Hive.openBox('settings');
+                    final box = Hive.box('settings');
+                    return box.get('show_product_json') as bool? ?? false;
+                  } catch (_) {
+                    return false;
+                  }
+                }(),
+                builder: (context, snap) {
+                  final show = snap.data ?? false;
+                  if (!show) return const SizedBox.shrink();
+                  return TextButton(
+                    onPressed: () {
+                      showDialog<void>(context: context, builder: (ctx) {
+                        return AlertDialog(
+                          title: const Text('Product JSON'),
+                          content: SingleChildScrollView(child: SelectableText(jsonEncode(product.toMap()))),
+                          actions: [TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('关闭'))],
+                        );
+                      });
+                    },
+                    child: const Text('查看 JSON', style: TextStyle(fontSize: 12)),
+                  );
                 },
-                child: const Text('查看 JSON', style: TextStyle(fontSize: 12)),
               ),
             ),
             const SizedBox(height: 10),

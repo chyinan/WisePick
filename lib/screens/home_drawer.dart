@@ -178,9 +178,11 @@ class _HomeDrawerState extends ConsumerState<HomeDrawer> {
               ),
             ),
             const Divider(),
+            // 将设置入口填满宽度，去掉右侧多余间隙，使用内容内边距控制左右间距
             ListTile(
+              contentPadding: const EdgeInsetsDirectional.only(start: 12, end: 0),
               leading: Icon(Icons.settings, color: Theme.of(context).colorScheme.primary),
-              title: const Text('设置'),
+              title: const Text('API设置'),
               onTap: () {
                 Navigator.of(context).pop();
                 Navigator.of(context).push(MaterialPageRoute(builder: (_) => const UserSettingsPage()));

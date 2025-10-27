@@ -220,17 +220,17 @@ class AboutPage extends ConsumerWidget {
             title: Text('应用名称'),
             subtitle: Text(appName),
           ),
-          const ListTile(
-            leading: Icon(Icons.verified_outlined),
-            title: Text('版本'),
-            trailing: Text(version),
+          ListTile(
+            leading: const Icon(Icons.verified_outlined),
+            title: const Text('版本'),
+            subtitle: Text(version, style: Theme.of(context).textTheme.bodyMedium),
           ),
 
           const _SectionHeader(title: '开发者'),
-          const ListTile(
-            leading: Icon(Icons.person_outline),
-            title: Text('作者'),
-            trailing: Text('chyinan'),
+          ListTile(
+            leading: const Icon(Icons.person_outline),
+            title: const Text('作者'),
+            subtitle: Text('chyinan', style: Theme.of(context).textTheme.bodyMedium),
           ),
           ListTile(
             leading: const Icon(Icons.link_outlined),

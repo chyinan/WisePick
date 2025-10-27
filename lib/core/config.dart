@@ -4,8 +4,6 @@
 import 'dart:io';
 
 class Config {
-  // OpenAI API Key 占位
-  static String get openAiApiKey => Platform.environment['OPENAI_API_KEY'] ?? 'YOUR_OPENAI_API_KEY';
 
   // 模拟电商来源 id 或关联参数
   static String get affiliateId => Platform.environment['AFFILIATE_ID'] ?? 'your_aff_id';
@@ -23,4 +21,7 @@ class Config {
   static String get pddClientId => Platform.environment['PDD_CLIENT_ID'] ?? 'YOUR_PDD_CLIENT_ID';
   static String get pddClientSecret => Platform.environment['PDD_CLIENT_SECRET'] ?? 'YOUR_PDD_CLIENT_SECRET';
   static String get pddPid => Platform.environment['PDD_PID'] ?? 'YOUR_PDD_PID';
+  
+  // OpenAI API Key (optional, used when calling OpenAI directly)
+  static String get openAiApiKey => Platform.environment['OPENAI_API_KEY'] ?? 'YOUR_OPENAI_API_KEY';
 }

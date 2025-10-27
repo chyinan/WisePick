@@ -33,7 +33,9 @@ class TaobaoAdapter {
       final commissionRate = double.tryParse(map['commission_rate']?.toString() ?? '') ?? 0.0; // 千分比或万分比视返回
       final commission = price * (commissionRate / (commissionRate > 100 ? 10000 : 100));
 
-    final sourceUrl = (map['click_url'] ?? map['coupon_click_url'] ?? map['url'] ?? map['item_url'] ?? '') as String;
+    // Prefer coupon_share_url first (better for coupon forwarding), then click_url,
+    // then coupon_click_url, then fall back to plain url/item_url.
+    final sourceUrl = (map['coupon_share_url'] ?? map['click_url'] ?? map['coupon_click_url'] ?? map['url'] ?? map['item_url'] ?? '') as String;
       var link = '';
       if (sourceUrl.isNotEmpty) {
         try {

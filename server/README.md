@@ -11,7 +11,15 @@ Run locally
 
 1. cd into `server`
 2. `dart pub get`
-3. `OPENAI_API_KEY=sk-... dart run bin/proxy_server.dart`
+3. `dart run bin/proxy_server.dart`  # 交互式启动：会在终端提示未配置项
+
+Notes: The server now runs in an interactive launcher. If an environment
+variable commonly used for third-party integrations is missing or set to a
+placeholder, the launcher will prompt you (例如 `请输入京东联盟App Key：`、`请输入京东联盟 Union ID：`、`请输入淘宝推广位 Adzone ID：`、`请输入拼多多 PID：`)。You may press Enter to leave it empty (部分功能可能不可用)。
+
+持久化：交互输入会保存到 `server/.env` 文件（覆盖或合并已有值），以便下次启动时无需重复输入。**注意：该 `.env` 可能包含密钥，请勿提交到版本控制（推荐将其加入 `.gitignore`）。**
+
+特别说明：OpenAI 的 API Key 现在由前端在运行时提供给后端（通过代理请求时携带），后端不再在启动时提示 `OPENAI_API_KEY`。
 
 Configure Flutter app
 

@@ -55,7 +55,17 @@ class ChatService {
         url = '$baseNoTrailing/v1/chat/completions';
       }
     } else {
-      url = 'http://localhost:8080/v1/chat/completions';
+      // resolve backend base saved in settings if present
+      String backend = 'http://localhost:8080';
+      try {
+        if (!Hive.isBoxOpen('settings')) await Hive.openBox('settings');
+        final box = Hive.box('settings');
+        final String? b = box.get('backend_base') as String?;
+        if (b != null && b.trim().isNotEmpty) backend = b.trim();
+        else backend = const String.fromEnvironment('BACKEND_BASE', defaultValue: 'http://localhost:8080');
+      } catch (_) {}
+      final baseNoTrailing = backend.replaceAll(RegExp(r'/+$'), '');
+      url = '$baseNoTrailing/v1/chat/completions';
     }
     // Check settings flag: if embed_prompts is disabled, send a lightweight user-only message
     bool embedPrompts = true;

@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:crypto/crypto.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 import '../../core/api_client.dart';
 import '../../core/config.dart';
@@ -20,10 +22,11 @@ class JdAdapter {
     // raw JD response. This avoids keeping JD app secret in the client.
     String backend = 'http://localhost:8080';
     try {
-      final confResp = await _client.get('http://localhost:8080/__settings');
-      if (confResp.statusCode == 200 && confResp.data is Map && confResp.data['backend_base'] != null) {
-        backend = confResp.data['backend_base'] as String;
-      }
+      if (!Hive.isBoxOpen('settings')) await Hive.openBox('settings');
+      final box = Hive.box('settings');
+      final String? b = box.get('backend_base') as String?;
+      if (b != null && b.trim().isNotEmpty) backend = b.trim();
+      else backend = Platform.environment['BACKEND_BASE'] ?? backend;
     } catch (_) {}
 
     final apiUrl = '$backend/jd/union/goods/query';
@@ -90,10 +93,11 @@ class JdAdapter {
         if (skuId.isNotEmpty) {
           String backend = 'http://localhost:8080';
           try {
-            final confResp = await _client.get('http://localhost:8080/__settings');
-            if (confResp.statusCode == 200 && confResp.data is Map && confResp.data['backend_base'] != null) {
-              backend = confResp.data['backend_base'] as String;
-            }
+            if (!Hive.isBoxOpen('settings')) await Hive.openBox('settings');
+            final box = Hive.box('settings');
+            final String? b = box.get('backend_base') as String?;
+            if (b != null && b.trim().isNotEmpty) backend = b.trim();
+            else backend = Platform.environment['BACKEND_BASE'] ?? backend;
           } catch (_) {}
 
           // ask backend to sign and/or generate promotion link using official JD SDK

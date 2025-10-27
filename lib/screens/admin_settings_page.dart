@@ -13,12 +13,7 @@ class AdminSettingsPage extends StatefulWidget {
 
 class _AdminSettingsPageState extends State<AdminSettingsPage> {
   final TextEditingController _openAiController = TextEditingController();
-  final TextEditingController _affiliateController = TextEditingController();
-  final TextEditingController _taobaoAppKeyController = TextEditingController();
-  final TextEditingController _taobaoAppSecretController = TextEditingController();
-  final TextEditingController _taobaoAdzoneController = TextEditingController();
-  final TextEditingController _jdAppKeyController = TextEditingController();
-  final TextEditingController _jdAppSecretController = TextEditingController();
+  // 淘宝/京东配置已改由后端环境变量管理，移除前端输入项
   final TextEditingController _baseUrlController = TextEditingController();
   final TextEditingController _backendBaseController = TextEditingController();
   final TextEditingController _modelController = TextEditingController();
@@ -29,6 +24,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
   bool _debugAiResponse = false;
   bool _copyFullReturn = false;
   bool _useMockAi = false;
+  bool _showProductJson = false;
   String _maxTokens = 'unlimited';
 
   @override
@@ -41,36 +37,29 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
     try {
       final box = await Hive.openBox('settings');
       final String? openai = box.get('openai_api') as String?;
-      final String? affiliate = box.get('veapi_key') as String?;
+      // VEAPI 已弃用，不再读取 veapi_key
       final String? backendBase = box.get('backend_base') as String?;
       final String? base = box.get('openai_base') as String?;
       final String? model = box.get('openai_model') as String?;
-      final String? taobaoKey = box.get('taobao_app_key') as String?;
-      final String? taobaoSecret = box.get('taobao_app_secret') as String?;
-      final String? taobaoAdzone = box.get('taobao_adzone') as String?;
-      final String? jdKey = box.get('jd_app_key') as String?;
-      final String? jdSecret = box.get('jd_app_secret') as String?;
+      // 淘宝/京东配置由后端环境变量管理，前端不再读取这些键
       final bool? embed = box.get('embed_prompts') as bool?;
       final bool? debug = box.get('debug_ai_response') as bool?;
       final bool? copyFull = box.get('copy_full_return') as bool?;
       final bool? mock = box.get('use_mock_ai') as bool?;
+      final bool? showJson = box.get('show_product_json') as bool?;
       final String? maxT = box.get('max_tokens') as String?;
       if (mounted) {
         setState(() {
           _openAiController.text = openai ?? '';
-          _affiliateController.text = affiliate ?? '';
+          // VEAPI 已弃用，不再展示或设置 veapi_key
           _baseUrlController.text = base ?? '';
           _backendBaseController.text = backendBase ?? 'http://localhost:8080';
           _modelController.text = model ?? 'gpt-3.5-turbo';
-          _taobaoAppKeyController.text = taobaoKey ?? '';
-          _taobaoAppSecretController.text = taobaoSecret ?? '';
-          _taobaoAdzoneController.text = taobaoAdzone ?? '';
-          _jdAppKeyController.text = jdKey ?? '';
-          _jdAppSecretController.text = jdSecret ?? '';
           _embedPrompts = embed ?? true;
           _debugAiResponse = debug ?? false;
           _copyFullReturn = copyFull ?? false;
           _useMockAi = mock ?? false;
+          _showProductJson = showJson ?? false;
           _maxTokens = maxT ?? 'unlimited';
         });
       }
@@ -82,7 +71,6 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
   @override
   void dispose() {
     _openAiController.dispose();
-    _affiliateController.dispose();
     _baseUrlController.dispose();
     _modelController.dispose();
     super.dispose();
@@ -90,149 +78,131 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: Text('后台管理设置', style: Theme.of(context).textTheme.titleMedium)),
+      appBar: AppBar(
+        title: Text('后台管理设置', style: Theme.of(context).textTheme.titleMedium),
+        centerTitle: true,
+        backgroundColor: colorScheme.surface,
+        foregroundColor: colorScheme.onSurface,
+        elevation: 0,
+      ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-            // OpenAI related settings moved to 用户设置页面
-            const SizedBox(height: 16),
-            Text('带货联盟 API Key / Tracking', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            TextField(controller: _affiliateController, decoration: InputDecoration(hintText: '渠道链接模板或 API Key')),
-            const SizedBox(height: 12),
-            Text('后端 Proxy 地址', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            TextField(controller: _backendBaseController, decoration: InputDecoration(hintText: 'http://localhost:8080 或 https://api.yourdomain.com')),
-            const SizedBox(height: 12),
-            // 淘宝配置
-            Text('淘宝联盟配置', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            TextField(controller: _taobaoAppKeyController, decoration: InputDecoration(hintText: 'Taobao App Key')),
-            const SizedBox(height: 8),
-            TextField(controller: _taobaoAppSecretController, decoration: InputDecoration(hintText: 'Taobao App Secret')),
-            const SizedBox(height: 8),
-            TextField(controller: _taobaoAdzoneController, decoration: InputDecoration(hintText: 'Taobao Adzone ID')),
-            const SizedBox(height: 12),
-            // 京东配置
-            Text('京东联盟配置', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            TextField(controller: _jdAppKeyController, decoration: InputDecoration(hintText: 'JD App Key')),
-            const SizedBox(height: 8),
-            TextField(controller: _jdAppSecretController, decoration: InputDecoration(hintText: 'JD App Secret')),
-            const SizedBox(height: 12),
-            // 将 max_tokens 提到上面并统一文字样式
-            const SizedBox(height: 6),
-            Text('max_tokens', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 6),
-            DropdownButtonFormField<String>(
-              value: _maxTokens,
-              items: ['unlimited','300','800','1000','2000'].map((v) => DropdownMenuItem(value: v, child: Text(v=='unlimited' ? '不限 (unlimited)' : v))).toList(),
-              onChanged: (v) { if (v != null) setState(() => _maxTokens = v); },
-              decoration: const InputDecoration(),
-              hint: Text(_maxTokens=='unlimited' ? '不限 (unlimited)' : _maxTokens),
-            ),
-            // 主体区域可扩展，开关项以行形式展示，开关置于右侧
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                  // 嵌入预设提示词
-                  Row(
+              const SizedBox(height: 8),
+              Card(
+                surfaceTintColor: colorScheme.surfaceTint,
+                elevation: 1,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('嵌入预设提示词', style: Theme.of(context).textTheme.bodyMedium),
-                            const SizedBox(height: 4),
-                            Text('在发送到 AI 前自动将用户问题合并到预设的 system/user prompt 中，便于调试开关。', style: Theme.of(context).textTheme.bodySmall),
-                          ],
+                      Text('后端 Proxy 地址', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _backendBaseController,
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: colorScheme.surfaceVariant,
+                          hintText: 'http://localhost:8080 或 https://api.yourdomain.com',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                         ),
                       ),
-                      Switch(value: _embedPrompts, onChanged: (v) => setState(() => _embedPrompts = v)),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  // 显示 AI 原始返回
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('显示 AI 原始返回', style: Theme.of(context).textTheme.bodyMedium),
-                            const SizedBox(height: 4),
-                            Text('开启后在聊天中会显示从 AI 返回的完整原始 JSON，便于调试。慎选，可能包含较多信息。', style: Theme.of(context).textTheme.bodySmall),
-                          ],
+                      const SizedBox(height: 12),
+                      Text('max_tokens', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<String>(
+                        isExpanded: true,
+                        value: _maxTokens,
+                        items: ['unlimited', '300', '800', '1000', '2000']
+                            .map((v) => DropdownMenuItem(value: v, child: Text(v == 'unlimited' ? '不限 (unlimited)' : v)))
+                            .toList(),
+                        onChanged: (v) {
+                          if (v != null) setState(() => _maxTokens = v);
+                        },
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: colorScheme.surfaceVariant,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         ),
                       ),
-                      Switch(value: _debugAiResponse, onChanged: (v) => setState(() => _debugAiResponse = v)),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  // 复制完整返回开关
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('复制完整返回', style: Theme.of(context).textTheme.bodyMedium),
-                            const SizedBox(height: 4),
-                            Text('开启后聊天界面右侧的复制按钮将复制 AI 的原始返回（用于调试），关闭则复制展示文本。', style: Theme.of(context).textTheme.bodySmall),
-                          ],
-                        ),
-                      ),
-                      Switch(value: _copyFullReturn, onChanged: (v) => setState(() => _copyFullReturn = v)),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  // 使用本地 Mock AI
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('使用本地 Mock AI', style: Theme.of(context).textTheme.bodyMedium),
-                            const SizedBox(height: 4),
-                            Text('启用后应用将使用内置的假后端响应，节约调用真实 API 的费用（仅用于开发/调试）。', style: Theme.of(context).textTheme.bodySmall),
-                          ],
-                        ),
-                      ),
-                      Switch(value: _useMockAi, onChanged: (v) => setState(() => _useMockAi = v)),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                ],
+                ),
               ),
-            // 将保存/取消按钮放到右下角
-            Align(
-              alignment: Alignment.bottomRight,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
+              const SizedBox(height: 12),
+              Card(
+                surfaceTintColor: colorScheme.surfaceTint,
+                elevation: 1,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                child: Column(
+                  children: [
+                    SwitchListTile(
+                      value: _embedPrompts,
+                      onChanged: (v) => setState(() => _embedPrompts = v),
+                      title: Text('嵌入预设提示词', style: Theme.of(context).textTheme.bodyLarge),
+                      subtitle: Text('在发送到 AI 前自动将用户问题合并到预设的 system/user prompt 中，便于调试开关。', style: Theme.of(context).textTheme.bodySmall),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    ),
+                    const Divider(height: 0),
+                    SwitchListTile(
+                      value: _debugAiResponse,
+                      onChanged: (v) => setState(() => _debugAiResponse = v),
+                      title: Text('显示 AI 原始返回', style: Theme.of(context).textTheme.bodyLarge),
+                      subtitle: Text('开启后在聊天中会显示从 AI 返回的完整原始 JSON，便于调试。慎选，可能包含较多信息。', style: Theme.of(context).textTheme.bodySmall),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    ),
+                    const Divider(height: 0),
+                    SwitchListTile(
+                      value: _copyFullReturn,
+                      onChanged: (v) => setState(() => _copyFullReturn = v),
+                      title: Text('复制完整返回', style: Theme.of(context).textTheme.bodyLarge),
+                      subtitle: Text('开启后聊天界面右侧的复制按钮将复制 AI 的原始返回（用于调试），关闭则复制展示文本。', style: Theme.of(context).textTheme.bodySmall),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    ),
+                    const Divider(height: 0),
+                    SwitchListTile(
+                      value: _useMockAi,
+                      onChanged: (v) => setState(() => _useMockAi = v),
+                      title: Text('使用本地 Mock AI', style: Theme.of(context).textTheme.bodyLarge),
+                      subtitle: Text('启用后应用将使用内置的假后端响应，节约调用真实 API 的费用（仅用于开发/调试）。', style: Theme.of(context).textTheme.bodySmall),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    ),
+                    const Divider(height: 0),
+                    SwitchListTile(
+                      value: _showProductJson,
+                      onChanged: (v) => setState(() => _showProductJson = v),
+                      title: Text('显示商品 JSON 按钮', style: Theme.of(context).textTheme.bodyLarge),
+                      subtitle: Text('控制商品详情页右上角的 "查看 JSON" 按钮是否可见（便于调试）。', style: Theme.of(context).textTheme.bodySmall),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  ElevatedButton(
+                  FilledButton(
                     onPressed: () async {
                       try {
                         final box = await Hive.openBox('settings');
-                        // OpenAI settings moved to 用户设置页面; 保持后端兼容性但不在此界面展示
                         await box.put('openai_api', _openAiController.text.trim());
                         await box.put('openai_base', _baseUrlController.text.trim());
                         await box.put('openai_model', _modelController.text.trim());
-                        await box.put('veapi_key', _affiliateController.text.trim());
-                        await box.put('taobao_app_key', _taobaoAppKeyController.text.trim());
-                        await box.put('taobao_app_secret', _taobaoAppSecretController.text.trim());
-                        await box.put('taobao_adzone', _taobaoAdzoneController.text.trim());
-                        await box.put('jd_app_key', _jdAppKeyController.text.trim());
-                        await box.put('jd_app_secret', _jdAppSecretController.text.trim());
                         await box.put('backend_base', _backendBaseController.text.trim());
                         await box.put('debug_ai_response', _debugAiResponse);
                         await box.put('embed_prompts', _embedPrompts);
                         await box.put('copy_full_return', _copyFullReturn);
+                        await box.put('show_product_json', _showProductJson);
                         await box.put('max_tokens', _maxTokens);
                         await box.put('use_mock_ai', _useMockAi);
                         if (!mounted) return;
@@ -246,10 +216,13 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                     child: Text('保存', style: Theme.of(context).textTheme.labelLarge),
                   ),
                   const SizedBox(width: 12),
-                  OutlinedButton(onPressed: () => Navigator.of(context).pop(), child: Text('取消', style: Theme.of(context).textTheme.labelLarge)),
+                  OutlinedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: Text('取消', style: Theme.of(context).textTheme.labelLarge),
+                  ),
                 ],
               ),
-            ),
+              const SizedBox(height: 12),
             ],
           ),
         ),

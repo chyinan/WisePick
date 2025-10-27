@@ -15,8 +15,9 @@ class CartPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final asyncList = ref.watch(cartItemsProvider);
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: Text('购物车', style: Theme.of(context).textTheme.titleMedium)),
+      appBar: AppBar(title: Text('购物车', style: Theme.of(context).textTheme.titleMedium), centerTitle: true, backgroundColor: colorScheme.surface, foregroundColor: colorScheme.onSurface, elevation: 0),
       body: asyncList.when(
         data: (List<Map<String, dynamic>> list) {
           if (list.isEmpty) return Center(child: Text('购物车为空', style: Theme.of(context).textTheme.bodyMedium));
@@ -44,104 +45,117 @@ class CartPage extends ConsumerWidget {
                     itemBuilder: (context, gidx) {
                       final shop = keys[gidx];
                       final items = groups[shop]!;
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          // 店铺头部（包含店铺选择）
-                          Consumer(builder: (c, ref2, _) {
-                            final sel = ref2.watch(cartSelectionProvider);
-                            final allSelected = items.isNotEmpty && items.every((m) => sel[m['id'] as String] == true);
-                            return Row(children: <Widget>[
-                              Checkbox(
-                                  value: allSelected,
-                                  onChanged: (v) {
-                                    final map = Map<String, bool>.from(sel);
-                                    for (final m in items) {
-                                      map[m['id'] as String] = v ?? false;
-                                    }
-                                    ref2.read(cartSelectionProvider.notifier).state = map;
-                                  }),
-                              const SizedBox(width: 6),
-                              Expanded(child: Text(shop, style: Theme.of(context).textTheme.titleMedium)),
-                            ]);
-                          }),
-                          const SizedBox(height: 8),
-                          // 店铺内商品列表
-                          Column(children: items.map((m) {
-                            final p = ProductModel.fromMap(m);
-                            final int qty = (m['qty'] as int?) ?? 1;
-                            return Dismissible(
-                              key: ValueKey(p.id),
-                              direction: DismissDirection.endToStart,
-                              background: Container(
-                                alignment: Alignment.centerRight,
-                                padding: const EdgeInsets.only(right: 20),
-                                color: Theme.of(context).colorScheme.error,
-                                child: Icon(Icons.delete, color: Theme.of(context).colorScheme.onError),
-                              ),
-                              onDismissed: (_) async {
-                                final cartSvc = ref.read(cartServiceProvider);
-                                await cartSvc.removeItem(p.id);
-                                final _ = ref.refresh(cartItemsProvider);
-                              },
-                              child: Row(
-                                children: <Widget>[
-                                  Consumer(builder: (c, ref2, _) {
-                                    final sel = ref2.watch(cartSelectionProvider);
-                                    final checked = sel[p.id] ?? false;
-                                    return Checkbox(
-                                        value: checked,
-                                        onChanged: (v) {
-                                          final map = Map<String, bool>.from(sel);
-                                          map[p.id] = v ?? false;
-                                          ref2.read(cartSelectionProvider.notifier).state = map;
-                                        });
-                                  }),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: ProductCard(
-                                      product: p,
-                                      onTap: () {
-                                        final String? aiRaw = m['aiParsedRaw'] as String? ?? m['raw_json'] as String?;
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(builder: (_) => ProductDetailPage(product: p, aiParsedRaw: aiRaw)),
-                                        );
-                                      },
-                                      onFavorite: (p) async {
-                                        final box = await Hive.openBox('favorites');
-                                        if (await box.containsKey(p.id)) {
-                                          await box.delete(p.id);
-                                        } else {
-                                          await box.put(p.id, p.toMap());
+                      return Card(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 1,
+                        child: Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              // 店铺头部（包含店铺选择）
+                              Consumer(builder: (c, ref2, _) {
+                                final sel = ref2.watch(cartSelectionProvider);
+                                final allSelected = items.isNotEmpty && items.every((m) => sel[m['id'] as String] == true);
+                                return Row(children: <Widget>[
+                                  Checkbox(
+                                      value: allSelected,
+                                      onChanged: (v) {
+                                        final map = Map<String, bool>.from(sel);
+                                        for (final m in items) {
+                                          map[m['id'] as String] = v ?? false;
                                         }
-                                      },
-                                      expandToFullWidth: true,
-                                      alignRight: true,
+                                        ref2.read(cartSelectionProvider.notifier).state = map;
+                                      }),
+                                  const SizedBox(width: 8),
+                                  Expanded(child: Text(shop, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600))),
+                                ]);
+                              }),
+                              const SizedBox(height: 8),
+                              // 店铺内商品列表
+                              Column(children: items.map((m) {
+                                final p = ProductModel.fromMap(m);
+                                final int qty = (m['qty'] as int?) ?? 1;
+                                return Dismissible(
+                                  key: ValueKey(p.id),
+                                  direction: DismissDirection.endToStart,
+                                  background: Container(
+                                    alignment: Alignment.centerRight,
+                                    padding: const EdgeInsets.only(right: 20),
+                                    color: Theme.of(context).colorScheme.error,
+                                    child: Icon(Icons.delete, color: Theme.of(context).colorScheme.onError),
+                                  ),
+                                  onDismissed: (_) async {
+                                    final cartSvc = ref.read(cartServiceProvider);
+                                    await cartSvc.removeItem(p.id);
+                                    final _ = ref.refresh(cartItemsProvider);
+                                  },
+                                  child: Card(
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    margin: const EdgeInsets.symmetric(vertical: 8),
+                                    elevation: 0,
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 10.0),
+                                      child: Row(
+                                        children: <Widget>[
+                                          Consumer(builder: (c, ref2, _) {
+                                            final sel = ref2.watch(cartSelectionProvider);
+                                            final checked = sel[p.id] ?? false;
+                                            return Checkbox(
+                                                value: checked,
+                                                onChanged: (v) {
+                                                  final map = Map<String, bool>.from(sel);
+                                                  map[p.id] = v ?? false;
+                                                  ref2.read(cartSelectionProvider.notifier).state = map;
+                                                });
+                                          }),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: ProductCard(
+                                              product: p,
+                                              onTap: () {
+                                                final String? aiRaw = m['aiParsedRaw'] as String? ?? m['raw_json'] as String?;
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(builder: (_) => ProductDetailPage(product: p, aiParsedRaw: aiRaw)),
+                                                );
+                                              },
+                                              expandToFullWidth: true,
+                                              alignRight: true,
+                                            ),
+                                          ),
+                                          Column(children: <Widget>[
+                                            IconButton(
+                                              onPressed: () async {
+                                                final cartSvc = ref.read(cartServiceProvider);
+                                                await cartSvc.setQuantity(p.id, qty + 1);
+                                                final _ = ref.refresh(cartItemsProvider);
+                                              },
+                                              icon: Icon(Icons.add_circle_outline, color: colorScheme.primary),
+                                            ),
+                                            Text('$qty', style: Theme.of(context).textTheme.bodyMedium),
+                                            IconButton(
+                                              onPressed: () async {
+                                                final cartSvc = ref.read(cartServiceProvider);
+                                                if (qty > 1) {
+                                                  await cartSvc.setQuantity(p.id, qty - 1);
+                                                } else {
+                                                  await cartSvc.removeItem(p.id);
+                                                }
+                                                final _ = ref.refresh(cartItemsProvider);
+                                              },
+                                              icon: Icon(Icons.remove_circle_outline, color: colorScheme.primary),
+                                            ),
+                                          ])
+                                        ],
+                                      ),
                                     ),
                                   ),
-                                  Column(children: <Widget>[
-                                    IconButton(onPressed: () async {
-                                      final cartSvc = ref.read(cartServiceProvider);
-                                      await cartSvc.setQuantity(p.id, qty + 1);
-                                      final _ = ref.refresh(cartItemsProvider);
-                                    }, icon: Icon(Icons.add_circle_outline, color: Theme.of(context).colorScheme.primary)),
-                                    Text('$qty', style: Theme.of(context).textTheme.bodyMedium),
-                                    IconButton(onPressed: () async {
-                                      final cartSvc = ref.read(cartServiceProvider);
-                                      if (qty > 1) {
-                                        await cartSvc.setQuantity(p.id, qty - 1);
-                                      } else {
-                                        await cartSvc.removeItem(p.id);
-                                      }
-                                      final _ = ref.refresh(cartItemsProvider);
-                                    }, icon: Icon(Icons.remove_circle_outline, color: Theme.of(context).colorScheme.primary)),
-                                  ])
-                                ],
-                              ),
-                            );
-                          }).toList()),
-                        ],
+                                );
+                              }).toList()),
+                            ],
+                          ),
+                        ),
                       );
                     },
                   );
@@ -153,7 +167,7 @@ class CartPage extends ConsumerWidget {
             ],
           );
         },
-        loading: () => Center(child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary)),
+        loading: () => Center(child: CircularProgressIndicator(color: colorScheme.primary)),
         error: (e, st) => Center(child: Text('加载失败：$e', style: Theme.of(context).textTheme.bodyMedium)),
       ),
     );

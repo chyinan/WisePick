@@ -1,3 +1,6 @@
+import 'dart:io';
+import 'package:hive_flutter/hive_flutter.dart';
+
 import '../../core/api_client.dart';
 import '../../core/pdd_client.dart';
 import '../../core/config.dart';
@@ -41,10 +44,13 @@ class PddAdapter {
       // attempt to build a promotion link via backend proxy if possible
       String link = '';
       try {
-        String backend = 'http://localhost:8080';
+      String backend = 'http://localhost:8080';
         try {
-          final confResp = await _client.get('http://localhost:8080/__settings');
-          if (confResp.statusCode == 200 && confResp.data is Map && confResp.data['backend_base'] != null) backend = confResp.data['backend_base'] as String;
+          if (!Hive.isBoxOpen('settings')) await Hive.openBox('settings');
+          final box = Hive.box('settings');
+          final String? b = box.get('backend_base') as String?;
+          if (b != null && b.trim().isNotEmpty) backend = b.trim();
+          else backend = Platform.environment['BACKEND_BASE'] ?? backend;
         } catch (_) {}
         // request backend to generate pdd promotion link if backend supports it
         try {
