@@ -45,6 +45,13 @@ class CartService {
   Future<void> removeItem(String productId) async {
     final box = await Hive.openBox(boxName);
     await box.delete(productId);
+    // 同步删除 favorites 中的收藏（若购物车删除时希望取消收藏）
+    try {
+      final favBox = await Hive.openBox('favorites');
+      if (favBox.containsKey(productId)) {
+        await favBox.delete(productId);
+      }
+    } catch (_) {}
   }
 
   Future<void> clear() async {

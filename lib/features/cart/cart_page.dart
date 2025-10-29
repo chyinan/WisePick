@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wisepick_dart_version/features/products/product_model.dart';
 import 'package:wisepick_dart_version/features/products/product_detail_page.dart';
@@ -7,6 +9,67 @@ import 'package:wisepick_dart_version/widgets/product_card.dart';
 // cart_service 的引用在 providers 中已存在，这里暂不直接导入
 // import 'cart_service.dart';
 import 'package:hive/hive.dart';
+import 'package:wisepick_dart_version/features/products/product_service.dart';
+
+// 尝试从存储的 Map 或 ProductModel 中提取可用的商品链接（对 PDD/其他平台做更多容错）
+String _extractLink(Map<String, dynamic> m, ProductModel p) {
+  String? tryStr(dynamic s) {
+    if (s == null) return null;
+    if (s is String) {
+      final t = s.trim();
+      return t.isEmpty ? null : t;
+    }
+    return null;
+  }
+
+  // 优先使用模型中的 link
+  final fromModel = tryStr(p.link);
+  if (fromModel != null) return fromModel;
+
+  // 常见顶层字段
+  final keys = ['link', 'sourceUrl', 'source_url', 'url', 'coupon_click_url', 'click_url', 'mobile_url', 'item_url'];
+  for (final k in keys) {
+    final v = tryStr(m[k]);
+    if (v != null) return v;
+  }
+
+  // raw_json 或 aiParsedRaw 里寻找 http/https/duoduo/pdd 等链接
+  final raw = tryStr(m['raw_json'] ?? m['aiParsedRaw']);
+  if (raw != null) {
+    try {
+      final decoded = json.decode(raw);
+      String? _search(dynamic node) {
+        if (node == null) return null;
+        if (node is String) {
+          final s = node.trim();
+          if (s.startsWith('http') || s.startsWith('duoduo://') || s.startsWith('pdd://')) return s;
+          final idx = s.indexOf('http');
+          if (idx >= 0) return s.substring(idx);
+          return null;
+        }
+        if (node is Map) {
+          for (final v in node.values) {
+            final r = _search(v);
+            if (r != null) return r;
+          }
+        }
+        if (node is List) {
+          for (final e in node) {
+            final r = _search(e);
+            if (r != null) return r;
+          }
+        }
+        return null;
+      }
+
+      final found = _search(decoded);
+      if (found != null) return found;
+    } catch (_) {}
+  }
+
+  // 退回原始字段
+  return tryStr(m['link'] as String?) ?? '';
+}
 
 /// 购物车页：展示本地购物车（替代收藏页）
 class CartPage extends ConsumerWidget {
@@ -140,7 +203,21 @@ class CartPage extends ConsumerWidget {
                                                 if (qty > 1) {
                                                   await cartSvc.setQuantity(p.id, qty - 1);
                                                 } else {
-                                                  await cartSvc.removeItem(p.id);
+                                                  // 当数量为 1 且用户再次点击减少时，先弹出确认对话框
+                                                  final shouldRemove = await showDialog<bool>(
+                                                    context: context,
+                                                    builder: (ctx) => AlertDialog(
+                                                      title: const Text('确认移除'),
+                                                      content: const Text('确认要移除该商品吗？'),
+                                                      actions: [
+                                                        TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('取消')),
+                                                        TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('移除')),
+                                                      ],
+                                                    ),
+                                                  );
+                                                  if (shouldRemove == true) {
+                                                    await cartSvc.removeItem(p.id);
+                                                  }
                                                 }
                                                 final _ = ref.refresh(cartItemsProvider);
                                               },
@@ -223,23 +300,79 @@ class _CartCheckoutBar extends ConsumerWidget {
           ElevatedButton(
               onPressed: count > 0
                   ? () {
+                      // 显示已选择商品名称与可复制链接的对话框
+                      final sel = ref.read(cartSelectionProvider);
+                      final selectedItems = <Map<String, dynamic>>[];
+                      for (final m in list) {
+                        final id = m['id'] as String;
+                        if (sel[id] == true) selectedItems.add(m);
+                      }
+
                       showDialog(
                         context: context,
                         builder: (ctx) => AlertDialog(
-                          title: const Text('结算'),
-                          content: Text('确认购买 $count 件，合计 ¥${total.toStringAsFixed(2)}？'),
+                          title: const Text('商品购买链接（点击复制）'),
+                          content: SizedBox(
+                            width: double.maxFinite,
+                            child: SingleChildScrollView(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: selectedItems.map((m) {
+                                  final p = ProductModel.fromMap(m);
+                                  final link = _extractLink(m, p);
+                                  final title = ProductModel.normalizeTitle(p.title);
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 6.0),
+                                    child: Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Expanded(child: Text(title)),
+                                        const SizedBox(width: 8),
+                                        GestureDetector(
+                                          onTap: () async {
+                                            String toCopy = link;
+
+                                            // 如果提取到的是图片链接，则不要直接复制图片链接（常见于 PDD raw 数据）
+                                            final imgRe = RegExp(r"\.(jpe?g|png|gif|webp|bmp)(\?|$)", caseSensitive: false);
+                                            if (toCopy.isNotEmpty && (imgRe.hasMatch(toCopy) || toCopy.contains('img.pddpic.com') || toCopy.contains('/mms-material-img/'))) {
+                                              toCopy = '';
+                                            }
+
+                                            // 如果没有链接且是拼多多商品，尝试在线生成推广链接
+                                            if (toCopy.isEmpty && p.platform == 'pdd') {
+                                              try {
+                                                final svc = ProductService();
+                                                final gen = await svc.generatePromotionLink(p);
+                                                if (gen != null && gen.isNotEmpty) toCopy = gen;
+                                              } catch (_) {}
+                                            }
+
+                                            if (toCopy.isNotEmpty) {
+                                              try {
+                                                await Clipboard.setData(ClipboardData(text: toCopy));
+                                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('已复制: ${toCopy.length > 50 ? toCopy.substring(0, 50) + '...' : toCopy}')));
+                                              } catch (_) {
+                                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('复制失败')));
+                                              }
+                                            } else {
+                                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('无法获取购买链接')));
+                                            }
+                                          },
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                            decoration: BoxDecoration(borderRadius: BorderRadius.circular(6), color: Theme.of(context).colorScheme.primary),
+                                            child: const Text('复制', style: TextStyle(color: Colors.white)),
+                                          ),
+                                        )
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                          ),
                           actions: <Widget>[
-              TextButton(onPressed: () => Navigator.of(ctx).pop(), child: Text('取消', style: Theme.of(context).textTheme.labelLarge)),
-                            ElevatedButton(
-                                onPressed: () async {
-                                  // 占位结算逻辑：清空购物车并关闭
-                                  final cartSvc = ref.read(cartServiceProvider);
-                                  await cartSvc.clear();
-                                  final _ = ref.refresh(cartItemsProvider);
-                                  Navigator.of(ctx).pop();
-                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已提交订单（模拟）')));
-                                },
-                                child: const Text('确认'))
+                            TextButton(onPressed: () => Navigator.of(ctx).pop(), child: Text('关闭', style: Theme.of(context).textTheme.labelLarge)),
                           ],
                         ),
                       );

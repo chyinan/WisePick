@@ -156,7 +156,7 @@ class _HomePageState extends State<HomePage> {
         if (!mounted) return;
         Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminSettingsPage()));
       } else if (unlocked) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('密码错误', style: Theme.of(context).textTheme.bodyMedium)));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('密码错误', style: TextStyle(color: Colors.white)), backgroundColor: Theme.of(context).colorScheme.error));
       }
     }
   }

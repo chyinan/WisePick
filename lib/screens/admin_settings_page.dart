@@ -49,11 +49,11 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
       final bool? showJson = box.get('show_product_json') as bool?;
       final String? maxT = box.get('max_tokens') as String?;
       if (mounted) {
-        setState(() {
+          setState(() {
           _openAiController.text = openai ?? '';
           // VEAPI 已弃用，不再展示或设置 veapi_key
           _baseUrlController.text = base ?? '';
-          _backendBaseController.text = backendBase ?? 'http://localhost:8080';
+          _backendBaseController.text = backendBase ?? 'http://47.82.79.141';
           _modelController.text = model ?? 'gpt-3.5-turbo';
           _embedPrompts = embed ?? true;
           _debugAiResponse = debug ?? false;
@@ -256,14 +256,16 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
 
       // Build models URL: support both base like 'https://host' and 'https://host/v1'
       // Normalize by trimming whitespace and removing trailing slashes
-      final normalizedBase = base.trim().replaceAll(RegExp(r'/+ '), '');
-      final baseNoTrailing = normalizedBase.replaceAll(RegExp(r'/+$'), '');
+      final baseTrimmed = base.trim();
+      final baseNoTrailing = baseTrimmed.replaceAll(RegExp(r'/+$'), '');
       String modelsUrl;
       if (RegExp(r'/v1$', caseSensitive: false).hasMatch(baseNoTrailing)) {
         modelsUrl = '$baseNoTrailing/models';
       } else {
         modelsUrl = '$baseNoTrailing/v1/models';
       }
+      // Helpful debug output when fetching models on device
+      debugPrint('Fetching models from: $modelsUrl');
       final resp = await dio.get(modelsUrl, options: Options(headers: headers));
       if (resp.statusCode == 200) {
         final data = resp.data as Map<String, dynamic>;

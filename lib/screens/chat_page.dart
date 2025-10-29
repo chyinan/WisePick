@@ -472,21 +472,21 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                       final attempts = (jdMeta['attempts'] ?? []) + (tbMeta['attempts'] ?? []) + (pddMeta['attempts'] ?? []);
                       if (results.isEmpty) {
                         if (!mounted) return;
+                        // transient notification only; do not append a failure line to the chat bubble
                         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('未找到相关商品')));
-                        // keep keywords and attach attempts info to message as text note
+                        // keep keywords and attempts in message metadata but avoid modifying visible text
                         final msgs = [...ref.read(chatStateNotifierProvider).messages];
                         final idx = msgs.indexWhere((m) => m.id == message.id);
                         if (idx != -1) {
                           final updated = ChatMessage(
                               id: message.id,
-                              text: '${message.text}\n(未找到商品，已尝试：${attempts.map((a) => a['attempt']+'('+ (a['matched']?.toString() ?? '0') +')').join(', ')})',
+                              text: message.text,
                               isUser: false,
                               products: results,
                               keywords: message.keywords,
                               attempts: List<dynamic>.from(attempts ?? []));
                           msgs[idx] = updated;
-                          ref.read(chatStateNotifierProvider.notifier).state =
-                              ref.read(chatStateNotifierProvider.notifier).state.copyWith(messages: msgs);
+                          ref.read(chatStateNotifierProvider.notifier).state = ref.read(chatStateNotifierProvider.notifier).state.copyWith(messages: msgs);
                         }
                       } else {
                         if (!mounted) return;
