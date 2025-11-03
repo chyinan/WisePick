@@ -57,6 +57,19 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
   Future<void> sendMessage(String text) async {
     if (text.trim().isEmpty) return;
 
+    // Ensure there is a conversation id so the conversation is persisted
+    // when sending messages from places that didn't explicitly create a
+    // conversation (e.g. home suggestion chips).
+    if (state.currentConversationId == null) {
+      final id = DateTime.now().microsecondsSinceEpoch.toString();
+      state = state.copyWith(currentConversationId: id, currentConversationTitle: '新对话');
+      try {
+        final repo = _ref.read(conversationRepositoryProvider);
+        final conv = ConversationModel(id: id, title: '新对话', messages: []);
+        await repo.saveConversation(conv);
+      } catch (_) {}
+    }
+
     // 添加用户消息结构体
     final userMsg = ChatMessage(id: DateTime.now().microsecondsSinceEpoch.toString(), text: text, isUser: true);
     state = state.copyWith(messages: [...state.messages, userMsg]);
