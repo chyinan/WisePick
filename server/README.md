@@ -13,6 +13,7 @@ Run locally
 1. cd into `server`
 2. `dart pub get`
 3. `dart run bin/proxy_server.dart`  # 交互式启动：会在终端提示未配置项
+   - 默认监听端口为 `8080`；若该端口已被占用，进程会自动尝试下一个可用端口（最多 10 次）。设置 `PORT` 环境变量可强制绑定到指定端口并跳过自动切换。
 
 Notes: The server now runs in an interactive launcher. If an environment
 variable commonly used for third-party integrations is missing or set to a

@@ -3754,8 +3754,42 @@ Future<void> runServer(List<String> args) async {
 
   final handler =
       const Pipeline().addMiddleware(logRequests()).addHandler(router.call);
-  final server = await serve(handler, '0.0.0.0', 8080);
-  print('Server listening on port ${server.port}');
+
+  final envPortRaw = Platform.environment['PORT'];
+  final envPort = int.tryParse(envPortRaw ?? '');
+  HttpServer? server;
+  if (envPort != null) {
+    server = await serve(handler, InternetAddress.anyIPv4, envPort);
+    print('Server listening on port ${server.port}');
+  } else {
+    const int maxAttempts = 10;
+    int attemptPort = 8080;
+    for (int i = 0; i < maxAttempts; i++) {
+      final port = attemptPort + i;
+      try {
+        server = await serve(handler, InternetAddress.anyIPv4, port);
+        if (i > 0) {
+          stdout.writeln(
+              'Port ${port - 1} unavailable, switched to port ${server.port}.');
+        }
+        break;
+      } on SocketException catch (e) {
+        final code = e.osError?.errorCode;
+        // 98 = EADDRINUSE (Linux), 48 = EADDRINUSE (macOS)
+        if (code == 98 || code == 48) {
+          stderr.writeln('Port $port in use, trying ${port + 1}...');
+          continue;
+        }
+        rethrow;
+      }
+    }
+    if (server == null) {
+      throw Exception(
+          'Failed to bind any port starting from $attemptPort (tried $maxAttempts ports).');
+    } else {
+      print('Server listening on port ${server.port}');
+    }
+  }
 }
 
 /// Interactive launcher: prompts for missing environment values and then

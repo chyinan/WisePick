@@ -272,12 +272,46 @@ class _HomePageState extends State<HomePage> {
           loading.close();
           if (!mounted) return;
           final msg = e.toString().replaceFirst('Exception: ', '').trim();
+          final normalizedMsg = msg.isEmpty ? '验证失败' : msg;
+          final isNetworkIssue = normalizedMsg.startsWith('无法连接后台');
+          final isConfigMissing = normalizedMsg.toUpperCase().contains(
+            'ADMIN_PASSWORD',
+          );
           messenger.showSnackBar(
             SnackBar(
-              content: Text(msg.isEmpty ? '验证失败' : msg),
+              content: Text(normalizedMsg),
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
+          if (isNetworkIssue || isConfigMissing) {
+            final proceedOffline =
+                await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: Text(
+                      '无法连接后端',
+                      style: Theme.of(ctx).textTheme.titleMedium,
+                    ),
+                    content: const Text('当前后端不可用。是否跳过验证并进入设置以修改后端地址？'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(false),
+                        child: const Text('取消'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(true),
+                        child: const Text('继续'),
+                      ),
+                    ],
+                  ),
+                ) ??
+                false;
+            if (proceedOffline && mounted) {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const AdminSettingsPage()),
+              );
+            }
+          }
         }
       }
     }
