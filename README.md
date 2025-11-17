@@ -53,6 +53,7 @@ samples, guidance on mobile development, and a full API reference.
 
 - `TAOBAO_APP_SECRET`：当使用官方淘宝签名/SDK 时需要。
 - `JD_APP_SECRET`：京东联盟的 secret（可选）。
+- `ADMIN_PASSWORD`：后台设置入口的管理员密码（Flutter 客户端会调用 `/admin/login` 校验）。
 
 示例：在 Linux 上启动 proxy 服务前，你可以：
 

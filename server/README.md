@@ -6,6 +6,7 @@ Environment variables
 - `OPENAI_API_KEY` (required): API key to forward in `Authorization: Bearer <key>`
 - `OPENAI_API_URL` (optional): upstream URL, defaults to `https://api.openai.com/v1/chat/completions`
 - `PORT` (optional): server port, defaults to `8080`
+- `ADMIN_PASSWORD` (required for后台入口): password checked by `/admin/login`, used by Flutter app to解锁后台设置界面
 
 Run locally
 

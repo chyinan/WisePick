@@ -1,18 +1,28 @@
-import 'package:flutter/material.dart';
-// 使用本地或打包字体 Noto Sans SC（在 pubspec.yaml 中声明）
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:convert';
 import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:http/http.dart' as http;
 import 'package:wisepick_dart_version/screens/chat_page.dart';
 import 'package:wisepick_dart_version/screens/admin_settings_page.dart';
 import 'package:wisepick_dart_version/features/products/product_model.dart';
 import 'package:wisepick_dart_version/features/cart/cart_page.dart';
 
 // 1. 创建一个 Provider 来管理和提供当前的主题种子颜色
-final seedColorProvider = StateProvider<Color>((ref) => const Color(0xFFFF7043));
+final seedColorProvider = StateProvider<Color>(
+  (ref) => const Color(0xFFFF7043),
+);
+
+const String _defaultBackendBase = String.fromEnvironment(
+  'BACKEND_BASE',
+  defaultValue: 'http://localhost:8080',
+);
+const String _adminAuthPath = '/admin/login';
 
 Future<void> main() async {
   // 初始化 Flutter 绑定
@@ -57,13 +67,23 @@ class WisePickApp extends ConsumerWidget {
         colorScheme: colorScheme,
         // 使用 Noto Sans SC 本地字体（在 pubspec.yaml 中以 assets 声明）并提升标题/按钮权重以增强力度
         fontFamily: 'NotoSansSC',
-        textTheme: ThemeData.light().textTheme.apply(fontFamily: 'NotoSansSC').copyWith(
-          headlineLarge: ThemeData.light().textTheme.headlineLarge?.copyWith(fontWeight: FontWeight.w600),
-          headlineMedium: ThemeData.light().textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w600),
-          titleLarge: ThemeData.light().textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
-          bodyMedium: ThemeData.light().textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
-          labelLarge: ThemeData.light().textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
-        ),
+        textTheme: ThemeData.light().textTheme
+            .apply(fontFamily: 'NotoSansSC')
+            .copyWith(
+              headlineLarge: ThemeData.light().textTheme.headlineLarge
+                  ?.copyWith(fontWeight: FontWeight.w600),
+              headlineMedium: ThemeData.light().textTheme.headlineMedium
+                  ?.copyWith(fontWeight: FontWeight.w600),
+              titleLarge: ThemeData.light().textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+              bodyMedium: ThemeData.light().textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
+              labelLarge: ThemeData.light().textTheme.labelLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
         // 应用级的简单 M3 组件样式覆盖，使用 colorScheme 代替硬编码颜色
         appBarTheme: AppBarTheme(
           backgroundColor: colorScheme.primaryContainer,
@@ -75,13 +95,17 @@ class WisePickApp extends ConsumerWidget {
           style: ElevatedButton.styleFrom(
             backgroundColor: colorScheme.primary,
             foregroundColor: colorScheme.onPrimary,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ),
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
             foregroundColor: colorScheme.primary,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ),
         inputDecorationTheme: InputDecorationTheme(
@@ -91,7 +115,10 @@ class WisePickApp extends ConsumerWidget {
             borderRadius: BorderRadius.all(Radius.circular(12)),
             borderSide: BorderSide.none,
           ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 10,
+          ),
         ),
         bottomNavigationBarTheme: BottomNavigationBarThemeData(
           backgroundColor: colorScheme.surface,
@@ -119,13 +146,68 @@ class _HomePageState extends State<HomePage> {
   // 使用 _pages 字段已不再需要（我们按 currentIndex 动态渲染），保留注释以便未来扩展
   // static const List<Widget> _pages = <Widget>[ChatPage(), CartPage()];
 
+  Future<String> _resolveBackendBase() async {
+    try {
+      final box = await Hive.openBox('settings');
+      final stored = box.get('backend_base') as String?;
+      if (stored != null && stored.trim().isNotEmpty) {
+        return stored.trim();
+      }
+    } catch (_) {}
+    return _defaultBackendBase;
+  }
+
+  Future<bool> _verifyAdminPassword(String password) async {
+    final trimmed = password.trim();
+    if (trimmed.isEmpty) {
+      throw Exception('密码不能为空');
+    }
+    final base = await _resolveBackendBase();
+    final sanitizedBase = base.replaceAll(RegExp(r'/+$'), '');
+    final uri = Uri.parse('$sanitizedBase$_adminAuthPath');
+    http.Response resp;
+    try {
+      resp = await http.post(
+        uri,
+        headers: const {'Content-Type': 'application/json'},
+        body: jsonEncode({'password': trimmed}),
+      );
+    } catch (e) {
+      throw Exception('无法连接后台：$e');
+    }
+
+    Map<String, dynamic>? body;
+    if (resp.body.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(resp.body);
+        if (decoded is Map<String, dynamic>) body = decoded;
+      } catch (_) {}
+    }
+
+    if (resp.statusCode != 200) {
+      final message =
+          body?['message']?.toString() ??
+          body?['error']?.toString() ??
+          '服务器返回错误(${resp.statusCode})';
+      throw Exception(message);
+    }
+
+    final success = body?['success'] == true;
+    if (!success) {
+      final message = body?['message']?.toString() ?? '密码错误';
+      throw Exception(message);
+    }
+
+    return true;
+  }
+
   void _onTap(int idx) => setState(() {
-        // 如果切换到非「关于」页，重置关于按钮连续计数，确保必须连续按 7 次关于才能触发
-        if (idx != 2) {
-          _aboutTapCount = 0;
-        }
-        _currentIndex = idx;
-      });
+    // 如果切换到非「关于」页，重置关于按钮连续计数，确保必须连续按 7 次关于才能触发
+    if (idx != 2) {
+      _aboutTapCount = 0;
+    }
+    _currentIndex = idx;
+  });
 
   void _onAboutTapped(BuildContext context) async {
     // 记录连续按下「关于」的次数；如果中途切换到其他 tab，会在 _onTap 中重置
@@ -135,28 +217,68 @@ class _HomePageState extends State<HomePage> {
     if (_aboutTapCount >= 7) {
       _aboutTapCount = 0;
       final TextEditingController pwController = TextEditingController();
-      final bool unlocked = await showDialog<bool>(
+      final bool unlocked =
+          await showDialog<bool>(
             context: context,
             builder: (context) => AlertDialog(
-              title: Text('输入管理员密码以进入后台管理', style: Theme.of(context).textTheme.titleMedium),
+              title: Text(
+                '输入管理员密码以进入后台管理',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
               content: TextField(
                 controller: pwController,
                 obscureText: true,
                 decoration: InputDecoration(hintText: '管理员密码'),
               ),
               actions: [
-                TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text('取消', style: Theme.of(context).textTheme.labelLarge)),
-                TextButton(onPressed: () => Navigator.of(context).pop(true), child: Text('确定', style: Theme.of(context).textTheme.labelLarge)),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: Text(
+                    '取消',
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: Text(
+                    '确定',
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ),
+                ),
               ],
             ),
           ) ??
           false;
+      final passwordInput = pwController.text.trim();
+      pwController.dispose();
 
-      if (unlocked && pwController.text == 'POPcap1234567!') {
+      if (unlocked) {
         if (!mounted) return;
-        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminSettingsPage()));
-      } else if (unlocked) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('密码错误', style: TextStyle(color: Colors.white)), backgroundColor: Theme.of(context).colorScheme.error));
+        final messenger = ScaffoldMessenger.of(context);
+        final loading = messenger.showSnackBar(
+          SnackBar(
+            content: const Text('正在验证管理员密码...'),
+            duration: const Duration(seconds: 30),
+          ),
+        );
+        try {
+          await _verifyAdminPassword(passwordInput);
+          loading.close();
+          if (!mounted) return;
+          Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const AdminSettingsPage()));
+        } catch (e) {
+          loading.close();
+          if (!mounted) return;
+          final msg = e.toString().replaceFirst('Exception: ', '').trim();
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text(msg.isEmpty ? '验证失败' : msg),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+        }
       }
     }
   }
@@ -184,7 +306,10 @@ class _HomePageState extends State<HomePage> {
         },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.chat_bubble), label: '聊天'),
-          BottomNavigationBarItem(icon: Icon(Icons.shopping_cart), label: '购物车'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.shopping_cart),
+            label: '购物车',
+          ),
           BottomNavigationBarItem(icon: Icon(Icons.info_outline), label: '关于'),
         ],
       ),
@@ -200,7 +325,12 @@ class AboutPage extends ConsumerWidget {
     final bool ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!ok) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('无法打开链接', style: Theme.of(context).textTheme.bodyMedium)),
+        SnackBar(
+          content: Text(
+            '无法打开链接',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ),
       );
     }
   }
@@ -211,7 +341,9 @@ class AboutPage extends ConsumerWidget {
     const String version = '0.0.1';
 
     return Scaffold(
-      appBar: AppBar(title: Text('关于', style: Theme.of(context).textTheme.titleMedium)),
+      appBar: AppBar(
+        title: Text('关于', style: Theme.of(context).textTheme.titleMedium),
+      ),
       body: ListView(
         children: [
           const _SectionHeader(title: '基本信息'),
@@ -223,20 +355,27 @@ class AboutPage extends ConsumerWidget {
           ListTile(
             leading: const Icon(Icons.verified_outlined),
             title: const Text('版本'),
-            subtitle: Text(version, style: Theme.of(context).textTheme.bodyMedium),
+            subtitle: Text(
+              version,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
           ),
 
           const _SectionHeader(title: '开发者'),
           ListTile(
             leading: const Icon(Icons.person_outline),
             title: const Text('作者'),
-            subtitle: Text('chyinan', style: Theme.of(context).textTheme.bodyMedium),
+            subtitle: Text(
+              'chyinan',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
           ),
           ListTile(
             leading: const Icon(Icons.link_outlined),
             title: const Text('开发者主页'),
             subtitle: const Text('https://github.com/chyinan'),
-            onTap: () => _openExternalUrl(context, 'https://github.com/chyinan'),
+            onTap: () =>
+                _openExternalUrl(context, 'https://github.com/chyinan'),
           ),
 
           // 3. 在“关于”页添加主题选择 UI
@@ -263,8 +402,8 @@ class _SectionHeader extends StatelessWidget {
       child: Text(
         title,
         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
       ),
     );
   }
@@ -303,7 +442,9 @@ class _ThemeColorSelector extends ConsumerWidget {
             child: CircleAvatar(
               radius: 20,
               backgroundColor: color,
-              child: isSelected ? const Icon(Icons.check, color: Colors.white) : null,
+              child: isSelected
+                  ? const Icon(Icons.check, color: Colors.white)
+                  : null,
             ),
           );
         }).toList(),
