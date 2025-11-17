@@ -1,13 +1,13 @@
 import 'dart:convert';
 import 'dart:io' show Platform;
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:window_manager/window_manager.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
+import 'package:window_manager/window_manager.dart';
 import 'package:wisepick_dart_version/screens/chat_page.dart';
 import 'package:wisepick_dart_version/screens/admin_settings_page.dart';
 import 'package:wisepick_dart_version/features/products/product_model.dart';
@@ -18,11 +18,8 @@ final seedColorProvider = StateProvider<Color>(
   (ref) => const Color(0xFFFF7043),
 );
 
-const String _defaultBackendBase = String.fromEnvironment(
-  'BACKEND_BASE',
-  defaultValue: 'http://localhost:8080',
-);
-const String _adminAuthPath = '/admin/login';
+const String _defaultAdminPasswordHash =
+    'b054968e7426730e9a005f1430e6d5cd70a03b08370a82323f9a9b231cf270be';
 
 Future<void> main() async {
   // 初始化 Flutter 绑定
@@ -146,59 +143,16 @@ class _HomePageState extends State<HomePage> {
   // 使用 _pages 字段已不再需要（我们按 currentIndex 动态渲染），保留注释以便未来扩展
   // static const List<Widget> _pages = <Widget>[ChatPage(), CartPage()];
 
-  Future<String> _resolveBackendBase() async {
-    try {
-      final box = await Hive.openBox('settings');
-      final stored = box.get('backend_base') as String?;
-      if (stored != null && stored.trim().isNotEmpty) {
-        return stored.trim();
-      }
-    } catch (_) {}
-    return _defaultBackendBase;
-  }
-
   Future<bool> _verifyAdminPassword(String password) async {
     final trimmed = password.trim();
     if (trimmed.isEmpty) {
       throw Exception('密码不能为空');
     }
-    final base = await _resolveBackendBase();
-    final sanitizedBase = base.replaceAll(RegExp(r'/+$'), '');
-    final uri = Uri.parse('$sanitizedBase$_adminAuthPath');
-    http.Response resp;
-    try {
-      resp = await http.post(
-        uri,
-        headers: const {'Content-Type': 'application/json'},
-        body: jsonEncode({'password': trimmed}),
-      );
-    } catch (e) {
-      throw Exception('无法连接后台：$e');
+    final inputHash = sha256.convert(utf8.encode(trimmed)).toString();
+    if (inputHash == _defaultAdminPasswordHash) {
+      return true;
     }
-
-    Map<String, dynamic>? body;
-    if (resp.body.isNotEmpty) {
-      try {
-        final decoded = jsonDecode(resp.body);
-        if (decoded is Map<String, dynamic>) body = decoded;
-      } catch (_) {}
-    }
-
-    if (resp.statusCode != 200) {
-      final message =
-          body?['message']?.toString() ??
-          body?['error']?.toString() ??
-          '服务器返回错误(${resp.statusCode})';
-      throw Exception(message);
-    }
-
-    final success = body?['success'] == true;
-    if (!success) {
-      final message = body?['message']?.toString() ?? '密码错误';
-      throw Exception(message);
-    }
-
-    return true;
+    throw Exception('密码错误');
   }
 
   void _onTap(int idx) => setState(() {
@@ -255,21 +209,13 @@ class _HomePageState extends State<HomePage> {
       if (unlocked) {
         if (!mounted) return;
         final messenger = ScaffoldMessenger.of(context);
-        final loading = messenger.showSnackBar(
-          SnackBar(
-            content: const Text('正在验证管理员密码...'),
-            duration: const Duration(seconds: 30),
-          ),
-        );
         try {
           await _verifyAdminPassword(passwordInput);
-          loading.close();
           if (!mounted) return;
           Navigator.of(
             context,
           ).push(MaterialPageRoute(builder: (_) => const AdminSettingsPage()));
         } catch (e) {
-          loading.close();
           if (!mounted) return;
           final msg = e.toString().replaceFirst('Exception: ', '').trim();
           final normalizedMsg = msg.isEmpty ? '验证失败' : msg;
