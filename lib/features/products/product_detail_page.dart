@@ -1195,64 +1195,45 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(width: 8),
-                  // 显示平台来源徽章，例如 PDD/TAOBAO/JD
-                  if (product.platform == 'pdd')
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.redAccent,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: const Text(
-                        '来自 拼多多',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
+                  // Platform Badge
+                  Builder(
+                    builder: (context) {
+                      Color color;
+                      String text;
+                      switch (product.platform) {
+                        case 'pdd':
+                          color = const Color(0xFFE02E24);
+                          text = '拼多多';
+                          break;
+                        case 'taobao':
+                          color = const Color(0xFFFF5000);
+                          text = '淘宝';
+                          break;
+                        case 'jd':
+                          color = const Color(0xFFE4393C);
+                          text = '京东';
+                          break;
+                        default:
+                          return const SizedBox.shrink();
+                      }
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: color.withOpacity(0.3)),
                         ),
-                      ),
-                    ),
-                  if (product.platform == 'taobao')
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.orange,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: const Text(
-                        '来自 淘宝',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
+                        child: Text(
+                          '来自 $text',
+                          style: TextStyle(
+                            color: color,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                    ),
-                  if (product.platform == 'jd')
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.red,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: const Text(
-                        '来自 京东',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
+                      );
+                    }
+                  ),
                 ],
               ),
               // AI 推荐内容在此版本被移除（不在商品详情页展示 AI 推荐理由/评分）

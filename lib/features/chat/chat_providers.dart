@@ -53,6 +53,13 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
 
   ChatStateNotifier({required this.service, required Ref ref}) : _ref = ref, super(ChatState());
 
+  /// 清除当前对话状态，重置为初始状态（即“新对话”）
+  void clearConversation() {
+     state = ChatState();
+     // 如果需要自动创建新 ID 可在此处处理，或等待用户发送第一条消息时处理
+     // 这里仅重置 UI 状态
+  }
+
   /// 发送用户消息并请求 AI 推荐（AI 回复可能包含 ProductModel 信息）
   Future<void> sendMessage(String text) async {
     if (text.trim().isEmpty) return;
@@ -858,4 +865,3 @@ final chatStateNotifierProvider = StateNotifierProvider<ChatStateNotifier, ChatS
 
 /// Conversation repository provider
 final conversationRepositoryProvider = Provider<ConversationRepository>((ref) => ConversationRepository());
-
