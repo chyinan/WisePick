@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show Platform;
 
@@ -12,6 +13,8 @@ import 'package:wisepick_dart_version/screens/chat_page.dart';
 import 'package:wisepick_dart_version/screens/admin_settings_page.dart';
 import 'package:wisepick_dart_version/features/products/product_model.dart';
 import 'package:wisepick_dart_version/features/cart/cart_page.dart';
+import 'package:wisepick_dart_version/services/notification_service.dart';
+import 'package:wisepick_dart_version/services/price_refresh_service.dart';
 
 // 1. 创建一个 Provider 来管理和提供当前的主题种子颜色
 final seedColorProvider = StateProvider<Color>(
@@ -30,6 +33,8 @@ Future<void> main() async {
     await windowManager.ensureInitialized();
   }
 
+  await NotificationService.instance.init();
+
   // 初始化 Hive，用于本地存储（收藏、历史）
   await Hive.initFlutter();
 
@@ -38,6 +43,8 @@ Future<void> main() async {
 
   // 使用 Riverpod 的 ProviderScope 包裹整个应用
   runApp(const ProviderScope(child: WisePickApp()));
+
+  unawaited(PriceRefreshService().refreshCartPrices());
 
   // 仅在桌面平台设置窗口标题
   if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {

@@ -23,11 +23,23 @@ class CartService {
       m['qty'] = cur + qty;
       // 若调用方提供了原始 JSON，则更新存储的 raw_json 字段以便详情页可用
       if (rawJson != null && rawJson.isNotEmpty) m['raw_json'] = rawJson;
+      final double effectivePrice = _effectivePrice(p);
+      m['initial_price'] ??= _maybeParseDouble(m['price']) ?? effectivePrice;
+      m['current_price'] ??= _maybeParseDouble(m['price']) ?? effectivePrice;
+      m['price'] = effectivePrice;
+      m['final_price'] = effectivePrice;
+      m['last_price_refresh'] = DateTime.now().millisecondsSinceEpoch;
       await box.put(p.id, m);
     } else {
       final m = p.toMap();
       m['qty'] = qty;
       if (rawJson != null && rawJson.isNotEmpty) m['raw_json'] = rawJson;
+      final double effectivePrice = _effectivePrice(p);
+      m['initial_price'] = effectivePrice;
+      m['current_price'] = effectivePrice;
+      m['price'] = effectivePrice;
+      m['final_price'] = effectivePrice;
+      m['last_price_refresh'] = DateTime.now().millisecondsSinceEpoch;
       await box.put(p.id, m);
     }
   }
@@ -57,6 +69,18 @@ class CartService {
   Future<void> clear() async {
     final box = await Hive.openBox(boxName);
     await box.clear();
+  }
+
+  double _effectivePrice(ProductModel p) {
+    if (p.finalPrice > 0) return p.finalPrice;
+    if (p.price > 0) return p.price;
+    if (p.originalPrice > 0) return p.originalPrice;
+    return 0.0;
+  }
+
+  double? _maybeParseDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '');
   }
 }
 

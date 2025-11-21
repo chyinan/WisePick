@@ -44,17 +44,14 @@ class PddClient {
     return digest.toString().toUpperCase();
   }
 
-  /// 调用 pdd.ddk.goods.search
-  /// [bizParams] 是业务参数（如 keyword, page, page_size, opt_id, range_list 等）
-  Future<dynamic> searchGoods(Map<String, dynamic> bizParams, {String? accessToken}) async {
+  Future<dynamic> _callApi(String type, Map<String, dynamic> bizParams, {String? accessToken}) async {
     final Map<String, dynamic> allParams = {
       'client_id': clientId,
-      'type': 'pdd.ddk.goods.search',
+      'type': type,
       'data_type': 'JSON',
       'timestamp': (DateTime.now().millisecondsSinceEpoch ~/ 1000).toString(),
     };
 
-    // 合并业务参数（保留原始类型以便签名时编码）
     for (final entry in bizParams.entries) {
       allParams[entry.key] = entry.value;
     }
@@ -63,27 +60,44 @@ class PddClient {
       allParams['access_token'] = accessToken;
     }
 
-    // 生成签名
     final sign = _generateSign(allParams);
 
-    // 构建请求体：PDD 要求 form-urlencoded 格式，注意对数组/对象参数进行 JSON 编码
     final Map<String, dynamic> body = {};
     allParams.forEach((k, v) {
       if (v == null) return;
-      if (v is List || v is Map) body[k] = jsonEncode(v);
-      else body[k] = v.toString();
+      if (v is List || v is Map) {
+        body[k] = jsonEncode(v);
+      } else {
+        body[k] = v.toString();
+      }
     });
     body['sign'] = sign;
 
     try {
-      final response = await apiClient.post(baseUrl, data: FormData.fromMap(body));
+      final response = await apiClient.post(
+        baseUrl,
+        data: FormData.fromMap(body),
+      );
       return response.data;
     } on DioException catch (e) {
-      // 统一返回错误信息，调用方可根据需要处理
-      return {'error': true, 'message': e.message ?? e.toString(), 'details': e.response?.data};
+      return {
+        'error': true,
+        'message': e.message ?? e.toString(),
+        'details': e.response?.data,
+      };
     } catch (e) {
       return {'error': true, 'message': e.toString()};
     }
+  }
+
+  /// 调用 pdd.ddk.goods.search
+  Future<dynamic> searchGoods(Map<String, dynamic> bizParams, {String? accessToken}) async {
+    return _callApi('pdd.ddk.goods.search', bizParams, accessToken: accessToken);
+  }
+
+  /// 调用 pdd.ddk.goods.detail
+  Future<dynamic> fetchGoodsDetail(Map<String, dynamic> bizParams, {String? accessToken}) async {
+    return _callApi('pdd.ddk.goods.detail', bizParams, accessToken: accessToken);
   }
 }
 

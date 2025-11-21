@@ -5,7 +5,7 @@ import '../../core/api_client.dart';
 import '../../core/config.dart';
 import 'product_model.dart';
 
-/// Taobao Adapter：负责调用淘宝联盟 API 并映射到 ProductModel
+/// Taobao Adapter：负责调用淘宝联盟 API 并映射到 ProductModel 
 class TaobaoAdapter {
   final ApiClient _client;
 

@@ -125,7 +125,7 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
     final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
-        title: Text('用户设置', style: Theme.of(context).textTheme.titleMedium),
+        title: Text('AI模型设置', style: Theme.of(context).textTheme.titleMedium),
         centerTitle: true,
         backgroundColor: colorScheme.surface,
         foregroundColor: colorScheme.onSurface,
@@ -321,7 +321,10 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
                         )
                       : Text(
                           '保存',
-                          style: Theme.of(context).textTheme.labelLarge,
+                          style: Theme.of(context)
+                              .textTheme
+                              .labelLarge
+                              ?.copyWith(color: colorScheme.onPrimary),
                         ),
                 ),
               ],
