@@ -44,6 +44,7 @@ dependencies:
   uuid: ^3.0.6
   flutter_local_notifications: ^17.1.2
   windows_notification: ^1.3.0
+  flutter_animate: ^4.5.2
   # Noto Sans SC 字体作为中文显示替代（通过 google_fonts 包加载），若需本地字体可改为 fonts: 声明
 
 dev_dependencies:

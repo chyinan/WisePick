@@ -6,6 +6,7 @@ import 'package:hive/hive.dart';
 import '../features/cart/cart_service.dart';
 import '../features/products/taobao_item_detail_service.dart';
 import 'notification_service.dart';
+import '../core/storage/hive_config.dart';
 
 class PriceRefreshService {
   PriceRefreshService({
@@ -74,11 +75,20 @@ class PriceRefreshService {
       await _persistTaobaoCache(productId, detail);
 
       if (priceDropped && dropAmount >= 0.01) {
-        await _notificationService.showPriceDropNotification(
-          title: (item['title'] ?? '商品').toString(),
-          dropAmount: dropAmount,
-          latestPrice: latestPrice,
-        );
+        // 检查通知开关设置
+        final box = await Hive.openBox(HiveConfig.settingsBox);
+        final notificationEnabled = box.get(
+          HiveConfig.priceNotificationEnabledKey,
+          defaultValue: true,
+        ) as bool;
+        
+        if (notificationEnabled) {
+          await _notificationService.showPriceDropNotification(
+            title: (item['title'] ?? '商品').toString(),
+            dropAmount: dropAmount,
+            latestPrice: latestPrice,
+          );
+        }
       } else if (lastKnownPrice == null || (latestPrice - lastKnownPrice).abs() >= 0.01) {
         // 如果只是普通更新也写入日志，方便排查
         log('更新淘宝商品 $productId 价格: $lastKnownPrice -> $latestPrice');

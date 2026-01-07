@@ -29,13 +29,14 @@ class ProductModelAdapter extends TypeAdapter<ProductModel> {
       link: (fields[10] as String?) ?? '',
       commission: (fields[11] as double?) ?? 0.0,
       description: (fields[12] as String?) ?? '',
+      shopTitle: (fields[13] as String?) ?? '',
     );
   }
 
   @override
   void write(BinaryWriter writer, ProductModel obj) {
     writer
-      ..writeByte(13)
+      ..writeByte(14) // 14 个字段
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -61,7 +62,9 @@ class ProductModelAdapter extends TypeAdapter<ProductModel> {
       ..writeByte(11)
       ..write(obj.commission)
       ..writeByte(12)
-      ..write(obj.description);
+      ..write(obj.description)
+      ..writeByte(13)
+      ..write(obj.shopTitle);
   }
 
   @override
@@ -69,6 +72,8 @@ class ProductModelAdapter extends TypeAdapter<ProductModel> {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) || other is ProductModelAdapter && runtimeType == other.runtimeType && typeId == other.typeId;
+      identical(this, other) ||
+      other is ProductModelAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
 }
-

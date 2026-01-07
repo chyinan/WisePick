@@ -1,0 +1,49 @@
+# 快淘帮 WisePick 后端代理服务 Docker Compose 配置
+# 使用方法: docker-compose up -d
+
+services:
+  wisepick-proxy:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: wisepick-proxy-server
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8080}:8080"
+    # 从 bin/.env 文件加载所有环境变量
+    env_file:
+      - ./bin/.env
+    # 仅设置服务器必需的基础配置（不覆盖 env_file 中的值）
+    environment:
+      - PORT=8080
+      - BACKEND_BASE=http://localhost:8080
+    
+    # 资源限制
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    
+    # 健康检查
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/__settings"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    
+    # 日志配置
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# 网络配置 (可选，用于多服务部署)
+networks:
+  default:
+    name: wisepick-network

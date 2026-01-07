@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_animate/flutter_animate.dart'; // Import flutter_animate
 import '../../features/chat/chat_providers.dart';
 import 'home_drawer.dart';
 import '../../features/chat/chat_message.dart';
@@ -12,6 +13,7 @@ import 'package:wisepick_dart_version/features/cart/cart_providers.dart';
 import '../../features/products/keyword_prompt.dart';
 import '../../features/products/search_service.dart';
 import '../../features/products/product_model.dart';
+import '../../features/chat/widgets/streaming_text.dart';
 
 /// 聊天页面组件
 class ChatPage extends ConsumerStatefulWidget {
@@ -42,6 +44,37 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   void _sendSuggestion(String text) {
     ref.read(chatStateNotifierProvider.notifier).sendMessage(text);
     WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+  }
+
+  /// 快捷建议芯片栏 - 显示在输入框上方
+  Widget _buildQuickSuggestionsBar(BuildContext context) {
+    final suggestions = ['推荐耳机', '查看优惠', '性价比手机', '游戏本推荐', '护肤品'];
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: suggestions.map((s) => Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Semantics(
+              label: '快捷建议：$s',
+              button: true,
+              child: ActionChip(
+                label: Text(s),
+                avatar: const Icon(Icons.lightbulb_outline, size: 16),
+                onPressed: () {
+                  _textController.text = s;
+                  _textController.selection = TextSelection.fromPosition(
+                    TextPosition(offset: s.length),
+                  );
+                },
+              ),
+            ),
+          )).toList(),
+        ),
+      ),
+    );
   }
 
   Widget _buildSuggestionCard({
@@ -86,7 +119,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           ),
         ),
       ),
-    );
+    ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.2, end: 0);
   }
 
   Widget _buildSuggestions(BuildContext context) {
@@ -96,7 +129,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.auto_awesome, size: 48, color: Theme.of(context).colorScheme.primary.withOpacity(0.5)),
+            Icon(Icons.auto_awesome, size: 48, color: Theme.of(context).colorScheme.primary.withOpacity(0.5))
+                .animate().scale(duration: 500.ms, curve: Curves.easeOutBack),
             const SizedBox(height: 16),
             Text(
               '我可以帮你挑选什么？',
@@ -104,7 +138,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                     fontWeight: FontWeight.bold,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
-            ),
+            ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.2, end: 0),
             const SizedBox(height: 32),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
@@ -129,7 +163,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                     subtitle: '送女朋友的礼物',
                     onTap: () => _sendSuggestion('有什么适合送给女朋友的礼物推荐吗？'),
                   ),
-                ],
+                ]
+                .animate(interval: 100.ms)
+                .fadeIn(duration: 400.ms)
+                .slideX(begin: 0.1, end: 0), // Staggered animation for cards
               ),
             ),
           ],
@@ -180,7 +217,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).cardTheme.color ?? Colors.white,
               borderRadius: const BorderRadius.only(
                 topRight: Radius.circular(16),
                 bottomLeft: Radius.circular(16),
@@ -209,7 +246,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           ),
         ],
       ),
-    );
+    ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.1, end: 0);
   }
 
   void _handleSendPressed() {
@@ -230,14 +267,16 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     );
   }
 
-  Widget _buildChatBubble(ChatMessage message) {
+  Widget _buildChatBubble(ChatMessage message, {bool isStreaming = false}) {
     final bool isUser = message.isUser;
     final String content = message.text;
 
     final CrossAxisAlignment alignment = isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start;
     final Color bubbleColor = isUser
         ? Theme.of(context).colorScheme.primary
-        : Colors.white;
+        : (Theme.of(context).brightness == Brightness.dark 
+            ? Theme.of(context).colorScheme.surfaceContainerHighest 
+            : Colors.white);
     final Color textColor = isUser
         ? Theme.of(context).colorScheme.onPrimary
         : Theme.of(context).colorScheme.onSurface;
@@ -326,7 +365,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                           },
                           expandToFullWidth: true,
                         ),
-                      )),
+                      ).animate().fadeIn(duration: 400.ms).slideX(begin: 0.1, end: 0)), // Animate product cards
                   if (totalPages > 1)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
@@ -354,7 +393,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 product: message.product!,
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProductDetailPage(product: message.product!))),
                 expandToFullWidth: true,
-             ),
+             ).animate().fadeIn(duration: 400.ms).slideX(begin: 0.1, end: 0),
 
            if (message.keywords != null && message.keywords!.isNotEmpty) ...[
               const SizedBox(height: 12),
@@ -363,15 +402,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
               KeywordPrompt(
                   keywords: message.keywords!,
                   onSelected: (kw) async {
-                      // Search logic (kept same as before, just simplified call site for brevity in thought process)
-                      // ... (Original search logic here) ...
-                       // Note: I am preserving the logic but ensuring code is cleaner.
-                       // Due to length limit, I will assume the SearchService call structure remains similar
-                       // but I need to make sure I don't break it. 
-                       // Re-implementing the search logic block briefly:
                        _handleKeywordSearch(kw, message);
                   },
-              ),
+              ).animate().fadeIn(delay: 300.ms),
            ]
         ],
       );
@@ -381,7 +414,15 @@ class _ChatPageState extends ConsumerState<ChatPage> {
        
        // Logic for long text truncation or special display
        Widget textContent;
-       if (firstUrl == null) {
+       // 对于正在流式输出的 AI 消息，使用 StreamingText
+       if (!isUser && isStreaming && content.isNotEmpty) {
+          textContent = StreamingText(
+            text: content,
+            style: textStyle,
+            charDelay: const Duration(milliseconds: 25),
+            showCursor: true,
+          );
+       } else if (firstUrl == null) {
           const int previewLen = 800;
           if (content.length <= previewLen) {
              textContent = SelectableText(content, style: textStyle);
@@ -430,27 +471,41 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         children: [
           if (!isUser) ...[avatar, const SizedBox(width: 8)],
           Flexible(
-            child: Container(
-              constraints: const BoxConstraints(maxWidth: 600),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: bubbleColor,
-                borderRadius: bubbleRadius,
-                boxShadow: shadows,
+            child: Semantics(
+              label: isUser ? '用户消息：$content' : 'AI 助手消息：$content',
+              hint: '长按可复制消息',
+              child: GestureDetector(
+                onLongPress: () {
+                  // 长按显示复制菜单
+                  _showCopyMenu(context, content);
+                },
+                child: Container(
+                  constraints: const BoxConstraints(maxWidth: 600),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: bubbleColor,
+                    borderRadius: bubbleRadius,
+                    boxShadow: shadows,
+                  ),
+                  child: bubbleContent,
+                ),
               ),
-              child: bubbleContent,
             ),
           ),
           if (isUser) ...[const SizedBox(width: 8), avatar],
         ],
       ),
-    );
+    ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.1, end: 0); // Animate bubble entry
   }
 
+  // ... _handleKeywordSearch, _extractFirstUrl, build, _FullDebugPage ...
+  // Need to ensure the rest of the file is preserved correctly.
+  // Since I'm using `write` tool with full content, I will paste the rest of the methods as they were
+  // but with the necessary imports and structure already defined in the beginning of the `write` content.
+  
   Future<void> _handleKeywordSearch(String kw, ChatMessage originalMessage) async {
        final svc = SearchService();
        try {
-          // ... Original parallel fetch logic ...
           final fJd = svc.searchWithMeta(kw, platform: 'jd');
           final fTb = svc.searchWithMeta(kw, platform: 'taobao');
           final fPdd = svc.searchWithMeta(kw, platform: 'pdd');
@@ -535,6 +590,37 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     return m?.group(0);
   }
 
+  void _showCopyMenu(BuildContext context, String text) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.copy),
+                title: const Text('复制消息'),
+                onTap: () async {
+                  await Clipboard.setData(ClipboardData(text: text));
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('已复制到剪贴板'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!_hasRegisteredListener) {
@@ -559,15 +645,30 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     return Scaffold(
         drawer: const HomeDrawer(),
         appBar: AppBar(
-           title: const Text('AI导购助手快淘帮'),
+           title: const Text('AI 导购助手'),
            centerTitle: false,
+           leading: Builder(
+             builder: (context) =>              Semantics(
+               label: '打开对话列表',
+               button: true,
+               child: IconButton(
+                 icon: const Icon(Icons.menu),
+                 tooltip: '打开对话列表',
+                 onPressed: () => Scaffold.of(context).openDrawer(),
+               ),
+             ),
+           ),
            actions: [
-             IconButton(
-               icon: const Icon(Icons.refresh),
-               tooltip: '新对话',
-               onPressed: () {
-                  ref.read(chatStateNotifierProvider.notifier).clearConversation();
-               },
+             Semantics(
+               label: '新建对话',
+               button: true,
+               child: IconButton(
+                 icon: const Icon(Icons.add),
+                 tooltip: '新对话',
+                 onPressed: () {
+                   ref.read(chatStateNotifierProvider.notifier).clearConversation();
+                 },
+               ),
              ),
            ],
         ),
@@ -600,13 +701,20 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                             child: _buildThinkingBubble(),
                           );
                         }
-                        return _buildChatBubble(msgs[index]);
+                        // 判断最后一条 AI 消息是否正在流式输出
+                        final isLastMessage = index == msgs.length - 1;
+                        final isLastAiMessage = isLastMessage && !msgs[index].isUser;
+                        final isCurrentlyStreaming = streaming && isLastAiMessage;
+                        return _buildChatBubble(msgs[index], isStreaming: isCurrentlyStreaming);
                       },
                     );
                   }),
                 ),
               ),
 
+              // Quick Suggestions Chips
+              _buildQuickSuggestionsBar(context),
+              
               // Input Area
               Container(
                 padding: const EdgeInsets.all(16),
@@ -621,31 +729,48 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                   ],
                 ),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: <Widget>[
                     Expanded(
-                      child: TextField(
-                        controller: _textController,
-                        maxLines: 1,
-                        decoration: InputDecoration(
-                          hintText: '输入您的需求，例如：推荐一款高性价比降噪耳机...',
-                          filled: true,
-                          fillColor: Theme.of(context).colorScheme.surfaceContainerLow,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: BorderSide.none,
+                      child: KeyboardListener(
+                        focusNode: FocusNode(),
+                        onKeyEvent: (event) {
+                          // Desktop: Enter sends, Shift+Enter adds newline
+                          if (event is KeyDownEvent &&
+                              event.logicalKey == LogicalKeyboardKey.enter &&
+                              !HardwareKeyboard.instance.isShiftPressed) {
+                            _handleSendPressed();
+                          }
+                        },
+                        child: TextField(
+                          controller: _textController,
+                          maxLines: 5,
+                          minLines: 1,
+                          textInputAction: TextInputAction.newline,
+                          decoration: InputDecoration(
+                            hintText: '输入您的需求，例如：推荐一款高性价比降噪耳机...',
+                            filled: true,
+                            fillColor: Theme.of(context).colorScheme.surfaceContainerLow,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(24),
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                           ),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                         ),
-                        onSubmitted: (_) => _handleSendPressed(),
                       ),
                     ),
                     const SizedBox(width: 12),
-                    FloatingActionButton(
-                      onPressed: _handleSendPressed,
-                      elevation: 0,
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Colors.white,
-                      child: const Icon(Icons.send),
+                    Semantics(
+                      label: '发送消息',
+                      button: true,
+                      child: FloatingActionButton(
+                        onPressed: _handleSendPressed,
+                        elevation: 0,
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        foregroundColor: Colors.white,
+                        child: const Icon(Icons.send),
+                      ),
                     ),
                   ],
                 ),

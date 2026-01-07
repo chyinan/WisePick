@@ -6,7 +6,6 @@ pubspec.lock
 # Flutter
 .flutter-plugins
 .flutter-plugins-dependencies
-.flutter-plugins-dependencies
 build/
 ios/Pods/
 *.xcworkspace
@@ -77,3 +76,11 @@ server/.venv/
 __pycache__/
 *.pyc
 server/.env
+
+# BMAD related folders
+.bmad-core/
+**/bmad-core/
+bmad-core*/
+**/bmad-core*/
+.cursor
+.bmad-infrastructure-devops

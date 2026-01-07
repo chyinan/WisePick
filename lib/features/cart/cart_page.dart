@@ -7,6 +7,7 @@ import 'package:wisepick_dart_version/features/products/product_detail_page.dart
 import 'package:wisepick_dart_version/features/cart/cart_providers.dart';
 import 'package:wisepick_dart_version/widgets/product_card.dart';
 import 'package:wisepick_dart_version/features/products/product_service.dart';
+import 'package:wisepick_dart_version/services/price_refresh_service.dart';
 
 class CartPage extends ConsumerWidget {
   const CartPage({super.key});
@@ -49,16 +50,24 @@ class CartPage extends ConsumerWidget {
           return Column(
             children: [
               Expanded(
-                child: ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: groups.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 16),
-                  itemBuilder: (ctx, index) {
-                    final shopName = groups.keys.elementAt(index);
-                    final items = groups[shopName]!;
-                    
-                    return _CartGroupCard(shopName: shopName, items: items);
+                child: RefreshIndicator(
+                  onRefresh: () async {
+                    // 刷新价格
+                    await PriceRefreshService().refreshCartPrices();
+                    // 刷新选品车数据
+                    ref.invalidate(cartItemsProvider);
                   },
+                  child: ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: groups.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 16),
+                    itemBuilder: (ctx, index) {
+                      final shopName = groups.keys.elementAt(index);
+                      final items = groups[shopName]!;
+                      
+                      return _CartGroupCard(shopName: shopName, items: items);
+                    },
+                  ),
                 ),
               ),
               _CartBottomBar(list: list),
@@ -92,16 +101,19 @@ class _CartGroupCard extends ConsumerWidget {
                final allSelected = items.every((m) => sel[m['id']] == true);
                return Row(
                  children: [
-                    Checkbox(
-                       value: allSelected,
-                       onChanged: (v) {
-                          final map = Map<String, bool>.from(sel);
-                          for (final m in items) {
-                             map[m['id']] = v ?? false;
-                          }
-                          ref.read(cartSelectionProvider.notifier).state = map;
-                       },
-                    ),
+                      Semantics(
+                        label: '全选 $shopName 店铺商品',
+                        child: Checkbox(
+                          value: allSelected,
+                          onChanged: (v) {
+                            final map = Map<String, bool>.from(sel);
+                            for (final m in items) {
+                              map[m['id']] = v ?? false;
+                            }
+                            ref.read(cartSelectionProvider.notifier).state = map;
+                          },
+                        ),
+                      ),
                     const SizedBox(width: 8),
                     const Icon(Icons.store, size: 20),
                     const SizedBox(width: 8),
@@ -213,13 +225,16 @@ class _CartBottomBar extends ConsumerWidget {
                 final allSelected = list.isNotEmpty && list.every((m) => sel[m['id']] == true);
                 return Row(
                    children: [
-                      Checkbox(
-                         value: allSelected,
-                         onChanged: (v) {
+                      Semantics(
+                        label: '全选所有商品',
+                        child: Checkbox(
+                          value: allSelected,
+                          onChanged: (v) {
                             final map = <String, bool>{};
                             for (final m in list) map[m['id']] = v ?? false;
                             ref.read(cartSelectionProvider.notifier).state = map;
-                         },
+                          },
+                        ),
                       ),
                       const Text('全选'),
                    ],
@@ -234,9 +249,14 @@ class _CartBottomBar extends ConsumerWidget {
                 ],
              ),
              const SizedBox(width: 16),
-             ElevatedButton(
-                onPressed: count > 0 ? () => _showCheckoutDialog(context, list, sel) : null,
-                child: const Text('去结算'),
+             Semantics(
+               label: '去结算，已选 $count 件商品，合计 ¥${total.toStringAsFixed(2)}',
+               button: true,
+               enabled: count > 0,
+               child: ElevatedButton(
+                 onPressed: count > 0 ? () => _showCheckoutDialog(context, list, sel) : null,
+                 child: const Text('去结算'),
+               ),
              ),
           ],
        ),

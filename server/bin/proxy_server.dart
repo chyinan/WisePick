@@ -79,38 +79,6 @@ Future<Response> _handleProxy(Request req) async {
     final bodyBytes = await req.read().expand((x) => x).toList();
     final reqBodyStr = utf8.decode(bodyBytes);
 
-    // If this is a signing proxy path (we will expose endpoints to sign for Taobao/JD), handle accordingly
-    final path = req.requestedUri.path;
-    if (path == '/sign/taobao' || path == '/sign/jd') {
-      try {
-        final env = Platform.environment;
-        final secretKey = path == '/sign/taobao'
-            ? env['TAOBAO_APP_SECRET']
-            : env['JD_APP_SECRET'];
-        if (secretKey == null)
-          return Response.internalServerError(
-              body: jsonEncode({'error': 'secret not configured'}),
-              headers: {'content-type': 'application/json'});
-
-        // compute HMAC-SHA256 of body + ts if provided
-        final ts =
-            req.headers['x-ts'] ?? DateTime.now().toUtc().toIso8601String();
-        final dataToSign = reqBodyStr + ts;
-        final hmac = Hmac(sha256, utf8.encode(secretKey));
-        final digest = hmac.convert(utf8.encode(dataToSign));
-        final signature = digest.toString();
-
-        // VEAPI support removed
-
-        return Response.ok(jsonEncode({'ts': ts, 'sign': signature}),
-            headers: {'content-type': 'application/json'});
-      } catch (e) {
-        return Response.internalServerError(
-            body: jsonEncode({'error': e.toString()}),
-            headers: {'content-type': 'application/json'});
-      }
-    }
-
     // Check whether the client requested a streaming response
     bool wantsStream = false;
     try {
@@ -186,9 +154,9 @@ Future<void> runServer(List<String> args) async {
       '/<ignore|.*>',
       (Request r) => Response(200, headers: {
             'access-control-allow-origin': '*',
-            'access-control-allow-methods': 'POST, OPTIONS',
+            'access-control-allow-methods': 'GET, POST, OPTIONS',
             'access-control-allow-headers':
-                'Origin, Content-Type, Accept, Authorization'
+                'Origin, Content-Type, Accept, Authorization, x-ts'
           }));
 
   // Simple settings endpoint for clients to read backend_base (optional)
@@ -196,7 +164,10 @@ Future<void> runServer(List<String> args) async {
     final env = Platform.environment;
     final backend = env['BACKEND_BASE'] ?? 'http://localhost:8080';
     return Response.ok(jsonEncode({'backend_base': backend}),
-        headers: {'content-type': 'application/json'});
+        headers: {
+          'content-type': 'application/json',
+          'access-control-allow-origin': '*'
+        });
   });
 
   router.post('/admin/login', (Request r) async {
@@ -2560,6 +2531,185 @@ Future<void> runServer(List<String> args) async {
       return Response.internalServerError(
           body: jsonEncode({'error': e.toString()}),
           headers: {'content-type': 'application/json'});
+    }
+  });
+
+  // 淘宝签名服务端点：POST /sign/taobao
+  // 为淘宝联盟 API 生成 HMAC-SHA256 签名
+  router.post('/sign/taobao', (Request r) async {
+    try {
+      final env = Platform.environment;
+      final appSecret = env['TAOBAO_APP_SECRET'];
+      if (appSecret == null || appSecret.isEmpty) {
+        return Response.internalServerError(
+            body: jsonEncode({'error': 'TAOBAO_APP_SECRET not configured'}),
+            headers: {
+              'content-type': 'application/json',
+              'access-control-allow-origin': '*'
+            });
+      }
+
+      final bodyStr = await r.readAsString();
+      // 获取时间戳（从 Header 或自动生成）
+      final ts = r.headers['x-ts'] ?? DateTime.now().toUtc().toIso8601String();
+      
+      // 计算 HMAC-SHA256 签名：body + timestamp
+      final dataToSign = bodyStr + ts;
+      final hmac = Hmac(sha256, utf8.encode(appSecret));
+      final digest = hmac.convert(utf8.encode(dataToSign));
+      final signature = digest.toString();
+
+      return Response.ok(jsonEncode({'ts': ts, 'sign': signature}),
+          headers: {
+            'content-type': 'application/json',
+            'access-control-allow-origin': '*'
+          });
+    } catch (e) {
+      return Response.internalServerError(
+          body: jsonEncode({'error': e.toString()}),
+          headers: {
+            'content-type': 'application/json',
+            'access-control-allow-origin': '*'
+          });
+    }
+  });
+
+  // 淘宝链接转换端点：POST /taobao/convert
+  // 将普通商品链接转换为推广链接，生成淘宝口令
+  router.post('/taobao/convert', (Request r) async {
+    try {
+      final env = Platform.environment;
+      final appKey = env['TAOBAO_APP_KEY'];
+      final appSecret = env['TAOBAO_APP_SECRET'];
+      final adzoneId = env['TAOBAO_ADZONE_ID'] ?? '116145250221';
+
+      if (appKey == null || appSecret == null || appKey.isEmpty || appSecret.isEmpty) {
+        return Response.internalServerError(
+            body: jsonEncode({'error': 'TAOBAO_APP_KEY/TAOBAO_APP_SECRET not configured'}),
+            headers: {
+              'content-type': 'application/json',
+              'access-control-allow-origin': '*'
+            });
+      }
+
+      final bodyStr = await r.readAsString();
+      Map<String, dynamic> payload = {};
+      try {
+        payload = jsonDecode(bodyStr) as Map<String, dynamic>;
+      } catch (_) {
+        try {
+          if (bodyStr.trim().isNotEmpty) {
+            payload = Map<String, dynamic>.from(Uri.splitQueryString(bodyStr));
+          }
+        } catch (_) {}
+      }
+
+      final itemId = payload['id']?.toString() ?? payload['item_id']?.toString() ?? payload['num_iid']?.toString() ?? '';
+      final itemUrl = payload['url']?.toString() ?? payload['item_url']?.toString() ?? '';
+
+      if (itemId.isEmpty && itemUrl.isEmpty) {
+        return Response(400,
+            body: jsonEncode({'error': 'id or url parameter required'}),
+            headers: {
+              'content-type': 'application/json',
+              'access-control-allow-origin': '*'
+            });
+      }
+
+      // 使用淘宝客物料链接转换 API: taobao.tbk.dg.material.optional.upgrade 或 taobao.tbk.coupon.convert
+      // 这里使用简化方式调用 taobao.tbk.privilege.get (高佣转链)
+      final apiParams = <String, String>{
+        'method': 'taobao.tbk.privilege.get',
+        'app_key': appKey,
+        'format': 'json',
+        'v': '2.0',
+        'sign_method': 'md5',
+        'adzone_id': adzoneId,
+      };
+
+      // 设置商品 ID 或 URL
+      if (itemId.isNotEmpty) {
+        apiParams['item_id'] = itemId;
+      }
+      if (itemUrl.isNotEmpty) {
+        apiParams['item_url'] = itemUrl;
+      }
+
+      // 生成 GMT+8 时间戳
+      final beijing = DateTime.now().toUtc().add(Duration(hours: 8));
+      apiParams['timestamp'] = beijing.toIso8601String().split('.').first.replaceFirst('T', ' ');
+
+      // 计算签名：MD5(appSecret + key1value1key2value2... + appSecret).toUpperCase()
+      final keys = apiParams.keys.toList()..sort();
+      final sb = StringBuffer();
+      for (final k in keys) {
+        sb.write(k);
+        sb.write(apiParams[k]);
+      }
+      final signBase = appSecret + sb.toString() + appSecret;
+      final signDigest = md5.convert(utf8.encode(signBase)).toString().toUpperCase();
+      apiParams['sign'] = signDigest;
+
+      // 调用淘宝 API
+      final uri = Uri.https('eco.taobao.com', '/router/rest');
+      final resp = await http.post(uri,
+          headers: {'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8'},
+          body: apiParams).timeout(Duration(seconds: 10));
+
+      if (resp.statusCode != 200) {
+        return Response.internalServerError(
+            body: jsonEncode({'error': 'taobao api failed', 'status': resp.statusCode}),
+            headers: {
+              'content-type': 'application/json',
+              'access-control-allow-origin': '*'
+            });
+      }
+
+      final respBody = jsonDecode(resp.body) as Map<String, dynamic>;
+      
+      // 解析响应，提取推广链接和口令
+      final result = <String, dynamic>{};
+      
+      // 尝试从不同的响应格式中提取数据
+      if (respBody.containsKey('tbk_privilege_get_response')) {
+        final data = respBody['tbk_privilege_get_response']['result'] as Map<String, dynamic>?;
+        if (data != null) {
+          result['coupon_share_url'] = data['coupon_click_url'] ?? data['item_url'] ?? '';
+          result['clickURL'] = data['click_url'] ?? data['item_url'] ?? '';
+          result['tpwd'] = data['tpwd'] ?? '';
+          result['coupon_info'] = data['coupon_info'] ?? '';
+          result['max_commission_rate'] = data['max_commission_rate'] ?? '';
+        }
+      }
+      
+      // 添加原始响应用于调试
+      result['raw'] = respBody;
+
+      // 存储调试信息
+      try {
+        final rec = {
+          'path': '/taobao/convert',
+          'query': itemId.isNotEmpty ? itemId : itemUrl,
+          'body': result,
+          'ts': DateTime.now().toIso8601String()
+        };
+        _lastReturnDebug = rec;
+        _lastReturnHistory.add(rec);
+        if (_lastReturnHistory.length > 20) _lastReturnHistory.removeAt(0);
+      } catch (_) {}
+
+      return Response.ok(jsonEncode(result),
+          headers: {
+            'content-type': 'application/json',
+            'access-control-allow-origin': '*'
+          });
+    } catch (e) {
+      return Response.internalServerError(
+          body: jsonEncode({'error': e.toString()}),
+          headers: {
+            'content-type': 'application/json',
+            'access-control-allow-origin': '*'
+          });
     }
   });
 

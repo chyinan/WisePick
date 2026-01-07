@@ -1,0 +1,51 @@
+# Docker 构建忽略文件
+
+# Dart 构建产物
+.dart_tool/
+.packages
+build/
+pubspec.lock
+
+# IDE 和编辑器
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# 环境配置文件 (包含敏感信息)
+.env
+.env.local
+.env.*.local
+
+# 测试和文档
+test/
+doc/
+*.md
+!README.md
+
+# 日志和临时文件
+*.log
+*.tmp
+*.temp
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Python (jd_scraper)
+*.py
+*.pyc
+__pycache__/
+requirements.txt
+venv/
+
+# 调试文件
+debug_page.html
+
+
