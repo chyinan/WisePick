@@ -285,3 +285,10 @@ class MessageBubbleSkeleton extends StatelessWidget {
   }
 }
 
+
+
+
+
+
+
+
