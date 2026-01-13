@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:io' show Platform;
 
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -9,6 +11,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../core/theme/theme_provider.dart';
 import '../features/cart/cart_page.dart';
 import '../features/cart/cart_providers.dart';
+import '../widgets/macos_window_buttons.dart';
 import 'admin_settings_page.dart';
 import 'chat_page.dart';
 import '../core/storage/hive_config.dart';
@@ -114,6 +117,10 @@ class _HomePageState extends ConsumerState<HomePage> {
     }
   }
 
+  /// 判断是否为桌面端
+  bool get _isDesktopPlatform =>
+      !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
+
   @override
   Widget build(BuildContext context) {
     // 监听选品车数量用于显示徽章
@@ -136,52 +143,60 @@ class _HomePageState extends ConsumerState<HomePage> {
         if (isDesktop) {
           // 桌面端：使用 NavigationRail 左侧导航
           return Scaffold(
-            body: Row(
+            body: Column(
               children: [
-                NavigationRail(
-                  selectedIndex: _currentIndex,
-                  onDestinationSelected: (idx) {
-                    if (idx == 2) _onAboutTapped(context);
-                    _onTap(idx);
-                  },
-                  labelType: NavigationRailLabelType.all,
-                  leading: Padding(
-                    padding: const EdgeInsets.only(bottom: 24.0, top: 12.0),
-                    child: CircleAvatar(
-                      radius: 24,
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      child: const Icon(Icons.shopping_bag_outlined,
-                          color: Colors.white),
-                    ),
+                // macOS 风格自定义标题栏
+                if (_isDesktopPlatform) const MacOSTitleBar(),
+                Expanded(
+                  child: Row(
+                    children: [
+                      NavigationRail(
+                        selectedIndex: _currentIndex,
+                        onDestinationSelected: (idx) {
+                          if (idx == 2) _onAboutTapped(context);
+                          _onTap(idx);
+                        },
+                        labelType: NavigationRailLabelType.all,
+                        leading: Padding(
+                          padding: const EdgeInsets.only(bottom: 24.0, top: 12.0),
+                          child: CircleAvatar(
+                            radius: 24,
+                            backgroundColor: Theme.of(context).colorScheme.primary,
+                            child: const Icon(Icons.shopping_bag_outlined,
+                                color: Colors.white),
+                          ),
+                        ),
+                        destinations: [
+                          const NavigationRailDestination(
+                            icon: Icon(Icons.smart_toy_outlined),
+                            selectedIcon: Icon(Icons.smart_toy),
+                            label: Text('AI 助手'),
+                          ),
+                          NavigationRailDestination(
+                            icon: Badge(
+                              isLabelVisible: cartCount > 0,
+                              label: Text('$cartCount'),
+                              child: const Icon(Icons.shopping_cart_outlined),
+                            ),
+                            selectedIcon: Badge(
+                              isLabelVisible: cartCount > 0,
+                              label: Text('$cartCount'),
+                              child: const Icon(Icons.shopping_cart),
+                            ),
+                            label: const Text('选品车'),
+                          ),
+                          const NavigationRailDestination(
+                            icon: Icon(Icons.settings_outlined),
+                            selectedIcon: Icon(Icons.settings),
+                            label: Text('设置'),
+                          ),
+                        ],
+                      ),
+                      const VerticalDivider(thickness: 1, width: 1),
+                      Expanded(child: body),
+                    ],
                   ),
-                  destinations: [
-                    const NavigationRailDestination(
-                      icon: Icon(Icons.smart_toy_outlined),
-                      selectedIcon: Icon(Icons.smart_toy),
-                      label: Text('AI 助手'),
-                    ),
-                    NavigationRailDestination(
-                      icon: Badge(
-                        isLabelVisible: cartCount > 0,
-                        label: Text('$cartCount'),
-                        child: const Icon(Icons.shopping_cart_outlined),
-                      ),
-                      selectedIcon: Badge(
-                        isLabelVisible: cartCount > 0,
-                        label: Text('$cartCount'),
-                        child: const Icon(Icons.shopping_cart),
-                      ),
-                      label: const Text('选品车'),
-                    ),
-                    const NavigationRailDestination(
-                      icon: Icon(Icons.settings_outlined),
-                      selectedIcon: Icon(Icons.settings),
-                      label: Text('设置'),
-                    ),
-                  ],
                 ),
-                const VerticalDivider(thickness: 1, width: 1),
-                Expanded(child: body),
               ],
             ),
           );
@@ -189,7 +204,13 @@ class _HomePageState extends ConsumerState<HomePage> {
 
         // 移动端：使用 BottomNavigationBar 底部导航
         return Scaffold(
-          body: body,
+          body: Column(
+            children: [
+              // macOS 风格自定义标题栏（移动端布局但在桌面平台运行时也显示）
+              if (_isDesktopPlatform) const MacOSTitleBar(),
+              Expanded(child: body),
+            ],
+          ),
           bottomNavigationBar: NavigationBar(
             selectedIndex: _currentIndex,
             onDestinationSelected: (idx) {
