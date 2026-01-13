@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:hive_flutter/hive_flutter.dart';
 
@@ -21,6 +22,8 @@ class PddAdapter {
       'page_size': pageSize,
       'pid': Config.pddPid,
       'with_coupon': withCoupon,
+      // 2024年起拼多多要求 pid 完成授权备案，或传入 custom_parameters
+      'custom_parameters': jsonEncode({'uid': 'wisepick', 'sid': 'app'}),
     };
 
     final resp = await _pdd.searchGoods(biz);

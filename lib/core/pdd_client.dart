@@ -99,5 +99,25 @@ class PddClient {
   Future<dynamic> fetchGoodsDetail(Map<String, dynamic> bizParams, {String? accessToken}) async {
     return _callApi('pdd.ddk.goods.detail', bizParams, accessToken: accessToken);
   }
+
+  /// 调用 pdd.ddk.member.authority.query 查询 PID 授权备案状态
+  /// 返回: bind=1 已绑定备案, bind=0 未绑定备案
+  Future<dynamic> queryAuthorityBind(Map<String, dynamic> bizParams, {String? accessToken}) async {
+    return _callApi('pdd.ddk.member.authority.query', bizParams, accessToken: accessToken);
+  }
+
+  /// 调用 pdd.ddk.rp.prom.url.generate 生成多多进宝推广链接
+  /// channel_type=10 时可生成授权备案链接
+  Future<dynamic> generateRpPromUrl(Map<String, dynamic> bizParams, {String? accessToken}) async {
+    return _callApi('pdd.ddk.rp.prom.url.generate', bizParams, accessToken: accessToken);
+  }
+
+  /// 生成授权备案链接（使用 pdd.ddk.rp.prom.url.generate，channel_type=10）
+  Future<dynamic> generateAuthorityUrl(Map<String, dynamic> bizParams, {String? accessToken}) async {
+    // 确保 channel_type=10 以生成授权备案链接
+    final params = Map<String, dynamic>.from(bizParams);
+    params['channel_type'] = 10;
+    return _callApi('pdd.ddk.rp.prom.url.generate', params, accessToken: accessToken);
+  }
 }
 
