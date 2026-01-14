@@ -56,13 +56,13 @@ class ChatService {
       }
     } else {
       // resolve backend base saved in settings if present
-      String backend = 'http://localhost:8080';
+      String backend = 'http://localhost:9527';
       try {
         if (!Hive.isBoxOpen('settings')) await Hive.openBox('settings');
         final box = Hive.box('settings');
         final String? b = box.get('backend_base') as String?;
         if (b != null && b.trim().isNotEmpty) backend = b.trim();
-        else backend = const String.fromEnvironment('BACKEND_BASE', defaultValue: 'http://localhost:8080');
+        else backend = const String.fromEnvironment('BACKEND_BASE', defaultValue: 'http://localhost:9527');
       } catch (_) {}
       final baseNoTrailing = backend.replaceAll(RegExp(r'/+$'), '');
       url = '$baseNoTrailing/v1/chat/completions';
@@ -210,7 +210,7 @@ class ChatService {
         url = '$baseNoTrailing/v1/chat/completions';
       }
     } else {
-      url = 'http://localhost:8080/v1/chat/completions';
+      url = 'http://localhost:9527/v1/chat/completions';
     }
     // Build messages consistent with non-streaming API and respect embed/debug/max_tokens settings
     bool embedPrompts = true;

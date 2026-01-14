@@ -20,7 +20,7 @@ class JdAdapter {
   Future<List<ProductModel>> search(String keyword, {int pageIndex = 1, int pageSize = 10}) async {
     // Prefer calling the backend proxy which performs signing and returns the
     // raw JD response. This avoids keeping JD app secret in the client.
-    String backend = 'http://localhost:8080';
+    String backend = 'http://localhost:9527';
     try {
       if (!Hive.isBoxOpen('settings')) await Hive.openBox('settings');
       final box = Hive.box('settings');
@@ -91,7 +91,7 @@ class JdAdapter {
       try {
         final skuId = map['skuId']?.toString() ?? '';
         if (skuId.isNotEmpty) {
-          String backend = 'http://localhost:8080';
+          String backend = 'http://localhost:9527';
           try {
             if (!Hive.isBoxOpen('settings')) await Hive.openBox('settings');
             final box = Hive.box('settings');

@@ -63,7 +63,7 @@ class HiveConfig {
   /// 获取设置 Box
   static Box get settings => Hive.box(settingsBox);
 
-  /// 获取选品车 Box
+  /// 获取购物车 Box
   static Box get cart => Hive.box(cartBox);
 
   /// 获取会话 Box

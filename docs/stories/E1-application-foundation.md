@@ -245,10 +245,10 @@ Draft
 
 1. 桌面端（宽度 > 800dp）使用 NavigationRail 左侧导航
 2. 移动端（宽度 ≤ 800dp）使用 BottomNavigationBar 底部导航
-3. 导航项包含：AI 助手、选品车（带数量徽章）、设置
+3. 导航项包含：AI 助手、购物车（带数量徽章）、设置
 4. 页面切换使用 IndexedStack 保持状态
 5. 导航图标使用 outlined/filled 区分选中状态
-6. 选品车图标显示商品数量徽章
+6. 购物车图标显示商品数量徽章
 
 ### Tasks / Subtasks
 
@@ -264,9 +264,9 @@ Draft
   - [ ] 桌面端显示 NavigationRail
   - [ ] 移动端显示 NavigationBar
   - [ ] 配置图标的 outlined/filled 变体
-- [ ] 实现选品车徽章 (AC: 6)
+- [ ] 实现购物车徽章 (AC: 6)
   - [ ] 使用 Badge Widget 显示数量
-  - [ ] 监听选品车状态更新徽章
+  - [ ] 监听购物车状态更新徽章
 
 ### Dev Notes
 
@@ -293,7 +293,7 @@ Draft
       label: Text('$cartCount'),
       child: Icon(Icons.shopping_cart),
     ),
-    label: '选品车',
+    label: '购物车',
   ),
   NavigationDestination(
     icon: Icon(Icons.settings_outlined),
@@ -370,7 +370,7 @@ Draft
 | Box 名称 | 用途 | TypeAdapter |
 |----------|------|-------------|
 | settings | 应用设置 | - |
-| cart_box | 选品车数据 | ProductModelAdapter |
+| cart_box | 购物车数据 | ProductModelAdapter |
 | conversations | 会话历史 | ConversationAdapter |
 | promo_cache | 推广链接缓存 | - |
 
@@ -407,6 +407,19 @@ class ProductModel {
 | Date | Version | Description | Author |
 |------|---------|-------------|--------|
 | 2026-01-06 | 1.0 | 初始创建 | Sarah (PO) |
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

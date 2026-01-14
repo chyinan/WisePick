@@ -8,6 +8,9 @@ import 'package:http/http.dart' as http;
 import 'package:crypto/crypto.dart';
 import 'dart:async';
 
+// 导入京东爬虫服务
+import '../lib/jd_scraper/jd_scraper.dart';
+
 // NOTE: veapi support removed per user request
 
 // In-memory last-return debug store. Use the endpoint /__debug/last_return to inspect.
@@ -162,7 +165,7 @@ Future<void> runServer(List<String> args) async {
   // Simple settings endpoint for clients to read backend_base (optional)
   router.get('/__settings', (Request r) async {
     final env = Platform.environment;
-    final backend = env['BACKEND_BASE'] ?? 'http://localhost:8080';
+    final backend = env['BACKEND_BASE'] ?? 'http://localhost:9527';
     return Response.ok(jsonEncode({'backend_base': backend}),
         headers: {
           'content-type': 'application/json',
@@ -549,7 +552,7 @@ Future<void> runServer(List<String> args) async {
           // we may fall back to Taobao when configured.
           if (useTaobao) {
             final uri = Uri.parse(
-                'http://localhost:8080/taobao/tbk_search?para=${Uri.encodeComponent(query)}');
+                'http://localhost:9527/taobao/tbk_search?para=${Uri.encodeComponent(query)}');
             final resp = await http.get(uri).timeout(Duration(seconds: 8));
             if (resp.statusCode != 200)
               throw Exception('taobao proxy failed ${resp.statusCode}');
@@ -739,7 +742,7 @@ Future<void> runServer(List<String> args) async {
       } else if (useTaobao) {
         // call local taobao proxy route we already implemented
         final uri = Uri.parse(
-            'http://localhost:8080/taobao/tbk_search?para=${Uri.encodeComponent(query)}');
+            'http://localhost:9527/taobao/tbk_search?para=${Uri.encodeComponent(query)}');
         final resp = await http.get(uri).timeout(Duration(seconds: 8));
         if (resp.statusCode != 200)
           throw Exception('taobao proxy failed ${resp.statusCode}');
@@ -769,7 +772,7 @@ Future<void> runServer(List<String> args) async {
           // If the caller requested JD or Taobao is not configured, prefer JD
           try {
             final uri = Uri.parse(
-                'http://localhost:8080/jd/union/goods/query?keyword=${Uri.encodeComponent(query)}&pageIndex=${params['page'] ?? params['pageIndex'] ?? '1'}&pageSize=${params['page_size'] ?? params['pageSize'] ?? '20'}');
+                'http://localhost:9527/jd/union/goods/query?keyword=${Uri.encodeComponent(query)}&pageIndex=${params['page'] ?? params['pageIndex'] ?? '1'}&pageSize=${params['page_size'] ?? params['pageSize'] ?? '20'}');
             final resp = await http.get(uri).timeout(Duration(seconds: 8));
             if (resp.statusCode != 200)
               throw Exception('jd proxy failed ${resp.statusCode}');
@@ -873,7 +876,7 @@ Future<void> runServer(List<String> args) async {
             // fall back to Taobao if JD call failed
             if (useTaobao) {
               final uri = Uri.parse(
-                  'http://localhost:8080/taobao/tbk_search?para=${Uri.encodeComponent(query)}');
+                  'http://localhost:9527/taobao/tbk_search?para=${Uri.encodeComponent(query)}');
               final resp = await http.get(uri).timeout(Duration(seconds: 8));
               if (resp.statusCode != 200)
                 throw Exception('taobao proxy failed ${resp.statusCode}');
@@ -970,7 +973,7 @@ Future<void> runServer(List<String> args) async {
             for (final simplified in candidates) {
               if (simplified.isEmpty) continue;
               final uri2 = Uri.parse(
-                  'http://localhost:8080/taobao/tbk_search?para=${Uri.encodeComponent(simplified)}');
+                  'http://localhost:9527/taobao/tbk_search?para=${Uri.encodeComponent(simplified)}');
               try {
                 final resp2 =
                     await http.get(uri2).timeout(Duration(seconds: 6));
@@ -1010,7 +1013,7 @@ Future<void> runServer(List<String> args) async {
           if (items == null || (items is List && items.isEmpty)) {
             try {
               final uri3 = Uri.parse(
-                  'http://localhost:8080/taobao/tbk_search?para=${Uri.encodeComponent(query)}&method=taobao.tbk.shop.get&fields=user_id,shop_title,shop_type,seller_nick,pict_url,shop_url');
+                  'http://localhost:9527/taobao/tbk_search?para=${Uri.encodeComponent(query)}&method=taobao.tbk.shop.get&fields=user_id,shop_title,shop_type,seller_nick,pict_url,shop_url');
               final resp3 = await http.get(uri3).timeout(Duration(seconds: 6));
               if (resp3.statusCode == 200) {
                 final body3 = jsonDecode(resp3.body) as Map<String, dynamic>;
@@ -1570,7 +1573,7 @@ Future<void> runServer(List<String> args) async {
               platformParam.isEmpty)) {
         try {
           final uri = Uri.parse(
-              'http://localhost:8080/jd/union/goods/query?keyword=${Uri.encodeComponent(query)}&pageIndex=${params['page'] ?? params['pageIndex'] ?? '1'}&pageSize=${params['page_size'] ?? params['pageSize'] ?? '20'}');
+              'http://localhost:9527/jd/union/goods/query?keyword=${Uri.encodeComponent(query)}&pageIndex=${params['page'] ?? params['pageIndex'] ?? '1'}&pageSize=${params['page_size'] ?? params['pageSize'] ?? '20'}');
           final respJ = await http.get(uri).timeout(Duration(seconds: 8));
           if (respJ.statusCode == 200) {
             final bodyJ = jsonDecode(respJ.body);
@@ -3823,7 +3826,14 @@ Future<void> runServer(List<String> args) async {
     }
   });
 
-  router.get('/api/get-jd-promotion', (Request r) async {
+  // ==================== 京东爬虫服务 (新 Dart 版本) ====================
+  // 挂载新的京东爬虫服务路由
+  final jdScraperRoutes = JdScraperRoutes();
+  router.mount('/', jdScraperRoutes.router.call);
+
+  // 旧版 API 路由 (Python 版本，保留作为备用)
+  // 使用 /api/get-jd-promotion-legacy 以区分新旧版本
+  router.get('/api/get-jd-promotion-legacy', (Request r) async {
     final sku = r.url.queryParameters['sku'];
     if (sku == null || sku.isEmpty) {
       return Response.badRequest(
@@ -3901,6 +3911,54 @@ Future<void> runServer(List<String> args) async {
           headers: {'Content-Type': 'application/json'});
     }
   });
+  
+  // 新版 API 路由 (Dart 版本) - 兼容旧接口格式
+  router.get('/api/get-jd-promotion', (Request r) async {
+    final sku = r.url.queryParameters['sku'];
+    if (sku == null || sku.isEmpty) {
+      return Response.badRequest(
+          body: jsonEncode(
+              {'status': 'error', 'message': 'Missing sku parameter'}),
+          headers: {'Content-Type': 'application/json'});
+    }
+
+    try {
+      final service = JdScraperService.instance;
+      await service.initialize();
+      
+      final info = await service.getProductInfo(sku);
+      
+      // 返回兼容旧格式的响应
+      final data = {
+        'promotionUrl': info.shortLink ?? info.promotionLink,
+        'price': info.price,
+        'title': info.title,
+        'skuId': info.skuId,
+        'commission': info.commission,
+        'commissionRate': info.commissionRate,
+        'cached': info.cached,
+      };
+      
+      return Response.ok(jsonEncode({'status': 'success', 'data': data}),
+          headers: {'Content-Type': 'application/json'});
+    } on ScraperException catch (e) {
+      final statusCode = e.type == ScraperErrorType.cookieExpired ? 401 : 500;
+      return Response(statusCode,
+          body: jsonEncode({
+            'status': 'error',
+            'errorType': e.type.name,
+            'message': e.message
+          }),
+          headers: {'Content-Type': 'application/json'});
+    } catch (e) {
+      return Response.internalServerError(
+          body: jsonEncode({
+            'status': 'error',
+            'message': 'Scraper error: $e'
+          }),
+          headers: {'Content-Type': 'application/json'});
+    }
+  });
 
   final handler =
       const Pipeline().addMiddleware(logRequests()).addHandler(router.call);
@@ -3913,7 +3971,7 @@ Future<void> runServer(List<String> args) async {
     print('Server listening on port ${server.port}');
   } else {
     const int maxAttempts = 10;
-    int attemptPort = 8080;
+    int attemptPort = 9527;
     for (int i = 0; i < maxAttempts; i++) {
       final port = attemptPort + i;
       try {

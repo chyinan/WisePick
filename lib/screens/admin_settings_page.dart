@@ -110,7 +110,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                         decoration: InputDecoration(
                           filled: true,
                           fillColor: colorScheme.surfaceVariant,
-                          hintText: 'http://localhost:8080 或 https://api.yourdomain.com',
+                          hintText: 'http://localhost:9527 或 https://api.yourdomain.com',
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                         ),

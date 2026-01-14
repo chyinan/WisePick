@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
+import 'package:dio/dio.dart';
+import 'package:hive/hive.dart';
+import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wisepick_dart_version/features/products/product_model.dart';
 import 'package:wisepick_dart_version/features/products/product_detail_page.dart';
@@ -23,7 +26,7 @@ class CartPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final asyncList = ref.watch(cartItemsProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('我的选品车')),
+      appBar: AppBar(title: const Text('我的购物车')),
       body: asyncList.when(
         data: (List<Map<String, dynamic>> list) {
           if (list.isEmpty) {
@@ -54,7 +57,7 @@ class CartPage extends ConsumerWidget {
                   onRefresh: () async {
                     // 刷新价格
                     await PriceRefreshService().refreshCartPrices();
-                    // 刷新选品车数据
+                    // 刷新购物车数据
                     ref.invalidate(cartItemsProvider);
                   },
                   child: ListView.separated(
@@ -264,34 +267,141 @@ class _CartBottomBar extends ConsumerWidget {
   }
 
   void _showCheckoutDialog(BuildContext context, List<Map<String, dynamic>> list, Map<String, bool> sel) {
-     // Simplified copy link logic for demo
      final selectedItems = list.where((m) => sel[m['id']] == true).toList();
      showDialog(
         context: context,
-        builder: (ctx) => AlertDialog(
-           title: const Text('商品链接'),
-           content: SizedBox(
-              width: double.maxFinite,
-              child: SingleChildScrollView(
-                 child: Column(
-                    children: selectedItems.map((m) {
-                       final p = ProductModel.fromMap(m);
-                       return ListTile(
-                          title: Text(p.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-                          trailing: TextButton(
-                             child: const Text('复制'),
-                             onPressed: () {
-                                Clipboard.setData(ClipboardData(text: p.link));
-                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已复制')));
-                             },
-                          ),
-                       );
-                    }).toList(),
-                 ),
-              ),
-           ),
-           actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('关闭'))],
-        ),
+        builder: (ctx) => _CheckoutLinkDialog(selectedItems: selectedItems),
      );
+  }
+}
+
+/// 商品链接弹窗（支持异步获取推广链接）
+class _CheckoutLinkDialog extends StatefulWidget {
+  final List<Map<String, dynamic>> selectedItems;
+  const _CheckoutLinkDialog({required this.selectedItems});
+
+  @override
+  State<_CheckoutLinkDialog> createState() => _CheckoutLinkDialogState();
+}
+
+class _CheckoutLinkDialogState extends State<_CheckoutLinkDialog> {
+  final Map<String, String> _promotionLinks = {};
+  final Map<String, bool> _loadingStates = {};
+  final _dio = Dio();
+
+  Future<String> _getBackendBase() async {
+    String backend = 'http://localhost:9527';
+    try {
+      if (!Hive.isBoxOpen('settings')) await Hive.openBox('settings');
+      final box = Hive.box('settings');
+      final String? b = box.get('backend_base') as String?;
+      if (b != null && b.trim().isNotEmpty) {
+        backend = b.trim();
+      } else {
+        backend = Platform.environment['BACKEND_BASE'] ?? backend;
+      }
+    } catch (_) {}
+    return backend;
+  }
+
+  Future<void> _fetchAndCopyLink(ProductModel p) async {
+    setState(() => _loadingStates[p.id] = true);
+    
+    try {
+      String? link = p.link;
+      
+      // 如果是京东商品且没有有效链接，调用后端获取推广链接
+      if (p.platform == 'jd' && (link.isEmpty || !link.contains('u.jd.com'))) {
+        final backend = await _getBackendBase();
+        try {
+          final response = await _dio.get(
+            '$backend/api/get-jd-promotion',
+            queryParameters: {'sku': p.id},
+          );
+          
+          if (response.data != null && response.data is Map) {
+            final data = response.data as Map<String, dynamic>;
+            // 尝试从响应中提取推广链接
+            link = data['promotionLink'] as String? ??
+                   data['shortLink'] as String? ??
+                   data['link'] as String? ??
+                   '';
+          }
+        } catch (e) {
+          debugPrint('获取京东推广链接失败: $e');
+        }
+      }
+      
+      // 如果仍然没有链接，使用原始商品链接作为备用
+      if (link == null || link.isEmpty) {
+        if (p.platform == 'jd') {
+          link = 'https://item.jd.com/${p.id}.html';
+        } else {
+          link = p.link;
+        }
+      }
+      
+      _promotionLinks[p.id] = link;
+      
+      // 复制到剪贴板
+      await Clipboard.setData(ClipboardData(text: link));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('已复制: $link')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('获取链接失败: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _loadingStates[p.id] = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('商品链接'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: SingleChildScrollView(
+          child: Column(
+            children: widget.selectedItems.map((m) {
+              final p = ProductModel.fromMap(m);
+              final isLoading = _loadingStates[p.id] ?? false;
+              final cachedLink = _promotionLinks[p.id];
+              
+              return ListTile(
+                title: Text(p.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                subtitle: cachedLink != null 
+                    ? Text(cachedLink, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12))
+                    : null,
+                trailing: isLoading
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : TextButton(
+                        onPressed: () => _fetchAndCopyLink(p),
+                        child: const Text('复制'),
+                      ),
+              );
+            }).toList(),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('关闭'),
+        ),
+      ],
+    );
   }
 }

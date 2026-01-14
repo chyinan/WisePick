@@ -15,7 +15,7 @@
 
 | 变量名 | 必需 | 说明 |
 |--------|------|------|
-| `PORT` | 否 | 服务器端口，默认 `8080` |
+| `PORT` | 否 | 服务器端口，默认 `9527` |
 | `ADMIN_PASSWORD` | 是 | 管理员密码，用于后台设置 |
 | `OPENAI_API_URL` | 否 | OpenAI API 地址，默认官方地址 |
 | `OPENAI_API_KEY` | 否 | OpenAI API Key（也可由前端提供） |
@@ -62,7 +62,7 @@ docker build -t wisepick-proxy .
 # 运行容器
 docker run -d \
   --name wisepick-proxy \
-  -p 8080:8080 \
+  -p 9527:9527 \
   -e ADMIN_PASSWORD=your_password \
   -e OPENAI_API_KEY=sk-xxx \
   wisepick-proxy
@@ -79,7 +79,7 @@ docker rm wisepick-proxy
 
 ```bash
 # 检查服务是否正常运行
-curl http://localhost:8080/__settings
+curl http://localhost:9527/__settings
 ```
 
 ---
@@ -104,7 +104,7 @@ dart run bin/proxy_server.dart
 
 **交互式配置**: 首次运行时，如果环境变量未配置，服务器会提示输入相关配置项。配置会自动保存到 `.env` 文件。
 
-**端口自动切换**: 默认端口 `8080`，如被占用会自动尝试下一个可用端口（最多 10 次）。
+**端口自动切换**: 默认端口 `9527`，如被占用会自动尝试下一个可用端口（最多 10 次）。
 
 ---
 

@@ -10,7 +10,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../core/theme/theme_provider.dart';
 import '../features/cart/cart_page.dart';
-import '../features/cart/cart_providers.dart';
+import '../features/chat/chat_providers.dart';
+import '../features/chat/conversation_model.dart';
 import '../widgets/macos_window_buttons.dart';
 import 'admin_settings_page.dart';
 import 'chat_page.dart';
@@ -30,6 +31,7 @@ class HomePage extends ConsumerStatefulWidget {
 class _HomePageState extends ConsumerState<HomePage> {
   int _currentIndex = 0;
   int _aboutTapCount = 0;
+  bool _showConversationPanel = false;  // 控制桌面端消息列表面板显示
 
   Future<bool> _verifyAdminPassword(String password) async {
     final trimmed = password.trim();
@@ -46,6 +48,10 @@ class _HomePageState extends ConsumerState<HomePage> {
   void _onTap(int idx) => setState(() {
         if (idx != 2) {
           _aboutTapCount = 0;
+        }
+        // 切换到非 AI 助手页面时，自动关闭消息列表面板
+        if (idx != 0) {
+          _showConversationPanel = false;
         }
         _currentIndex = idx;
       });
@@ -123,9 +129,6 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    // 监听选品车数量用于显示徽章
-    final cartCount = ref.watch(cartCountProvider);
-
     final Widget body;
     if (_currentIndex == 0) {
       body = const ChatPage();
@@ -159,11 +162,39 @@ class _HomePageState extends ConsumerState<HomePage> {
                         labelType: NavigationRailLabelType.all,
                         leading: Padding(
                           padding: const EdgeInsets.only(bottom: 24.0, top: 12.0),
-                          child: CircleAvatar(
-                            radius: 24,
-                            backgroundColor: Theme.of(context).colorScheme.primary,
-                            child: const Icon(Icons.shopping_bag_outlined,
-                                color: Colors.white),
+                          child: Tooltip(
+                            message: _currentIndex == 0
+                                ? (_showConversationPanel ? '关闭对话列表' : '打开对话列表')
+                                : '返回 AI 助手',
+                            child: InkWell(
+                              onTap: () {
+                                setState(() {
+                                  if (_currentIndex == 0) {
+                                    // 在 AI 助手页面：切换消息列表面板
+                                    _showConversationPanel = !_showConversationPanel;
+                                  } else {
+                                    // 在其他页面：跳转回 AI 助手并打开消息列表
+                                    _currentIndex = 0;
+                                    _showConversationPanel = true;
+                                  }
+                                });
+                              },
+                              borderRadius: BorderRadius.circular(24),
+                              child: CircleAvatar(
+                                radius: 24,
+                                backgroundColor: (_currentIndex == 0 && _showConversationPanel)
+                                    ? Theme.of(context).colorScheme.primaryContainer
+                                    : const Color(0xFF6750A4), // 消息列表按钮无论深色模式还是浅色模式都固定深紫色主题色
+                                child: Icon(
+                                  (_currentIndex == 0 && _showConversationPanel) 
+                                      ? Icons.close 
+                                      : Icons.shopping_bag_outlined,
+                                  color: (_currentIndex == 0 && _showConversationPanel)
+                                      ? Theme.of(context).colorScheme.primary
+                                      : Colors.white,
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                         destinations: [
@@ -172,18 +203,10 @@ class _HomePageState extends ConsumerState<HomePage> {
                             selectedIcon: Icon(Icons.smart_toy),
                             label: Text('AI 助手'),
                           ),
-                          NavigationRailDestination(
-                            icon: Badge(
-                              isLabelVisible: cartCount > 0,
-                              label: Text('$cartCount'),
-                              child: const Icon(Icons.shopping_cart_outlined),
-                            ),
-                            selectedIcon: Badge(
-                              isLabelVisible: cartCount > 0,
-                              label: Text('$cartCount'),
-                              child: const Icon(Icons.shopping_cart),
-                            ),
-                            label: const Text('选品车'),
+                          const NavigationRailDestination(
+                            icon: Icon(Icons.shopping_cart_outlined),
+                            selectedIcon: Icon(Icons.shopping_cart),
+                            label: Text('购物车'),
                           ),
                           const NavigationRailDestination(
                             icon: Icon(Icons.settings_outlined),
@@ -193,6 +216,13 @@ class _HomePageState extends ConsumerState<HomePage> {
                         ],
                       ),
                       const VerticalDivider(thickness: 1, width: 1),
+                      // 桌面端消息列表面板
+                      if (_showConversationPanel && _currentIndex == 0)
+                        _DesktopConversationPanel(
+                          onClose: () => setState(() => _showConversationPanel = false),
+                        ),
+                      if (_showConversationPanel && _currentIndex == 0)
+                        const VerticalDivider(thickness: 1, width: 1),
                       Expanded(child: body),
                     ],
                   ),
@@ -223,18 +253,10 @@ class _HomePageState extends ConsumerState<HomePage> {
                 selectedIcon: Icon(Icons.smart_toy),
                 label: 'AI 助手',
               ),
-              NavigationDestination(
-                icon: Badge(
-                  isLabelVisible: cartCount > 0,
-                  label: Text('$cartCount'),
-                  child: const Icon(Icons.shopping_cart_outlined),
-                ),
-                selectedIcon: Badge(
-                  isLabelVisible: cartCount > 0,
-                  label: Text('$cartCount'),
-                  child: const Icon(Icons.shopping_cart),
-                ),
-                label: '选品车',
+              const NavigationDestination(
+                icon: Icon(Icons.shopping_cart_outlined),
+                selectedIcon: Icon(Icons.shopping_cart),
+                label: '购物车',
               ),
               const NavigationDestination(
                 icon: Icon(Icons.settings_outlined),
@@ -298,7 +320,7 @@ class _PriceNotificationSwitchState extends ConsumerState<_PriceNotificationSwit
 
     return SwitchListTile(
       title: const Text('价格变化通知'),
-      subtitle: const Text('当选品车中的商品降价时发送通知'),
+      subtitle: const Text('当购物车中的商品降价时发送通知'),
       value: _enabled,
       onChanged: _updateSetting,
     );
@@ -493,6 +515,225 @@ class _SectionHeader extends StatelessWidget {
               color: Theme.of(context).colorScheme.primary,
               fontWeight: FontWeight.bold,
             ),
+      ),
+    );
+  }
+}
+
+/// 桌面端消息列表面板
+class _DesktopConversationPanel extends ConsumerStatefulWidget {
+  final VoidCallback onClose;
+  
+  const _DesktopConversationPanel({required this.onClose});
+
+  @override
+  ConsumerState<_DesktopConversationPanel> createState() => _DesktopConversationPanelState();
+}
+
+class _DesktopConversationPanelState extends ConsumerState<_DesktopConversationPanel> {
+  List<ConversationModel> _conversations = [];
+  final TextEditingController _searchController = TextEditingController();
+  bool _isLoading = true;
+
+  List<ConversationModel> get _filteredConversations {
+    final q = _searchController.text.trim().toLowerCase();
+    if (q.isEmpty) return _conversations;
+    return _conversations.where((c) => c.title.toLowerCase().contains(q)).toList();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadConversations();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadConversations() async {
+    try {
+      final repo = ref.read(conversationRepositoryProvider);
+      final list = await repo.listConversations();
+      if (mounted) {
+        setState(() {
+          _conversations = list;
+          _isLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _newConversation() async {
+    final notifier = ref.read(chatStateNotifierProvider.notifier);
+    await notifier.createNewConversation();
+    await _loadConversations();
+  }
+
+  Future<void> _deleteConversation(ConversationModel c) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('删除会话'),
+        content: Text('确定要删除「${c.title}」吗？'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('删除', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      final notifier = ref.read(chatStateNotifierProvider.notifier);
+      await notifier.deleteConversationById(c.id);
+      await _loadConversations();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final currentId = ref.watch(chatStateNotifierProvider).currentConversationId;
+    
+    return Container(
+      width: 280,
+      color: theme.colorScheme.surfaceContainerLowest,
+      child: Column(
+        children: [
+          // 头部
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: theme.dividerColor.withOpacity(0.5)),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.chat_bubble_outline, size: 20, color: theme.colorScheme.primary),
+                const SizedBox(width: 8),
+                Text('对话列表', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+                const Spacer(),
+                IconButton(
+                  icon: Icon(Icons.add, size: 20, color: theme.colorScheme.primary),
+                  tooltip: '新建对话',
+                  onPressed: _newConversation,
+                  visualDensity: VisualDensity.compact,
+                ),
+              ],
+            ),
+          ),
+          // 搜索框
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: '搜索对话...',
+                prefixIcon: const Icon(Icons.search, size: 20),
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: theme.dividerColor),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: theme.dividerColor.withOpacity(0.5)),
+                ),
+              ),
+              style: theme.textTheme.bodyMedium,
+              onChanged: (_) => setState(() {}),
+            ),
+          ),
+          // 对话列表
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _filteredConversations.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.chat_outlined, size: 48, color: theme.colorScheme.outline),
+                            const SizedBox(height: 12),
+                            Text('暂无对话', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.outline)),
+                            const SizedBox(height: 8),
+                            TextButton.icon(
+                              onPressed: _newConversation,
+                              icon: const Icon(Icons.add, size: 18),
+                              label: const Text('新建对话'),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        itemCount: _filteredConversations.length,
+                        itemBuilder: (ctx, idx) {
+                          final c = _filteredConversations[idx];
+                          final isSelected = c.id == currentId;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 4),
+                            child: Material(
+                              color: isSelected 
+                                  ? theme.colorScheme.primaryContainer.withOpacity(0.5)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(8),
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(8),
+                                onTap: () {
+                                  final notifier = ref.read(chatStateNotifierProvider.notifier);
+                                  notifier.loadConversation(c);
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              c.title,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: theme.textTheme.bodyMedium?.copyWith(
+                                                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              '${c.messages.length} 条消息',
+                                              style: theme.textTheme.bodySmall?.copyWith(
+                                                color: theme.colorScheme.outline,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: Icon(Icons.delete_outline, size: 18, color: theme.colorScheme.outline),
+                                        tooltip: '删除',
+                                        onPressed: () => _deleteConversation(c),
+                                        visualDensity: VisualDensity.compact,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+          ),
+        ],
       ),
     );
   }

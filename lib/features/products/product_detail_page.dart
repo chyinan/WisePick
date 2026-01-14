@@ -101,7 +101,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
     try {
       // Replace with your actual server address
       final uri = Uri.parse(
-        'http://127.0.0.1:8080/api/get-jd-promotion?sku=${widget.product.id}',
+        'http://127.0.0.1:9527/api/get-jd-promotion?sku=${widget.product.id}',
       );
       final response = await http.get(uri).timeout(const Duration(minutes: 2));
 
@@ -522,6 +522,14 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
 
   Widget _buildPriceDiffLabel(BuildContext context, double? currentPrice) {
     if (!_hasCartRecord || _initialCartPrice == null || currentPrice == null) {
+      return const SizedBox.shrink();
+    }
+    // 如果初始价格为 0 或非常小，视为无效记录（商品加入时价格未获取）
+    if (_initialCartPrice! < 0.01) {
+      return const SizedBox.shrink();
+    }
+    // 如果当前价格为 0 或非常小，也不显示比价
+    if (currentPrice < 0.01) {
       return const SizedBox.shrink();
     }
     final delta = currentPrice - _initialCartPrice!;
@@ -1039,6 +1047,9 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                     final bool hasPrice =
                         (_promotionData?['price'] != null) ||
                         (cachedPrice != null);
+                    // 检查是否下架（后端返回 isOffShelf 或价格为 0）
+                    final bool isOffShelf = _promotionData?['isOffShelf'] == true ||
+                        (effectivePrice != null && effectivePrice < 0.01);
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -1053,19 +1064,36 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                                     .onSurfaceVariant,
                               ),
                             ),
-                            Text(
-                              effectivePrice != null
-                                  ? '\u00a5${effectivePrice.toStringAsFixed(2)}'
-                                  : '\u00a5--.--',
-                              style: TextStyle(
-                                color:
-                                    Theme.of(context).colorScheme.primary,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
+                            if (isOffShelf)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.errorContainer,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  '商品处于下架/无货状态',
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.error,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              )
+                            else
+                              Text(
+                                effectivePrice != null
+                                    ? '\u00a5${effectivePrice.toStringAsFixed(2)}'
+                                    : '\u00a5--.--',
+                                style: TextStyle(
+                                  color:
+                                      Theme.of(context).colorScheme.primary,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                            ),
                             const SizedBox(width: 12),
-                            if (!hasPrice)
+                            if (!hasPrice && !isOffShelf)
                               _isFetchingPromotion
                                   ? const SizedBox(
                                       width: 24,
@@ -1080,8 +1108,9 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                                     ),
                           ],
                         ),
-                        _buildPriceDiffLabel(
-                            context, effectivePrice?.toDouble()),
+                        if (!isOffShelf)
+                          _buildPriceDiffLabel(
+                              context, effectivePrice?.toDouble()),
                       ],
                     );
                   } else if (widget.product.platform == 'taobao') {
@@ -1146,6 +1175,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                     );
                   } else {
                     final price = product.price;
+                    final bool isOffShelf = price < 0.01;
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -1160,18 +1190,36 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                                     .onSurfaceVariant,
                               ),
                             ),
-                            Text(
-                              '\u00a5${price.toStringAsFixed(2)}',
-                              style: TextStyle(
-                                color:
-                                    Theme.of(context).colorScheme.primary,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
+                            if (isOffShelf)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.errorContainer,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  '商品处于下架/无货状态',
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.error,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              )
+                            else
+                              Text(
+                                '\u00a5${price.toStringAsFixed(2)}',
+                                style: TextStyle(
+                                  color:
+                                      Theme.of(context).colorScheme.primary,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                            ),
                           ],
                         ),
-                        _buildPriceDiffLabel(context, price),
+                        if (!isOffShelf)
+                          _buildPriceDiffLabel(context, price),
                       ],
                     );
                   }
@@ -1336,7 +1384,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                           height: 48,
                           child: Center(child: CircularProgressIndicator()),
                         )
-                      : ElevatedButton.icon(
+                      : FilledButton.icon(
                           onPressed: () async {
                             setState(() => _isLoadingLink = true);
 
@@ -1655,15 +1703,8 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
 
                             setState(() => _isLoadingLink = false);
                           },
-                          icon: Icon(
-                            Icons.open_in_new,
-                            color: Theme.of(context).colorScheme.onPrimary,
-                          ),
-                          label: Text(
-                            '前往购买',
-                            style: Theme.of(context).textTheme.labelLarge
-                                ?.copyWith(color: Colors.white),
-                          ),
+                          icon: const Icon(Icons.open_in_new),
+                          label: const Text('前往购买'),
                         ),
                 ],
               ),

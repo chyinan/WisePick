@@ -642,22 +642,28 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       });
     }
 
+    // 检测是否为宽屏（桌面端），宽屏时不显示菜单按钮（因为有侧边栏）
+    final isWideScreen = MediaQuery.of(context).size.width >= 600;
+    
     return Scaffold(
-        drawer: const HomeDrawer(),
+        drawer: isWideScreen ? null : const HomeDrawer(),
         appBar: AppBar(
            title: const Text('AI 导购助手'),
            centerTitle: false,
-           leading: Builder(
-             builder: (context) =>              Semantics(
-               label: '打开对话列表',
-               button: true,
-               child: IconButton(
-                 icon: const Icon(Icons.menu),
-                 tooltip: '打开对话列表',
-                 onPressed: () => Scaffold.of(context).openDrawer(),
-               ),
-             ),
-           ),
+           leading: isWideScreen 
+               ? null  // 桌面端不显示菜单按钮
+               : Builder(
+                   builder: (context) => Semantics(
+                     label: '打开对话列表',
+                     button: true,
+                     child: IconButton(
+                       icon: const Icon(Icons.menu),
+                       tooltip: '打开对话列表',
+                       onPressed: () => Scaffold.of(context).openDrawer(),
+                     ),
+                   ),
+                 ),
+           automaticallyImplyLeading: false,  // 禁止自动添加返回按钮
            actions: [
              Semantics(
                label: '新建对话',
@@ -712,8 +718,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 ),
               ),
 
-              // Quick Suggestions Chips
-              _buildQuickSuggestionsBar(context),
+              // Quick Suggestions Chips - 只在新对话时显示
+              Consumer(builder: (context, ref2, _) {
+                final msgs = ref2.watch(chatStateNotifierProvider).messages;
+                if (msgs.isEmpty) {
+                  return _buildQuickSuggestionsBar(context);
+                }
+                return const SizedBox.shrink();
+              }),
               
               // Input Area
               Container(

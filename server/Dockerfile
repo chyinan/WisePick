@@ -39,14 +39,14 @@ COPY --from=build /app/bin/server /app/bin/server
 USER appuser
 
 # 暴露端口
-EXPOSE 8080
+EXPOSE 9527
 
 # 设置环境变量默认值
-ENV PORT=8080
+ENV PORT=9527
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8080/__settings || exit 1
+    CMD curl -f http://localhost:9527/__settings || exit 1
 
 # 启动命令
 CMD ["/app/bin/server"]

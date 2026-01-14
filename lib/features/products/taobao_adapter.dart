@@ -40,9 +40,9 @@ class TaobaoAdapter {
       if (sourceUrl.isNotEmpty) {
         try {
           // Read backend base from settings via a simple settings endpoint or assume localhost
-          String backend = 'http://localhost:8080';
+          String backend = 'http://localhost:9527';
           try {
-            final confResp = await _client.get('http://localhost:8080/__settings');
+            final confResp = await _client.get('http://localhost:9527/__settings');
             if (confResp.statusCode == 200 && confResp.data is Map && confResp.data['backend_base'] != null) {
               backend = confResp.data['backend_base'] as String;
             }
