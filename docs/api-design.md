@@ -41,7 +41,7 @@
 
 ### 1.4 API 基础信息
 
-**基础 URL**: `http://localhost:8080` (开发环境)  
+**基础 URL**: `http://localhost:9527` (开发环境)  
 **协议**: HTTP/HTTPS  
 **数据格式**: JSON  
 **字符编码**: UTF-8  
@@ -913,7 +913,7 @@ if (response.data['success'] == true) {
 **响应格式**:
 ```json
 {
-  "backend_base": "http://localhost:8080"
+  "backend_base": "http://localhost:9527"
 }
 ```
 
@@ -925,7 +925,7 @@ if (response.data['success'] == true) {
 
 **配置说明**:
 - 后端地址可通过环境变量 `BACKEND_BASE` 配置
-- 默认值: `http://localhost:8080`
+- 默认值: `http://localhost:9527`
 
 **前端调用示例**:
 ```dart
@@ -1248,7 +1248,7 @@ import 'dart:convert';
 
 Future<void> streamChat() async {
   final dio = Dio();
-  final backendBase = 'http://localhost:8080';
+  final backendBase = 'http://localhost:9527';
   final apiKey = 'your-openai-api-key';
   
   try {
@@ -1287,7 +1287,7 @@ Future<void> streamChat() async {
 ```dart
 Future<List<Map<String, dynamic>>> searchProducts(String keyword) async {
   final apiClient = ApiClient();
-  final backendBase = 'http://localhost:8080';
+  final backendBase = 'http://localhost:9527';
   
   try {
     final response = await apiClient.get(
@@ -1317,7 +1317,7 @@ Future<List<Map<String, dynamic>>> searchProducts(String keyword) async {
 ```dart
 Future<String?> generatePromotionLink(Map<String, dynamic> product) async {
   final apiClient = ApiClient();
-  final backendBase = 'http://localhost:8080';
+  final backendBase = 'http://localhost:9527';
   
   try {
     String? link;
@@ -1371,7 +1371,7 @@ Future<String?> generatePromotionLink(Map<String, dynamic> product) async {
 #### 13.2.1 AI 聊天
 
 ```bash
-curl -X POST http://localhost:8080/v1/chat/completions \
+curl -X POST http://localhost:9527/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{
@@ -1386,13 +1386,13 @@ curl -X POST http://localhost:8080/v1/chat/completions \
 #### 13.2.2 商品搜索
 
 ```bash
-curl -X GET "http://localhost:8080/api/products/search?query=USB+DAC&page_no=1&page_size=10&platform=all"
+curl -X GET "http://localhost:9527/api/products/search?query=USB+DAC&page_no=1&page_size=10&platform=all"
 ```
 
 #### 13.2.3 淘宝签名
 
 ```bash
-curl -X POST http://localhost:8080/sign/taobao \
+curl -X POST http://localhost:9527/sign/taobao \
   -H "Content-Type: application/json" \
   -H "x-ts: 2024-01-01T00:00:00Z" \
   -d '{
@@ -1404,7 +1404,7 @@ curl -X POST http://localhost:8080/sign/taobao \
 #### 13.2.4 管理员登录
 
 ```bash
-curl -X POST http://localhost:8080/admin/login \
+curl -X POST http://localhost:9527/admin/login \
   -H "Content-Type: application/json" \
   -d '{
     "password": "your_admin_password"
@@ -1573,7 +1573,7 @@ import 'dart:convert';
 void main() {
   test('Admin login with correct password', () async {
     final response = await http.post(
-      Uri.parse('http://localhost:8080/admin/login'),
+      Uri.parse('http://localhost:9527/admin/login'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'password': 'test_password'}),
     );
@@ -1617,8 +1617,8 @@ void main() {
 - `PDD_PID`: 拼多多推广位 ID
 
 **服务器配置**:
-- `PORT`: 服务器端口（默认: 8080）
-- `BACKEND_BASE`: 后端基础地址（默认: `http://localhost:8080`）
+- `PORT`: 服务器端口（默认: 9527）
+- `BACKEND_BASE`: 后端基础地址（默认: `http://localhost:9527`）
 
 ### 18.2 API 端点速查表
 

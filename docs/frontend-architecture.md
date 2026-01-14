@@ -25,7 +25,7 @@
 
 - **技术栈**: Flutter、Dart、Riverpod、Hive 等核心技术选型
 - **架构模式**: MVVM、Adapter、Service 层等设计模式
-- **核心模块**: 聊天、商品、选品车等业务模块设计
+- **核心模块**: 聊天、商品、购物车等业务模块设计
 - **状态管理**: Riverpod 状态管理架构
 - **数据流**: 用户交互到数据持久化的完整流程
 - **UI 架构**: Material Design 3 组件设计
@@ -157,7 +157,7 @@
 
 - **ChatService**: 聊天业务逻辑
 - **ProductService**: 商品业务逻辑
-- **CartService**: 选品车业务逻辑
+- **CartService**: 购物车业务逻辑
 - **SearchService**: 搜索业务逻辑
 
 #### 3.2.4 Repository 模式
@@ -347,21 +347,21 @@ features/products/
 - 使用 Hive 注解支持序列化
 - 支持向后兼容（legacy 字段）
 
-### 4.4 选品车模块 (Cart Feature)
+### 4.4 购物车模块 (Cart Feature)
 
 #### 4.4.1 模块结构
 
 ```
 features/cart/
-├── cart_service.dart          # 选品车业务逻辑
+├── cart_service.dart          # 购物车业务逻辑
 ├── cart_providers.dart       # Riverpod 状态管理
-└── cart_page.dart            # 选品车页面
+└── cart_page.dart            # 购物车页面
 ```
 
 #### 4.4.2 CartService 设计
 
 **核心职责**:
-- 选品车数据管理（添加、删除、更新）
+- 购物车数据管理（添加、删除、更新）
 - 商品数量管理
 - 价格跟踪（初始价格、当前价格）
 
@@ -370,7 +370,7 @@ features/cart/
 - `removeItem()`: 删除商品
 - `setQuantity()`: 设置商品数量
 - `getAllItems()`: 获取所有商品
-- `clear()`: 清空选品车
+- `clear()`: 清空购物车
 
 **数据存储**:
 - 使用 Hive Box: `cart_box`
@@ -380,7 +380,7 @@ features/cart/
 #### 4.4.3 CartProviders 设计
 
 **状态管理**:
-- `cartItemsProvider`: 选品车商品列表
+- `cartItemsProvider`: 购物车商品列表
 - `selectedItemsProvider`: 选中的商品
 - `totalPriceProvider`: 总价计算
 
@@ -395,7 +395,7 @@ features/cart/
 - 批量复制推广链接
 
 **交互流程**:
-1. 加载选品车数据
+1. 加载购物车数据
 2. 按店铺分组显示
 3. 用户选择商品
 4. 调整数量
@@ -472,13 +472,13 @@ screens/
 **位置**: `lib/services/price_refresh_service.dart`
 
 **核心职责**:
-- 后台自动刷新选品车商品价格
+- 后台自动刷新购物车商品价格
 - 价格变化检测
 - 价格变化通知
 
 **刷新策略**:
 - 单例模式，防止重复执行
-- 遍历选品车所有商品
+- 遍历购物车所有商品
 - 按平台调用对应服务获取最新价格
 - 对比价格变化，触发通知
 
@@ -564,7 +564,7 @@ core/theme/
 **核心职责**:
 - 商品信息展示
 - 商品卡片 UI
-- 商品操作（加入选品车、查看详情）
+- 商品操作（加入购物车、查看详情）
 
 **显示内容**:
 - 商品图片
@@ -615,7 +615,7 @@ core/theme/
 
 **按功能模块组织**:
 - `chat_providers.dart`: 聊天相关状态
-- `cart_providers.dart`: 选品车相关状态
+- `cart_providers.dart`: 购物车相关状态
 - `theme_provider.dart`: 主题状态
 
 **命名规范**:
@@ -652,7 +652,7 @@ Provider → Service → Hive → 持久化存储
 
 #### 5.3.2 状态同步
 
-- 选品车状态与 Hive 存储同步
+- 购物车状态与 Hive 存储同步
 - 会话状态与 Hive 存储同步
 - 主题状态与 Hive 存储同步
 
@@ -731,7 +731,7 @@ ApiClient.post('/sign/{platform}')
 返回给用户
 ```
 
-#### 6.1.4 选品车操作数据流
+#### 6.1.4 购物车操作数据流
 
 ```
 用户操作（添加/删除/更新）
@@ -756,7 +756,7 @@ CartPage UI 刷新
 ```
 PriceRefreshService 启动
   ↓
-读取选品车所有商品
+读取购物车所有商品
   ↓
 按平台分组
   ↓
@@ -783,7 +783,7 @@ Hive Box: 'conversations'
 自动保存（每次消息后）
 ```
 
-#### 6.3.2 选品车数据持久化
+#### 6.3.2 购物车数据持久化
 
 ```
 CartService
@@ -864,7 +864,7 @@ Hive Box: 'settings'
 #### 7.2.2 CartPage
 
 **布局结构**:
-- 顶部：选品车标题和操作栏
+- 顶部：购物车标题和操作栏
 - 中间：商品列表（按店铺分组）
 - 底部：结算栏（总价、批量操作）
 
@@ -879,13 +879,13 @@ Hive Box: 'settings'
 **布局结构**:
 - 顶部：商品图片轮播
 - 中间：商品信息（标题、价格、描述）
-- 底部：操作按钮（加入选品车、复制链接）
+- 底部：操作按钮（加入购物车、复制链接）
 
 **交互设计**:
 - 图片放大查看
 - 价格信息展示（原价、现价、优惠券）
 - 推广链接生成和复制
-- 一键加入选品车
+- 一键加入购物车
 - 外部链接跳转
 
 ---
@@ -1084,7 +1084,7 @@ Hive Box: 'settings'
 **测试示例**:
 - 测试商品搜索功能
 - 测试推广链接缓存
-- 测试选品车操作
+- 测试购物车操作
 
 #### 10.1.2 工具函数测试
 
@@ -1119,9 +1119,9 @@ Hive Box: 'settings'
 - 数据持久化
 
 **测试场景**:
-- 用户搜索商品 → 查看详情 → 加入选品车 → 生成推广链接
-- AI 对话 → 商品推荐 → 添加商品到选品车
-- 选品车操作 → 价格刷新 → 通知触发
+- 用户搜索商品 → 查看详情 → 加入购物车 → 生成推广链接
+- AI 对话 → 商品推荐 → 添加商品到购物车
+- 购物车操作 → 价格刷新 → 通知触发
 
 ### 10.3 测试覆盖率目标
 
@@ -1226,7 +1226,7 @@ features/new_feature/
 
 **存储 Boxes**:
 - `settings`: 应用设置
-- `cart_box`: 选品车数据
+- `cart_box`: 购物车数据
 - `conversations`: 会话历史
 - `promo_cache`: 推广链接缓存
 
@@ -1247,7 +1247,7 @@ features/new_feature/
 #### 12.2.1 持久化策略
 
 **实时保存**:
-- 选品车操作立即保存
+- 购物车操作立即保存
 - 会话消息自动保存
 - 设置变更立即保存
 
@@ -1410,7 +1410,7 @@ lib/
 ├── features/                # 功能模块
 │   ├── chat/                # 聊天功能
 │   ├── products/            # 商品功能
-│   └── cart/                # 选品车功能
+│   └── cart/                # 购物车功能
 ├── screens/                 # 页面组件
 ├── services/                # 业务服务
 ├── widgets/                 # 通用组件

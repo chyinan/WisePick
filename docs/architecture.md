@@ -105,7 +105,7 @@ wisepick_dart_version/
 │   │   │   ├── jd_adapter.dart
 │   │   │   ├── pdd_adapter.dart
 │   │   │   └── product_model.dart
-│   │   └── cart/                 # 选品车功能模块
+│   │   └── cart/                 # 购物车功能模块
 │   │       ├── cart_service.dart
 │   │       └── cart_providers.dart
 │   ├── screens/                   # 页面组件
@@ -440,12 +440,12 @@ class ChatService {
 - AiPromptService: Prompt 构建
 - Hive: 会话历史存储
 
-#### 4.1.4 选品车服务组件 (CartService)
+#### 4.1.4 购物车服务组件 (CartService)
 
 **位置**: `lib/features/cart/cart_service.dart`
 
 **职责**:
-- 选品车数据管理
+- 购物车数据管理
 - 商品数量调整
 - 价格刷新
 
@@ -598,7 +598,7 @@ class Conversation {
    }
    ```
 
-2. **cart** (选品车)
+2. **cart** (购物车)
    ```dart
    List<Map<String, dynamic>>  // 商品列表
    {
@@ -1000,7 +1000,7 @@ server {
     server_name api.yourdomain.com;
 
     location / {
-        proxy_pass http://localhost:8080;
+        proxy_pass http://localhost:9527;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -1015,7 +1015,7 @@ server {
 #### 8.3.1 开发环境
 
 - **前端**: 本地运行，连接本地后端
-- **后端**: `http://localhost:8080`
+- **后端**: `http://localhost:9527`
 - **调试**: 启用调试模式、Mock AI
 
 #### 8.3.2 生产环境
@@ -1113,8 +1113,8 @@ testWidgets('ChatPage should display messages', (tester) async {
 **测试工具**: `integration_test`
 
 **示例场景**:
-- 用户搜索商品 → 查看详情 → 加入选品车 → 生成推广链接
-- AI 对话 → 商品推荐 → 添加商品到选品车
+- 用户搜索商品 → 查看详情 → 加入购物车 → 生成推广链接
+- AI 对话 → 商品推荐 → 添加商品到购物车
 
 ### 10.2 后端测试
 

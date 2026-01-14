@@ -47,7 +47,7 @@ class PddAdapter {
       // attempt to build a promotion link via backend proxy if possible
       String link = '';
       try {
-      String backend = 'http://localhost:8080';
+      String backend = 'http://localhost:9527';
         try {
           if (!Hive.isBoxOpen('settings')) await Hive.openBox('settings');
           final box = Hive.box('settings');

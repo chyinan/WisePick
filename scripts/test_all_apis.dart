@@ -3,7 +3,7 @@
 ///   dart run scripts/test_all_apis.dart
 ///
 /// 需要在 .env 或环境变量中设置以下配置：
-///   - BACKEND_BASE: 后端服务器地址 (默认: http://localhost:8080)
+///   - BACKEND_BASE: 后端服务器地址 (默认: http://localhost:9527)
 ///   - PDD_CLIENT_ID, PDD_CLIENT_SECRET, PDD_PID: 拼多多配置
 ///   - JD_APP_KEY, JD_APP_SECRET, JD_UNION_ID: 京东配置
 ///   - TAOBAO_APP_KEY, TAOBAO_APP_SECRET, TAOBAO_ADZONE_ID: 淘宝配置
@@ -71,7 +71,7 @@ class ApiTester {
       : _client = ApiClient(),
         _backendBase = backendBase ??
             Platform.environment['BACKEND_BASE'] ??
-            'http://localhost:8080';
+            'http://localhost:9527';
 
   List<TestResult> get results => List.unmodifiable(_results);
 

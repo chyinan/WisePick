@@ -10,7 +10,7 @@ class SearchService {
   SearchService({String? baseUrl}) : baseUrl = baseUrl ?? _resolveBackendBase();
 
   static String _resolveBackendBase() {
-    String backend = 'http://localhost:8080';
+    String backend = 'http://localhost:9527';
     try {
       if (Hive.isBoxOpen('settings')) {
         final box = Hive.box('settings');

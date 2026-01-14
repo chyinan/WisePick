@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wisepick_dart_version/features/products/jd_price_provider.dart';
 import '../features/products/product_model.dart';
+import 'cached_product_image.dart';
 
 /// 商品卡片显示模式
 enum ProductCardMode {
@@ -185,26 +186,13 @@ class _ProductCardState extends ConsumerState<ProductCard>
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 图片区域
-              SizedBox(
+              // 图片区域（使用缓存图片组件）
+              CachedProductImage(
+                imageUrl: widget.product.imageUrl,
                 width: 120,
                 height: 120,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: widget.product.imageUrl.isNotEmpty
-                      ? Image.network(
-                          widget.product.imageUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
-                            color: theme.colorScheme.surfaceContainerHighest,
-                            child: const Icon(Icons.broken_image_outlined),
-                          ),
-                        )
-                      : Container(
-                          color: theme.colorScheme.surfaceContainerHighest,
-                          child: const Icon(Icons.image_not_supported_outlined),
-                        ),
-                ),
+                fit: BoxFit.cover,
+                borderRadius: 12,
               ),
               
               // 内容区域
@@ -232,13 +220,13 @@ class _ProductCardState extends ConsumerState<ProductCard>
                         children: [
                           // 价格
                           Text(
-                            widget.product.platform == 'jd'
-                                ? (cachedPrice != null ? '¥${cachedPrice.toStringAsFixed(2)}' : '¥--.--')
-                                : '¥${widget.product.price > 0 ? widget.product.price.toStringAsFixed(2) : '询价'}',
+                            _getPriceText(widget.product, cachedPrice),
                             style: theme.textTheme.titleLarge?.copyWith(
-                              color: theme.colorScheme.primary,
+                              color: _isOffShelf(widget.product, cachedPrice) 
+                                  ? theme.colorScheme.error 
+                                  : theme.colorScheme.primary,
                               fontWeight: FontWeight.bold,
-                              fontSize: 18,
+                              fontSize: _isOffShelf(widget.product, cachedPrice) ? 12 : 18,
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -315,26 +303,13 @@ class _ProductCardState extends ConsumerState<ProductCard>
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 图片区域（更大）
-                  SizedBox(
+                  // 图片区域（更大，使用缓存图片组件）
+                  CachedProductImage(
+                    imageUrl: widget.product.imageUrl,
                     width: 160,
                     height: 160,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: widget.product.imageUrl.isNotEmpty
-                          ? Image.network(
-                              widget.product.imageUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Container(
-                                color: theme.colorScheme.surfaceContainerHighest,
-                                child: const Icon(Icons.broken_image_outlined),
-                              ),
-                            )
-                          : Container(
-                              color: theme.colorScheme.surfaceContainerHighest,
-                              child: const Icon(Icons.image_not_supported_outlined),
-                            ),
-                    ),
+                    fit: BoxFit.cover,
+                    borderRadius: 12,
                   ),
                   
                   const SizedBox(width: 16),
@@ -363,12 +338,13 @@ class _ProductCardState extends ConsumerState<ProductCard>
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
-                              widget.product.platform == 'jd'
-                                  ? (cachedPrice != null ? '¥${cachedPrice.toStringAsFixed(2)}' : '¥--.--')
-                                  : '¥${widget.product.price > 0 ? widget.product.price.toStringAsFixed(2) : '询价'}',
+                              _getPriceText(widget.product, cachedPrice),
                               style: theme.textTheme.headlineSmall?.copyWith(
-                                color: theme.colorScheme.primary,
+                                color: _isOffShelf(widget.product, cachedPrice) 
+                                    ? theme.colorScheme.error 
+                                    : theme.colorScheme.primary,
                                 fontWeight: FontWeight.bold,
+                                fontSize: _isOffShelf(widget.product, cachedPrice) ? 14 : null,
                               ),
                             ),
                             if (widget.product.originalPrice > 0 && widget.product.originalPrice > widget.product.price) ...[
@@ -463,26 +439,14 @@ class _ProductCardState extends ConsumerState<ProductCard>
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 图片区域（更小）
-              SizedBox(
+              // 图片区域（更小，使用缓存图片组件）
+              CachedProductImage(
+                imageUrl: widget.product.imageUrl,
                 width: 100,
                 height: 100,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: widget.product.imageUrl.isNotEmpty
-                      ? Image.network(
-                          widget.product.imageUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
-                            color: theme.colorScheme.surfaceContainerHighest,
-                            child: const Icon(Icons.broken_image_outlined, size: 24),
-                          ),
-                        )
-                      : Container(
-                          color: theme.colorScheme.surfaceContainerHighest,
-                          child: const Icon(Icons.image_not_supported_outlined, size: 24),
-                        ),
-                ),
+                fit: BoxFit.cover,
+                borderRadius: 8,
+                errorIconSize: 24,
               ),
               
               // 内容区域
@@ -510,13 +474,13 @@ class _ProductCardState extends ConsumerState<ProductCard>
                         children: [
                           // 价格
                           Text(
-                            widget.product.platform == 'jd'
-                                ? (cachedPrice != null ? '¥${cachedPrice.toStringAsFixed(2)}' : '¥--.--')
-                                : '¥${widget.product.price > 0 ? widget.product.price.toStringAsFixed(2) : '询价'}',
+                            _getPriceText(widget.product, cachedPrice),
                             style: theme.textTheme.titleMedium?.copyWith(
-                              color: theme.colorScheme.primary,
+                              color: _isOffShelf(widget.product, cachedPrice) 
+                                  ? theme.colorScheme.error 
+                                  : theme.colorScheme.primary,
                               fontWeight: FontWeight.bold,
-                              fontSize: 16,
+                              fontSize: _isOffShelf(widget.product, cachedPrice) ? 11 : 16,
                             ),
                           ),
                           const SizedBox(width: 6),
@@ -550,4 +514,37 @@ class _ProductCardState extends ConsumerState<ProductCard>
       ),
     );
   }
+}
+
+/// 判断商品是否下架/无货
+bool _isOffShelf(ProductModel product, num? cachedPrice) {
+  if (product.platform == 'jd') {
+    // 京东商品：有缓存价格且为 0，视为下架
+    if (cachedPrice != null && cachedPrice < 0.01) return true;
+    // 没有缓存价格且原始价格为 0
+    if (cachedPrice == null && product.price < 0.01) return true;
+  } else {
+    // 其他平台：价格为 0 视为下架
+    if (product.price < 0.01) return true;
+  }
+  return false;
+}
+
+/// 获取价格显示文本
+String _getPriceText(ProductModel product, num? cachedPrice) {
+  if (_isOffShelf(product, cachedPrice)) {
+    return '下架/无货';
+  }
+  
+  if (product.platform == 'jd') {
+    if (cachedPrice != null) {
+      return '¥${cachedPrice.toStringAsFixed(2)}';
+    }
+    return '¥--.--';
+  }
+  
+  if (product.price > 0) {
+    return '¥${product.price.toStringAsFixed(2)}';
+  }
+  return '询价';
 }

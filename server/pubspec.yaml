@@ -1,15 +1,22 @@
 name: wisepick_proxy_server
-description: Proxy server for OpenAI-compatible API
-version: 0.0.1
+description: Proxy server for OpenAI-compatible API with JD Union Scraper
+version: 0.1.0
 environment:
-  sdk: '>=2.18.0 <3.0.0'
+  sdk: '>=2.18.0 <4.0.0'
 
 dependencies:
   shelf: ^1.4.0
   shelf_router: ^1.0.0
   http: ^0.13.0
   crypto: ^3.0.2
-  puppeteer: ^2.2.0
+  puppeteer: ^3.14.0
+  path: ^1.8.0
+
+dev_dependencies:
+  test: ^1.24.0
+  lints: ^4.0.0
 
 executables:
   proxy_server: bin/proxy_server.dart
+  test_cookie_manager: bin/test_cookie_manager.dart
+  test_browser_pool: bin/test_browser_pool.dart

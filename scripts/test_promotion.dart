@@ -9,7 +9,7 @@ import 'dart:convert';
 import 'dart:io';
 
 Future<void> main(List<String> args) async {
-  final backend = Platform.environment['BACKEND_BASE'] ?? 'http://localhost:8080';
+  final backend = Platform.environment['BACKEND_BASE'] ?? 'http://localhost:9527';
   print('Using backend: $backend');
 
   // 示例：测试淘宝万能转链接口

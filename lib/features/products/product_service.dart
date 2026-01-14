@@ -109,15 +109,15 @@ class ProductService {
     } catch (_) {}
 
     // read backend base from Hive settings if available, else default to localhost
-    String backend = 'http://localhost:8080';
+    String backend = 'http://localhost:9527';
     try {
       if (await _ensureHiveOpen()) {
         final box = Hive.box('settings');
         final String? b = box.get('backend_base') as String?;
         if (b != null && b.trim().isNotEmpty) backend = b.trim();
-        else backend = const String.fromEnvironment('BACKEND_BASE', defaultValue: 'http://localhost:8080');
+        else backend = const String.fromEnvironment('BACKEND_BASE', defaultValue: 'http://localhost:9527');
       } else {
-        backend = const String.fromEnvironment('BACKEND_BASE', defaultValue: 'http://localhost:8080');
+        backend = const String.fromEnvironment('BACKEND_BASE', defaultValue: 'http://localhost:9527');
       }
     } catch (_) {}
 

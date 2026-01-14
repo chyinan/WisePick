@@ -1,0 +1,503 @@
+import 'dart:async';
+import 'dart:collection';
+import 'dart:math';
+
+import 'package:puppeteer/puppeteer.dart';
+
+import 'models/scraper_error.dart';
+
+/// 浏览器实例包装类
+class BrowserInstance {
+  /// 浏览器实例
+  final Browser browser;
+
+  /// 浏览器上下文（用于隔离会话）
+  final BrowserContext? context;
+
+  /// 超时时间
+  final Duration timeout;
+
+  /// 上次使用时间
+  DateTime? _lastUsed;
+
+  /// 是否正在使用中
+  bool _inUse = false;
+
+  /// 创建时间
+  final DateTime createdAt;
+
+  /// 使用次数
+  int _useCount = 0;
+
+  BrowserInstance(this.browser, this.timeout, {this.context})
+      : createdAt = DateTime.now() {
+    _lastUsed = DateTime.now();
+  }
+
+  /// 是否可用
+  bool get isAvailable => !_inUse && !isExpired;
+
+  /// 是否已过期
+  bool get isExpired {
+    if (_lastUsed == null) return true;
+    return DateTime.now().difference(_lastUsed!) > timeout;
+  }
+
+  /// 获取使用次数
+  int get useCount => _useCount;
+
+  /// 获取存活时长
+  Duration get age => DateTime.now().difference(createdAt);
+
+  /// 标记为使用中
+  void markInUse() {
+    _inUse = true;
+    _lastUsed = DateTime.now();
+    _useCount++;
+  }
+
+  /// 标记为可用
+  void markAvailable() {
+    _inUse = false;
+    _lastUsed = DateTime.now();
+  }
+
+  /// 检查浏览器是否仍然连接
+  Future<bool> isConnected() async {
+    try {
+      // 尝试获取浏览器版本来检查连接状态
+      await browser.version;
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// 关闭浏览器实例
+  Future<void> close() async {
+    try {
+      await browser.close();
+    } catch (e) {
+      _log('关闭浏览器实例失败: $e');
+    }
+  }
+
+  void _log(String message) {
+    print('[BrowserInstance] $message');
+  }
+}
+
+/// 浏览器池配置
+class BrowserPoolConfig {
+  /// 最大浏览器实例数
+  final int maxBrowsers;
+
+  /// 浏览器实例超时时间
+  final Duration browserTimeout;
+
+  /// 是否使用无头模式
+  final bool headless;
+
+  /// Chrome 可执行文件路径（可选）
+  final String? executablePath;
+
+  /// 额外的浏览器启动参数
+  final List<String> extraArgs;
+
+  /// 默认视口大小
+  final DeviceViewport? defaultViewport;
+
+  /// 是否忽略 HTTPS 错误
+  final bool ignoreHttpsErrors;
+
+  /// 操作减速（用于调试）
+  final Duration? slowMo;
+
+  const BrowserPoolConfig({
+    this.maxBrowsers = 3,
+    this.browserTimeout = const Duration(minutes: 30),
+    this.headless = false,
+    this.executablePath,
+    this.extraArgs = const [],
+    this.defaultViewport,
+    this.ignoreHttpsErrors = false,
+    this.slowMo,
+  });
+
+  /// 创建开发环境配置
+  factory BrowserPoolConfig.development() {
+    return BrowserPoolConfig(
+      maxBrowsers: 2,
+      browserTimeout: const Duration(minutes: 15),
+      headless: false,
+      slowMo: const Duration(milliseconds: 50),
+    );
+  }
+
+  /// 创建生产环境配置
+  factory BrowserPoolConfig.production() {
+    return const BrowserPoolConfig(
+      maxBrowsers: 5,
+      browserTimeout: const Duration(minutes: 30),
+      headless: true,
+    );
+  }
+}
+
+/// 浏览器池管理器
+///
+/// 负责浏览器实例的创建、复用、回收和健康检查
+class BrowserPool {
+  /// 配置
+  final BrowserPoolConfig config;
+
+  /// 浏览器实例列表
+  final List<BrowserInstance> _browsers = [];
+
+  /// 等待队列
+  final Queue<Completer<BrowserInstance>> _waitingQueue = Queue();
+
+  /// 是否已关闭
+  bool _closed = false;
+
+  /// 指纹随机化器
+  final _fingerprintRandomizer = FingerprintRandomizer();
+
+  BrowserPool({BrowserPoolConfig? config})
+      : config = config ?? const BrowserPoolConfig();
+
+  /// 获取浏览器实例
+  ///
+  /// 如果有可用实例则直接返回，否则创建新实例或等待
+  Future<BrowserInstance> acquire() async {
+    if (_closed) {
+      throw ScraperException(
+        type: ScraperErrorType.unknown,
+        message: '浏览器池已关闭',
+      );
+    }
+
+    // 清理过期浏览器
+    await _cleanupExpiredBrowsers();
+
+    // 查找可用浏览器
+    for (final instance in _browsers) {
+      if (instance.isAvailable) {
+        // 检查是否仍然连接
+        if (await instance.isConnected()) {
+          instance.markInUse();
+          _log('复用浏览器实例 (使用次数: ${instance.useCount})');
+          return instance;
+        } else {
+          // 移除断开连接的实例
+          await _removeInstance(instance);
+        }
+      }
+    }
+
+    // 如果未达到上限，创建新浏览器
+    if (_browsers.length < config.maxBrowsers) {
+      final instance = await _createBrowserInstance();
+      instance.markInUse();
+      _browsers.add(instance);
+      _log('创建新浏览器实例 (当前数量: ${_browsers.length}/${config.maxBrowsers})');
+      return instance;
+    }
+
+    // 等待可用浏览器
+    _log('等待可用浏览器实例...');
+    final completer = Completer<BrowserInstance>();
+    _waitingQueue.add(completer);
+    return completer.future;
+  }
+
+  /// 释放浏览器实例
+  void release(BrowserInstance instance) {
+    if (_closed) return;
+
+    instance.markAvailable();
+
+    // 如果有等待的请求，分配浏览器
+    if (_waitingQueue.isNotEmpty) {
+      final completer = _waitingQueue.removeFirst();
+      instance.markInUse();
+      completer.complete(instance);
+      _log('将浏览器实例分配给等待中的请求');
+    } else {
+      _log('浏览器实例已释放');
+    }
+  }
+
+  /// 获取新页面
+  ///
+  /// 便捷方法：获取浏览器实例并创建新页面
+  Future<PageWithInstance> acquirePage() async {
+    final instance = await acquire();
+    try {
+      final page = await instance.browser.newPage();
+      return PageWithInstance(page, instance, this);
+    } catch (e) {
+      release(instance);
+      rethrow;
+    }
+  }
+
+  /// 创建浏览器实例
+  Future<BrowserInstance> _createBrowserInstance() async {
+    try {
+      // 获取随机化的启动参数
+      final args = _buildLaunchArgs();
+      final viewport = _fingerprintRandomizer.getRandomViewport();
+
+      final browser = await puppeteer.launch(
+        headless: config.headless,
+        executablePath: config.executablePath,
+        args: args,
+        defaultViewport: viewport,
+        ignoreHttpsErrors: config.ignoreHttpsErrors,
+        slowMo: config.slowMo,
+      );
+
+      // 注入反检测脚本到默认上下文
+      final pages = await browser.pages;
+      for (final page in pages) {
+        await _injectStealthScripts(page);
+      }
+
+      return BrowserInstance(browser, config.browserTimeout);
+    } catch (e, stack) {
+      _log('创建浏览器实例失败: $e');
+      throw ScraperException.unknown(e, stack);
+    }
+  }
+
+  /// 构建浏览器启动参数
+  List<String> _buildLaunchArgs() {
+    final args = <String>[
+      // 反检测参数
+      '--disable-blink-features=AutomationControlled',
+      '--disable-dev-shm-usage',
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-web-security',
+      '--disable-features=IsolateOrigins,site-per-process',
+
+      // 性能优化参数
+      '--disable-background-networking',
+      '--disable-default-apps',
+      '--disable-extensions',
+      '--disable-sync',
+      '--disable-translate',
+      '--metrics-recording-only',
+      '--mute-audio',
+      '--no-first-run',
+
+      // 语言和地区设置
+      '--lang=zh-CN',
+    ];
+
+    // 添加额外参数
+    args.addAll(config.extraArgs);
+
+    return args;
+  }
+
+  /// 注入反检测脚本
+  Future<void> _injectStealthScripts(Page page) async {
+    final userAgent = _fingerprintRandomizer.getRandomUserAgent();
+
+    // 设置 User-Agent
+    await page.setUserAgent(userAgent);
+
+    // 注入反检测 JavaScript
+    await page.evaluateOnNewDocument('''
+      // 隐藏 webdriver 属性
+      Object.defineProperty(navigator, 'webdriver', {
+        get: () => undefined
+      });
+      
+      // 模拟 Chrome 对象
+      window.chrome = {
+        runtime: {},
+        loadTimes: function() {},
+        csi: function() {},
+        app: {}
+      };
+      
+      // 修改插件数量
+      Object.defineProperty(navigator, 'plugins', {
+        get: () => [1, 2, 3, 4, 5]
+      });
+      
+      // 设置语言
+      Object.defineProperty(navigator, 'languages', {
+        get: () => ['zh-CN', 'zh', 'en']
+      });
+      
+      // 隐藏自动化相关属性
+      delete navigator.__proto__.webdriver;
+      
+      // 修改 permissions 查询
+      const originalQuery = window.navigator.permissions.query;
+      window.navigator.permissions.query = (parameters) => (
+        parameters.name === 'notifications' ?
+          Promise.resolve({ state: Notification.permission }) :
+          originalQuery(parameters)
+      );
+    ''');
+  }
+
+  /// 清理过期浏览器
+  Future<void> _cleanupExpiredBrowsers() async {
+    final toRemove = <BrowserInstance>[];
+
+    for (final instance in _browsers) {
+      if (instance.isExpired && !instance._inUse) {
+        toRemove.add(instance);
+      }
+    }
+
+    for (final instance in toRemove) {
+      await _removeInstance(instance);
+    }
+
+    if (toRemove.isNotEmpty) {
+      _log('清理了 ${toRemove.length} 个过期浏览器实例');
+    }
+  }
+
+  /// 移除浏览器实例
+  Future<void> _removeInstance(BrowserInstance instance) async {
+    _browsers.remove(instance);
+    await instance.close();
+  }
+
+  /// 关闭所有浏览器
+  Future<void> closeAll() async {
+    _closed = true;
+
+    // 取消所有等待中的请求
+    while (_waitingQueue.isNotEmpty) {
+      final completer = _waitingQueue.removeFirst();
+      completer.completeError(ScraperException(
+        type: ScraperErrorType.unknown,
+        message: '浏览器池已关闭',
+      ));
+    }
+
+    // 关闭所有浏览器实例
+    for (final instance in _browsers) {
+      await instance.close();
+    }
+    _browsers.clear();
+
+    _log('所有浏览器实例已关闭');
+  }
+
+  /// 获取池状态
+  Map<String, dynamic> getStatus() {
+    return {
+      'total': _browsers.length,
+      'maxBrowsers': config.maxBrowsers,
+      'available': _browsers.where((b) => b.isAvailable).length,
+      'inUse': _browsers.where((b) => b._inUse).length,
+      'waiting': _waitingQueue.length,
+      'closed': _closed,
+      'instances': _browsers.map((b) => {
+            'inUse': b._inUse,
+            'useCount': b.useCount,
+            'age': b.age.inMinutes,
+            'isExpired': b.isExpired,
+          }).toList(),
+    };
+  }
+
+  void _log(String message) {
+    print('[BrowserPool] $message');
+  }
+}
+
+/// 页面和实例的组合，便于管理
+class PageWithInstance {
+  final Page page;
+  final BrowserInstance instance;
+  final BrowserPool pool;
+
+  PageWithInstance(this.page, this.instance, this.pool);
+
+  /// 关闭页面并释放浏览器实例
+  Future<void> close() async {
+    try {
+      await page.close();
+    } catch (_) {}
+    pool.release(instance);
+  }
+}
+
+/// 指纹随机化器
+///
+/// 用于生成随机的浏览器指纹，避免被检测
+class FingerprintRandomizer {
+  final Random _random = Random();
+
+  /// 获取随机 User-Agent
+  String getRandomUserAgent() {
+    final userAgents = [
+      // Chrome Windows
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36',
+
+      // Chrome macOS
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+
+      // Edge
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0',
+    ];
+
+    return userAgents[_random.nextInt(userAgents.length)];
+  }
+
+  /// 获取随机视口大小
+  DeviceViewport getRandomViewport() {
+    final viewports = [
+      DeviceViewport(width: 1920, height: 1080),
+      DeviceViewport(width: 1366, height: 768),
+      DeviceViewport(width: 1536, height: 864),
+      DeviceViewport(width: 1440, height: 900),
+      DeviceViewport(width: 1680, height: 1050),
+    ];
+
+    return viewports[_random.nextInt(viewports.length)];
+  }
+
+  /// 获取随机地理位置（中国城市）
+  Map<String, double> getRandomGeolocation() {
+    final locations = [
+      {'latitude': 39.9042, 'longitude': 116.4074}, // 北京
+      {'latitude': 31.2304, 'longitude': 121.4737}, // 上海
+      {'latitude': 23.1291, 'longitude': 113.2644}, // 广州
+      {'latitude': 22.5431, 'longitude': 114.0579}, // 深圳
+      {'latitude': 30.5728, 'longitude': 104.0668}, // 成都
+    ];
+
+    return locations[_random.nextInt(locations.length)];
+  }
+
+  /// 获取随机时区
+  String getRandomTimezone() {
+    // 京东主要面向中国用户，使用中国时区
+    return 'Asia/Shanghai';
+  }
+}
+
+
+
+
+
+
+
+
+
+

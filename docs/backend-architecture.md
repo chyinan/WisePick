@@ -395,7 +395,7 @@
 #### 4.6.2 端口管理
 
 **功能**:
-- 默认端口：8080
+- 默认端口：9527
 - 端口被占用时自动尝试下一个可用端口（最多 10 次）
 - 通过 `PORT` 环境变量可强制绑定指定端口
 
@@ -410,7 +410,7 @@
 **响应格式**:
 ```json
 {
-  "backend_base": "http://localhost:8080"
+  "backend_base": "http://localhost:9527"
 }
 ```
 
@@ -898,7 +898,7 @@ server {
     server_name api.yourdomain.com;
 
     location / {
-        proxy_pass http://localhost:8080;
+        proxy_pass http://localhost:9527;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -911,7 +911,7 @@ server {
 #### 9.2.4 环境配置
 
 **开发环境**:
-- 本地运行，端口 8080
+- 本地运行，端口 9527
 - 使用 `.env` 文件配置
 - 启用调试模式
 
@@ -1374,7 +1374,7 @@ server {
 - `PDD_PID`: 拼多多推广位 ID
 
 **服务器配置**:
-- `PORT`: 服务器端口（默认: 8080）
+- `PORT`: 服务器端口（默认: 9527）
 - `BACKEND_BASE`: 后端基础地址
 
 ### 16.4 API 端点参考
