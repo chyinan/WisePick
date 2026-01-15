@@ -179,12 +179,7 @@ POST /api/jd/cache/clear
 GET /api/get-jd-promotion?sku=xxx
 ```
 
-此接口现在使用新的 Dart 爬虫服务，响应格式与旧版本兼容。
-
-如需使用旧的 Python 版本，请访问：
-```
-GET /api/get-jd-promotion-legacy?sku=xxx
-```
+此接口使用新的 Dart 爬虫服务，响应格式与旧版本兼容。
 
 ## 使用示例
 
