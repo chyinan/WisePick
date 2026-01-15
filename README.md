@@ -7,7 +7,9 @@
 ![Dart](https://img.shields.io/badge/Dart-3.9.2+-0175C2?logo=dart)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
+
 <img src="logo.png" width="200" alt="WisePick LOGO"/>
+
 
 <img src="screenshot.png" width="800" alt="WisePick Screenshot"/>
 
