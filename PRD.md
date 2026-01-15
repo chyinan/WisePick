@@ -2,7 +2,7 @@
 
 **版本**: 1.0  
 **创建日期**: 2024  
-**最后更新**: 2024  
+**最后更新**: 2026-01-15  
 **文档状态**: 正式版
 
 ---
@@ -20,6 +20,7 @@
 - **多平台聚合**: 统一搜索淘宝、京东、拼多多三大电商平台
 - **推广链接**: 自动生成联盟推广链接，支持佣金收益
 - **选品管理**: 提供购物车功能，方便用户收藏和比价
+- **高级爬虫**: 内置京东联盟高级网页爬虫，提升数据获取成功率
 
 ---
 
@@ -76,6 +77,7 @@
 - 使用 Adapter 模式适配不同平台 API
 - 统一商品模型 `ProductModel` 封装
 - 支持缓存机制提升性能
+- **京东高级爬虫**: 针对京东联盟 API 限流和风控，提供基于 Playwright 的自动化爬虫方案
 
 **用户故事**:
 - 作为用户，我希望输入关键词后能同时搜索多个平台
@@ -453,9 +455,10 @@ lib/
 - **请求体**: OpenAI 兼容格式
 - **响应**: JSON 或 SSE 流
 
-#### 9.1.2 推广链接生成
+#### 9.1.2 推广链接与爬虫接口
 - **淘宝**: `POST /sign/taobao` 或 `POST /taobao/convert`
-- **京东**: `POST /sign/jd` 或 `POST /jd/union/promotion/bysubunionid`
+- **京东 API**: `POST /sign/jd` 或 `POST /jd/union/promotion/bysubunionid`
+- **京东爬虫**: `POST /jd/product`, `POST /jd/products/batch`, `POST /jd/cookie/refresh`
 - **拼多多**: `POST /sign/pdd`
 
 #### 9.1.3 管理员接口

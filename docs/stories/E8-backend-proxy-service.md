@@ -472,25 +472,36 @@ String sign(Map<String, String> params, String clientSecret) {
 |------|---------|-------------|--------|
 | 2026-01-06 | 1.0 | 初始创建 | Sarah (PO) |
 
+---
 
+## Story 8.6: 京东高级网页爬虫
 
+### Status
+In Progress
 
+### Story
+**As a** 开发者,  
+**I want** 实现一个能够模拟人类行为的京东网页爬虫,  
+**so that** 在京东联盟 API 受限时仍能获取商品数据
 
+### Acceptance Criteria
 
+1. 实现基于 Playwright 的浏览器池管理
+2. 实现人类行为模拟（鼠标移动、滚动、延迟）
+3. 支持 Cookie 过期检测和自动通知
+4. 支持单商品和批量抓取接口
+5. 爬虫错误有详细日志记录
 
+### Tasks / Subtasks
 
+- [x] 浏览器池管理 (AC: 1)
+- [x] 人类行为模拟 (AC: 2)
+- [x] Cookie 管理与检测 (AC: 3)
+- [x] 抓取逻辑实现 (AC: 4)
+- [x] 错误处理与日志 (AC: 5)
 
+### Change Log
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+| Date | Version | Description | Author |
+|------|---------|-------------|--------|
+| 2026-01-15 | 1.0 | 初始实现京东高级爬虫 | CHYINAN (Architect) |
