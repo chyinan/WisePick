@@ -9,11 +9,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wisepick_dart_version/features/cart/cart_providers.dart';
 import 'package:wisepick_dart_version/features/cart/cart_service.dart';
 import 'package:flutter/services.dart';
+import 'package:wisepick_dart_version/services/share_service.dart';
 import 'product_model.dart';
 import 'product_service.dart';
 import 'package:wisepick_dart_version/features/products/jd_price_provider.dart';
 import 'package:wisepick_dart_version/features/products/pdd_goods_detail_service.dart';
 import 'package:wisepick_dart_version/features/products/taobao_item_detail_service.dart';
+import 'package:wisepick_dart_version/features/chat/chat_service.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 
 /// 商品详情页，展示商品完整信息（响应式布局：窄屏竖排，宽屏左右并列）
 class ProductDetailPage extends ConsumerStatefulWidget {
@@ -49,6 +52,10 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
   double? _initialCartPrice;
   double? _lastCartPrice;
   bool _hasCartRecord = false;
+  // AI 智能介绍相关状态
+  bool _isLoadingAiIntro = false;
+  String? _aiIntroContent;
+  bool _aiIntroExpanded = false;
 
   @override
   void initState() {
@@ -59,6 +66,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
     _loadFavoriteState();
     _prepareInitialGallery();
     _loadCartPriceInfo();
+    _loadCachedAiIntro();
   }
 
   @override
@@ -76,9 +84,13 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
         _initialCartPrice = null;
         _lastCartPrice = null;
         _hasCartRecord = false;
+        _aiIntroContent = null;
+        _isLoadingAiIntro = false;
+        _aiIntroExpanded = false;
       });
       _prepareInitialGallery();
       _loadCartPriceInfo();
+      _loadCachedAiIntro();
     }
   }
 
@@ -189,6 +201,394 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
         _lastCartPrice = null;
       });
     }
+  }
+
+  /// 加载缓存的 AI 商品介绍
+  Future<void> _loadCachedAiIntro() async {
+    try {
+      const boxName = 'ai_intro_cache';
+      if (!Hive.isBoxOpen(boxName)) {
+        await Hive.openBox(boxName);
+      }
+      final box = Hive.box(boxName);
+      final cacheKey = '${widget.product.platform}_${widget.product.id}';
+      final cached = box.get(cacheKey);
+      
+      if (cached is Map) {
+        final content = cached['content'] as String?;
+        final timestamp = cached['timestamp'] as int?;
+        
+        if (content != null && content.isNotEmpty) {
+          // 缓存有效期：7天
+          final isExpired = timestamp != null &&
+              DateTime.now().millisecondsSinceEpoch - timestamp > 7 * 24 * 60 * 60 * 1000;
+          
+          if (!isExpired && mounted) {
+            setState(() {
+              _aiIntroContent = content;
+              _aiIntroExpanded = false; // 默认收起，让用户点击展开
+            });
+          }
+        }
+      }
+    } catch (e) {
+      // 缓存加载失败不影响正常使用
+      debugPrint('加载 AI 介绍缓存失败: $e');
+    }
+  }
+
+  /// 保存 AI 商品介绍到缓存
+  Future<void> _saveAiIntroToCache(String content) async {
+    try {
+      const boxName = 'ai_intro_cache';
+      if (!Hive.isBoxOpen(boxName)) {
+        await Hive.openBox(boxName);
+      }
+      final box = Hive.box(boxName);
+      final cacheKey = '${widget.product.platform}_${widget.product.id}';
+      
+      await box.put(cacheKey, {
+        'content': content,
+        'timestamp': DateTime.now().millisecondsSinceEpoch,
+        'productTitle': widget.product.title,
+      });
+    } catch (e) {
+      debugPrint('保存 AI 介绍缓存失败: $e');
+    }
+  }
+
+  /// 获取 AI 商品介绍
+  Future<void> _fetchAiIntroduction() async {
+    if (_isLoadingAiIntro) return;
+    
+    setState(() {
+      _isLoadingAiIntro = true;
+      _aiIntroExpanded = true;
+    });
+
+    try {
+      final chatService = ChatService();
+      final productTitle = widget.product.title;
+      final platform = widget.product.platform;
+      
+      // 构建专门用于商品介绍的 prompt
+      final prompt = '''请详细介绍以下商品的特点和优缺点：
+
+商品名称：$productTitle
+来源平台：${_getPlatformName(platform)}
+
+请从以下几个方面进行介绍：
+1. 产品概述（简要介绍这是什么产品）
+2. 主要特点和优势
+3. 可能的不足或需要注意的地方
+4. 适合的用户群体
+5. 购买建议
+
+请用清晰易懂的中文回答，内容要客观公正。''';
+
+      final reply = await chatService.getAiReply(prompt);
+      
+      if (!mounted) return;
+      setState(() {
+        _aiIntroContent = reply;
+        _isLoadingAiIntro = false;
+      });
+      
+      // 保存到缓存
+      if (reply.isNotEmpty && !reply.startsWith('AI 服务调用失败')) {
+        _saveAiIntroToCache(reply);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _aiIntroContent = '获取 AI 介绍失败：${e.toString()}';
+        _isLoadingAiIntro = false;
+      });
+    }
+  }
+
+  String _getPlatformName(String platform) {
+    switch (platform) {
+      case 'jd':
+        return '京东';
+      case 'taobao':
+        return '淘宝';
+      case 'pdd':
+        return '拼多多';
+      default:
+        return '未知平台';
+    }
+  }
+
+  /// 构建 AI 智能介绍区域
+  Widget _buildAiIntroSection(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    // 自定义 Markdown 样式
+    final markdownStyleSheet = MarkdownStyleSheet(
+      p: theme.textTheme.bodyMedium?.copyWith(
+        height: 1.7,
+        color: colorScheme.onSurface,
+      ),
+      h1: theme.textTheme.titleLarge?.copyWith(
+        fontWeight: FontWeight.bold,
+        color: colorScheme.onSurface,
+      ),
+      h2: theme.textTheme.titleMedium?.copyWith(
+        fontWeight: FontWeight.bold,
+        color: colorScheme.onSurface,
+        fontSize: 18,
+      ),
+      h3: theme.textTheme.titleSmall?.copyWith(
+        fontWeight: FontWeight.bold,
+        color: colorScheme.onSurface,
+      ),
+      strong: TextStyle(
+        fontWeight: FontWeight.bold,
+        color: colorScheme.primary,
+      ),
+      em: TextStyle(
+        fontStyle: FontStyle.italic,
+        color: colorScheme.onSurfaceVariant,
+      ),
+      listBullet: theme.textTheme.bodyMedium?.copyWith(
+        color: colorScheme.primary,
+      ),
+      blockquote: theme.textTheme.bodyMedium?.copyWith(
+        color: colorScheme.onSurfaceVariant,
+        fontStyle: FontStyle.italic,
+      ),
+      blockquoteDecoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest,
+        border: Border(
+          left: BorderSide(
+            color: colorScheme.primary,
+            width: 4,
+          ),
+        ),
+      ),
+      blockquotePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      code: TextStyle(
+        backgroundColor: colorScheme.surfaceContainerHighest,
+        color: colorScheme.secondary,
+        fontFamily: 'monospace',
+        fontSize: 13,
+      ),
+      codeblockDecoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      codeblockPadding: const EdgeInsets.all(12),
+      horizontalRuleDecoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(
+            color: colorScheme.outlineVariant,
+            width: 1,
+          ),
+        ),
+      ),
+    );
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withOpacity(0.5),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // 标题栏和按钮
+          InkWell(
+            onTap: () {
+              if (_aiIntroContent == null && !_isLoadingAiIntro) {
+                _fetchAiIntroduction();
+              } else {
+                setState(() {
+                  _aiIntroExpanded = !_aiIntroExpanded;
+                });
+              }
+            },
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.auto_awesome,
+                      color: colorScheme.onPrimaryContainer,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'AI 智能介绍',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.onSurface,
+                          ),
+                        ),
+                        if (_aiIntroContent == null && !_isLoadingAiIntro)
+                          Text(
+                            '点击获取 AI 生成的商品详细介绍',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  if (_isLoadingAiIntro)
+                    const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2.5),
+                    )
+                  else if (_aiIntroContent == null)
+                    FilledButton.icon(
+                      onPressed: _fetchAiIntroduction,
+                      icon: const Icon(Icons.auto_awesome, size: 18),
+                      label: const Text('获取介绍'),
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      ),
+                    )
+                  else
+                    IconButton(
+                      onPressed: () {
+                        setState(() {
+                          _aiIntroExpanded = !_aiIntroExpanded;
+                        });
+                      },
+                      icon: Icon(
+                        _aiIntroExpanded
+                            ? Icons.keyboard_arrow_up
+                            : Icons.keyboard_arrow_down,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          // AI 介绍内容
+          if (_aiIntroExpanded && (_isLoadingAiIntro || _aiIntroContent != null))
+            AnimatedSize(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeInOut,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Divider(height: 1),
+                  if (_isLoadingAiIntro)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 16),
+                      child: Column(
+                        children: [
+                          const CircularProgressIndicator(),
+                          const SizedBox(height: 16),
+                          Text(
+                            '正在生成 AI 智能介绍...',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '请稍候，AI 正在分析商品信息',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Markdown 渲染区域 - 内容居中，最大宽度限制
+                        Center(
+                          child: Container(
+                            constraints: const BoxConstraints(maxWidth: 800),
+                            width: double.infinity,
+                            padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
+                            child: MarkdownBody(
+                              data: _aiIntroContent ?? '',
+                              styleSheet: markdownStyleSheet,
+                              selectable: true,
+                              onTapLink: (text, href, title) {
+                                if (href != null) {
+                                  launchUrl(Uri.parse(href));
+                                }
+                              },
+                            ),
+                          ),
+                        ),
+                        // 底部操作栏：免责声明 + 重新获取按钮
+                        Center(
+                          child: Container(
+                            constraints: const BoxConstraints(maxWidth: 800),
+                            width: double.infinity,
+                            margin: const EdgeInsets.fromLTRB(24, 8, 24, 20),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.info_outline,
+                                  size: 14,
+                                  color: colorScheme.onSurfaceVariant.withOpacity(0.8),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'AI 生成内容不保证真实准确性，请自行仔细核对',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: colorScheme.onSurfaceVariant.withOpacity(0.8),
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                TextButton.icon(
+                                  onPressed: _isLoadingAiIntro ? null : _fetchAiIntroduction,
+                                  icon: const Icon(Icons.refresh, size: 16),
+                                  label: const Text('重新获取'),
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                    textStyle: theme.textTheme.labelSmall,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
   }
 
   void _prepareInitialGallery() {
@@ -1305,6 +1705,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
               const SizedBox(height: 20),
               Wrap(
                 spacing: 12,
+                runSpacing: 8,
                 children: <Widget>[
                   OutlinedButton.icon(
                     onPressed: () async {
@@ -1375,6 +1776,20 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                     ),
                     label: Text(
                       _isFavorited ? '已收藏' : '加入收藏',
+                      style: Theme.of(context).textTheme.labelLarge,
+                    ),
+                  ),
+                  // 分享按钮
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (ctx) => ShareOptionsDialog(product: widget.product),
+                      );
+                    },
+                    icon: const Icon(Icons.share),
+                    label: Text(
+                      '分享',
                       style: Theme.of(context).textTheme.labelLarge,
                     ),
                   ),
@@ -1590,14 +2005,15 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                                     context: context,
                                     builder: (ctx) {
                                       String normalized = finalUrl.trim();
-                                      if (normalized.startsWith('//'))
-                                        normalized = 'https:' + normalized;
+                                      if (normalized.startsWith('//')) {
+                                        normalized = 'https:$normalized';
+                                      }
                                       return AlertDialog(
                                         title: const Text('商品链接'),
                                         content: Column(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            SelectableText(finalUrl),
+                                            SelectableText(normalized),
                                             const SizedBox(height: 12),
                                             Row(
                                               children: [
@@ -1711,26 +2127,38 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
             ],
           );
 
+          // AI 智能介绍作为独立区块，边框与上方内容对齐
+          Widget aiIntroSection = _buildAiIntroSection(context);
+
           if (wide) {
             return SingleChildScrollView(
               padding: const EdgeInsets.all(24),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: <Widget>[
-                  // 左侧图片
-                  image,
-                  const SizedBox(width: 24),
-                  // 右侧详情卡
-                  Expanded(
-                    child: Card(
-                      elevation: 0,
-                      color: Colors.transparent,
-                      child: Padding(
-                        padding: const EdgeInsets.all(4),
-                        child: details,
+                  // 上方：图片 + 详情并排
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      // 左侧图片
+                      image,
+                      const SizedBox(width: 24),
+                      // 右侧详情卡
+                      Expanded(
+                        child: Card(
+                          elevation: 0,
+                          color: Colors.transparent,
+                          child: Padding(
+                            padding: const EdgeInsets.all(4),
+                            child: details,
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
+                  // 下方：AI 智能介绍，居中显示
+                  const SizedBox(height: 24),
+                  aiIntroSection,
                 ],
               ),
             );
@@ -1745,6 +2173,9 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                 Center(child: image),
                 const SizedBox(height: 12),
                 details,
+                // AI 智能介绍
+                const SizedBox(height: 24),
+                aiIntroSection,
               ],
             ),
           );
