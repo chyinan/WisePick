@@ -3942,19 +3942,60 @@ Future<void> runServer(List<String> args) async {
       return Response.ok(jsonEncode({'status': 'success', 'data': data}),
           headers: {'Content-Type': 'application/json'});
     } on ScraperException catch (e) {
-      final statusCode = e.type == ScraperErrorType.cookieExpired ? 401 : 500;
+      // 根据错误类型返回适当的状态码和用户友好消息
+      int statusCode;
+      String userMessage;
+      bool isServiceError = false;
+      
+      switch (e.type) {
+        case ScraperErrorType.cookieExpired:
+        case ScraperErrorType.loginRequired:
+          statusCode = 401;
+          userMessage = '服务器出了一点小问题，请稍后再试~';
+          isServiceError = true;
+          break;
+        case ScraperErrorType.antiBotDetected:
+          statusCode = 403;
+          userMessage = '当前访问频率过高，请稍后再试~';
+          isServiceError = true;
+          break;
+        case ScraperErrorType.productNotFound:
+          statusCode = 404;
+          userMessage = '未找到该商品信息';
+          break;
+        case ScraperErrorType.timeout:
+          statusCode = 504;
+          userMessage = '服务器响应超时，请稍后再试~';
+          isServiceError = true;
+          break;
+        case ScraperErrorType.networkError:
+          statusCode = 503;
+          userMessage = '网络连接异常，请稍后再试~';
+          isServiceError = true;
+          break;
+        default:
+          statusCode = 500;
+          userMessage = '服务器出了一点小问题，请稍后再试~';
+          isServiceError = true;
+      }
+      
       return Response(statusCode,
           body: jsonEncode({
             'status': 'error',
             'errorType': e.type.name,
-            'message': e.message
+            'message': e.message,
+            'userMessage': userMessage,
+            'isServiceError': isServiceError,
           }),
           headers: {'Content-Type': 'application/json'});
     } catch (e) {
       return Response.internalServerError(
           body: jsonEncode({
             'status': 'error',
-            'message': 'Scraper error: $e'
+            'errorType': 'unknown',
+            'message': 'Scraper error: $e',
+            'userMessage': '服务器出了一点小问题，请稍后再试~',
+            'isServiceError': true,
           }),
           headers: {'Content-Type': 'application/json'});
     }

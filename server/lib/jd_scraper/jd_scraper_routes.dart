@@ -4,7 +4,7 @@ import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 
 import 'jd_scraper_service.dart';
-import 'cookie_manager.dart';
+import 'error_handler.dart';
 import 'models/models.dart';
 
 /// 京东爬虫服务路由
@@ -16,6 +16,8 @@ import 'models/models.dart';
 /// - GET  /api/jd/cookie/status - 获取 Cookie 状态
 /// - POST /api/jd/cookie/update - 更新 Cookie
 /// - GET  /api/jd/errors - 获取错误日志
+/// - GET  /api/jd/alerts - 获取管理员告警
+/// - POST /api/jd/alerts/:id/acknowledge - 确认告警已处理
 class JdScraperRoutes {
   /// 爬虫服务实例
   final JdScraperService _service;
@@ -45,9 +47,16 @@ class JdScraperRoutes {
 
     // 错误日志
     router.get('/api/jd/errors', _getErrors);
+    
+    // 管理员告警
+    router.get('/api/jd/alerts', _getAlerts);
+    router.post('/api/jd/alerts/<alertId>/acknowledge', _acknowledgeAlert);
 
     // 缓存管理
     router.post('/api/jd/cache/clear', _clearCache);
+    
+    // 浏览器管理
+    router.post('/api/jd/browsers/cleanup', _cleanupBrowsers);
 
     return router;
   }
@@ -78,7 +87,13 @@ class JdScraperRoutes {
         'data': info.toJson(),
       });
     } on ScraperException catch (e) {
-      return _errorResponse(e.type.name, e.message, statusCode: _getStatusCode(e.type));
+      final isServiceError = e.type != ScraperErrorType.productNotFound;
+      return _errorResponse(
+        e.type.name, 
+        e.message, 
+        statusCode: _getStatusCode(e.type),
+        isServiceError: isServiceError,
+      );
     } catch (e) {
       return _errorResponse('unknown', e.toString());
     }
@@ -210,6 +225,72 @@ class JdScraperRoutes {
       return _errorResponse('unknown', e.toString());
     }
   }
+  
+  /// 清理空闲浏览器
+  Future<Response> _cleanupBrowsers(Request request) async {
+    try {
+      final count = await _service.browserPool.closeIdleBrowsers();
+      return _jsonResponse({
+        'success': true,
+        'message': 'Cleaned up $count idle browser(s)',
+        'closedCount': count,
+      });
+    } catch (e) {
+      return _errorResponse('unknown', e.toString());
+    }
+  }
+  
+  /// 获取管理员告警
+  Future<Response> _getAlerts(Request request) async {
+    try {
+      final limitStr = request.url.queryParameters['limit'];
+      final typeStr = request.url.queryParameters['type'];
+      final unacknowledgedOnlyStr = request.url.queryParameters['unacknowledgedOnly'];
+
+      final limit = limitStr != null ? int.tryParse(limitStr) : 50;
+      AlertType? type;
+      if (typeStr != null) {
+        try {
+          type = AlertType.values.firstWhere(
+            (t) => t.name == typeStr,
+          );
+        } catch (_) {}
+      }
+      final unacknowledgedOnly = unacknowledgedOnlyStr == 'true';
+
+      final alerts = _service.errorHandler.getAlerts(
+        type: type,
+        unacknowledgedOnly: unacknowledgedOnly,
+        limit: limit,
+      );
+
+      return _jsonResponse({
+        'success': true,
+        'data': alerts.map((a) => a.toJson()).toList(),
+        'total': alerts.length,
+        'hasActiveCookieAlert': _service.errorHandler.hasActiveCookieAlert(),
+      });
+    } catch (e) {
+      return _errorResponse('unknown', e.toString());
+    }
+  }
+  
+  /// 确认告警已处理
+  Future<Response> _acknowledgeAlert(Request request, String alertId) async {
+    try {
+      final success = _service.errorHandler.acknowledgeAlert(alertId);
+      if (success) {
+        return _jsonResponse({
+          'success': true,
+          'message': 'Alert acknowledged successfully',
+        });
+      } else {
+        return _errorResponse('notFound', 'Alert not found: $alertId', statusCode: 404);
+      }
+    } catch (e) {
+      return _errorResponse('unknown', e.toString());
+    }
+  }
 
   /// 关闭服务
   Future<void> close() async {
@@ -232,19 +313,44 @@ class JdScraperRoutes {
 
   /// 错误响应
   Response _errorResponse(String errorType, String message,
-      {int statusCode = 500}) {
+      {int statusCode = 500, String? userMessage, bool isServiceError = true}) {
     return Response(
       statusCode,
       body: jsonEncode({
         'success': false,
         'error': errorType,
         'message': message,
+        'userMessage': userMessage ?? _getUserFriendlyMessage(errorType),
+        'isServiceError': isServiceError,
       }),
       headers: {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
       },
     );
+  }
+  
+  /// 获取用户友好的错误消息
+  String _getUserFriendlyMessage(String errorType) {
+    switch (errorType) {
+      case 'cookieExpired':
+      case 'loginRequired':
+        return '服务器出了一点小问题，请稍后再试~';
+      case 'antiBotDetected':
+        return '当前访问频率过高，请稍后再试~';
+      case 'productNotFound':
+        return '未找到该商品信息';
+      case 'timeout':
+        return '服务器响应超时，请稍后再试~';
+      case 'networkError':
+        return '网络连接异常，请稍后再试~';
+      case 'badRequest':
+        return '请求参数有误';
+      case 'notFound':
+        return '未找到相关资源';
+      default:
+        return '服务器出了一点小问题，请稍后再试~';
+    }
   }
 
   /// 根据错误类型获取 HTTP 状态码
