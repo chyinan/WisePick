@@ -76,9 +76,24 @@ class BrowserInstance {
   /// 关闭浏览器实例
   Future<void> close() async {
     try {
+      // 先关闭所有页面
+      final pages = await browser.pages;
+      for (final page in pages) {
+        try {
+          await page.close();
+        } catch (_) {}
+      }
+      
+      // 关闭浏览器
       await browser.close();
+      _log('浏览器实例已关闭');
     } catch (e) {
       _log('关闭浏览器实例失败: $e');
+      // 尝试强制终止进程
+      try {
+        browser.process?.kill();
+        _log('已强制终止浏览器进程');
+      } catch (_) {}
     }
   }
 
@@ -94,6 +109,9 @@ class BrowserPoolConfig {
 
   /// 浏览器实例超时时间
   final Duration browserTimeout;
+  
+  /// 空闲超时时间（空闲多久后关闭浏览器）
+  final Duration idleTimeout;
 
   /// 是否使用无头模式
   final bool headless;
@@ -112,16 +130,21 @@ class BrowserPoolConfig {
 
   /// 操作减速（用于调试）
   final Duration? slowMo;
+  
+  /// 是否在请求完成后立即关闭浏览器（不复用）
+  final bool closeAfterUse;
 
   const BrowserPoolConfig({
     this.maxBrowsers = 3,
     this.browserTimeout = const Duration(minutes: 30),
+    this.idleTimeout = const Duration(minutes: 2),
     this.headless = false,
     this.executablePath,
     this.extraArgs = const [],
     this.defaultViewport,
     this.ignoreHttpsErrors = false,
     this.slowMo,
+    this.closeAfterUse = false,
   });
 
   /// 创建开发环境配置
@@ -129,8 +152,10 @@ class BrowserPoolConfig {
     return BrowserPoolConfig(
       maxBrowsers: 2,
       browserTimeout: const Duration(minutes: 15),
+      idleTimeout: const Duration(minutes: 1),
       headless: false,
       slowMo: const Duration(milliseconds: 50),
+      closeAfterUse: true,  // 开发环境下用完即关
     );
   }
 
@@ -139,7 +164,9 @@ class BrowserPoolConfig {
     return const BrowserPoolConfig(
       maxBrowsers: 5,
       browserTimeout: const Duration(minutes: 30),
+      idleTimeout: const Duration(minutes: 2),
       headless: true,
+      closeAfterUse: true,  // 生产环境也建议用完即关，避免进程残留
     );
   }
 }
@@ -162,9 +189,51 @@ class BrowserPool {
 
   /// 指纹随机化器
   final _fingerprintRandomizer = FingerprintRandomizer();
+  
+  /// 空闲清理定时器
+  Timer? _idleCleanupTimer;
 
   BrowserPool({BrowserPoolConfig? config})
-      : config = config ?? const BrowserPoolConfig();
+      : config = config ?? const BrowserPoolConfig() {
+    // 启动空闲清理定时器
+    _startIdleCleanupTimer();
+  }
+  
+  /// 启动空闲清理定时器
+  void _startIdleCleanupTimer() {
+    _idleCleanupTimer?.cancel();
+    _idleCleanupTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => _cleanupIdleBrowsers(),
+    );
+  }
+  
+  /// 清理空闲超时的浏览器
+  Future<void> _cleanupIdleBrowsers() async {
+    if (_closed) return;
+    
+    final toRemove = <BrowserInstance>[];
+    final now = DateTime.now();
+    
+    for (final instance in _browsers) {
+      // 如果浏览器不在使用中，且空闲时间超过配置的空闲超时
+      if (!instance._inUse && instance._lastUsed != null) {
+        final idleTime = now.difference(instance._lastUsed!);
+        if (idleTime > config.idleTimeout) {
+          toRemove.add(instance);
+          _log('浏览器空闲超时 (${idleTime.inSeconds}秒)，准备关闭');
+        }
+      }
+    }
+    
+    for (final instance in toRemove) {
+      await _removeInstance(instance);
+    }
+    
+    if (toRemove.isNotEmpty) {
+      _log('清理了 ${toRemove.length} 个空闲浏览器实例，剩余: ${_browsers.length}');
+    }
+  }
 
   /// 获取浏览器实例
   ///
@@ -212,20 +281,28 @@ class BrowserPool {
   }
 
   /// 释放浏览器实例
-  void release(BrowserInstance instance) {
+  Future<void> release(BrowserInstance instance) async {
     if (_closed) return;
 
-    instance.markAvailable();
-
-    // 如果有等待的请求，分配浏览器
+    // 如果有等待的请求，分配浏览器（不关闭）
     if (_waitingQueue.isNotEmpty) {
       final completer = _waitingQueue.removeFirst();
       instance.markInUse();
       completer.complete(instance);
       _log('将浏览器实例分配给等待中的请求');
-    } else {
-      _log('浏览器实例已释放');
+      return;
     }
+    
+    // 如果配置为用完即关，则直接关闭浏览器
+    if (config.closeAfterUse) {
+      _log('用完即关模式：关闭浏览器实例');
+      await _removeInstance(instance);
+      return;
+    }
+
+    // 否则标记为可用，等待复用
+    instance.markAvailable();
+    _log('浏览器实例已释放，等待复用');
   }
 
   /// 获取新页面
@@ -368,13 +445,42 @@ class BrowserPool {
 
   /// 移除浏览器实例
   Future<void> _removeInstance(BrowserInstance instance) async {
+    if (!_browsers.contains(instance)) return;
     _browsers.remove(instance);
     await instance.close();
+    _log('移除浏览器实例，剩余: ${_browsers.length}/${config.maxBrowsers}');
+  }
+  
+  /// 立即关闭所有空闲浏览器（手动清理）
+  Future<int> closeIdleBrowsers() async {
+    if (_closed) return 0;
+    
+    final toRemove = <BrowserInstance>[];
+    
+    for (final instance in _browsers) {
+      if (!instance._inUse) {
+        toRemove.add(instance);
+      }
+    }
+    
+    for (final instance in toRemove) {
+      await _removeInstance(instance);
+    }
+    
+    if (toRemove.isNotEmpty) {
+      _log('手动清理了 ${toRemove.length} 个空闲浏览器实例');
+    }
+    
+    return toRemove.length;
   }
 
   /// 关闭所有浏览器
   Future<void> closeAll() async {
     _closed = true;
+    
+    // 取消空闲清理定时器
+    _idleCleanupTimer?.cancel();
+    _idleCleanupTimer = null;
 
     // 取消所有等待中的请求
     while (_waitingQueue.isNotEmpty) {
@@ -430,7 +536,7 @@ class PageWithInstance {
     try {
       await page.close();
     } catch (_) {}
-    pool.release(instance);
+    await pool.release(instance);
   }
 }
 

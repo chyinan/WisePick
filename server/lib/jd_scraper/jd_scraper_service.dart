@@ -237,11 +237,20 @@ class JdScraperService {
           await Future.delayed(config.retryDelay);
         }
       } catch (e, stack) {
-        lastError = ScraperException.unknown(e, stack);
-        _log('获取失败: $e');
+        // 根据异常类型创建适当的 ScraperException
+        final errorStr = e.toString().toLowerCase();
+        
+        if (errorStr.contains('timeout')) {
+          // 超时异常 - 可能是因为跳转到登录页导致页面加载缓慢
+          lastError = ScraperException.timeout('请求超时: $e');
+          _log('获取失败 (超时): $e');
+        } else {
+          lastError = ScraperException.unknown(e, stack);
+          _log('获取失败: $e');
+        }
         
         // 记录错误
-        await errorHandler.handleError(e, skuId: skuId);
+        await errorHandler.handleError(lastError, skuId: skuId);
         performanceMonitor.recordError('getProductInfo');
 
         if (attempt < config.maxRetries) {
@@ -300,11 +309,26 @@ class JdScraperService {
 
       // 2. 访问京东联盟推广页面
       _log('访问京东联盟推广页面...');
-      await page.goto(
-        'https://union.jd.com/proManager/custompromotion',
-        wait: Until.networkIdle,
-        timeout: config.pageLoadTimeout,
-      );
+      try {
+        await page.goto(
+          'https://union.jd.com/proManager/custompromotion',
+          wait: Until.networkIdle,
+          timeout: config.pageLoadTimeout,
+        );
+      } catch (e) {
+        // 页面导航可能超时，但可能已经跳转到了登录页
+        // 检查当前URL是否是登录页
+        final currentUrl = page.url ?? '';
+        _log('页面导航异常，当前URL: $currentUrl');
+        
+        if (await _isLoginRequired(page)) {
+          _log('⚠️ 页面导航时检测到跳转至登录页');
+          await cookieManager.updateValidationStatus(false);
+          throw ScraperException.cookieExpired('Cookie 已过期，需要重新登录');
+        }
+        // 如果不是登录页，则重新抛出原始异常
+        rethrow;
+      }
 
       // 3. 检测是否需要登录
       if (await _isLoginRequired(page)) {
@@ -371,11 +395,31 @@ class JdScraperService {
   }
 
   /// 检测是否需要登录
+  /// 
+  /// 检测多种场景：
+  /// 1. URL 跳转到京东 passport 登录页
+  /// 2. URL 跳转到京东联盟登录页 (union.jd.com 的登录相关页面)
+  /// 3. URL 包含 returnUrl 参数（通常是登录重定向）
+  /// 4. 页面内容包含登录相关提示
   Future<bool> _isLoginRequired(Page page) async {
     final url = page.url ?? '';
 
     // 检查 URL 是否跳转到登录页
-    if (url.contains('passport.jd.com') || url.contains('login')) {
+    // 1. 京东 passport 登录
+    if (url.contains('passport.jd.com') || url.contains('plogin.m.jd.com')) {
+      _log('⚠️ 检测到跳转至京东 passport 登录页: $url');
+      return true;
+    }
+    
+    // 2. 京东联盟首页带 returnUrl（说明需要重新登录）
+    if (url.contains('union.jd.com/index') && url.contains('returnUrl')) {
+      _log('⚠️ 检测到跳转至京东联盟登录页（带returnUrl）: $url');
+      return true;
+    }
+    
+    // 3. 通用登录检测
+    if (url.contains('/login') || url.contains('login.') || url.contains('signin')) {
+      _log('⚠️ 检测到跳转至登录页: $url');
       return true;
     }
 
@@ -384,9 +428,33 @@ class JdScraperService {
       final bodyText = await page.evaluate<String>(
         '() => document.body.innerText',
       );
-      if (bodyText != null &&
-          (bodyText.contains('请登录') || bodyText.contains('未登录'))) {
-        return true;
+      if (bodyText != null) {
+        // 检测常见的登录提示文本
+        final loginIndicators = [
+          '请登录',
+          '未登录', 
+          '登录后查看',
+          '请使用京东账号登录',
+          '请先登录',
+          '登录京东联盟',
+        ];
+        for (final indicator in loginIndicators) {
+          if (bodyText.contains(indicator)) {
+            _log('⚠️ 页面内容包含登录提示: "$indicator"');
+            return true;
+          }
+        }
+      }
+    } catch (_) {}
+    
+    // 检查页面标题
+    try {
+      final title = await page.evaluate<String>('() => document.title');
+      if (title != null) {
+        if (title.contains('登录') || title.contains('Login')) {
+          _log('⚠️ 页面标题包含登录: "$title"');
+          return true;
+        }
       }
     } catch (_) {}
 

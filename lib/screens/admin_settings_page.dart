@@ -53,7 +53,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
           _openAiController.text = openai ?? '';
           // VEAPI 已弃用，不再展示或设置 veapi_key
           _baseUrlController.text = base ?? '';
-          _backendBaseController.text = backendBase ?? 'http://47.82.79.141';
+          _backendBaseController.text = backendBase ?? 'http://localhost:9527';
           _modelController.text = model ?? 'gpt-3.5-turbo';
           _embedPrompts = embed ?? true;
           _debugAiResponse = debug ?? false;

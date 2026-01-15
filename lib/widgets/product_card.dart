@@ -517,12 +517,13 @@ class _ProductCardState extends ConsumerState<ProductCard>
 }
 
 /// 判断商品是否下架/无货
+/// 注意：只有当价格已爬取（cachedPrice != null）且为 0 时才视为下架
+/// 未爬取时（cachedPrice == null）应显示"¥--.--"而不是下架状态
 bool _isOffShelf(ProductModel product, num? cachedPrice) {
   if (product.platform == 'jd') {
-    // 京东商品：有缓存价格且为 0，视为下架
+    // 京东商品：只有在已获取价格且价格为 0 时才视为下架
+    // cachedPrice == null 表示还未爬取，不应判断为下架
     if (cachedPrice != null && cachedPrice < 0.01) return true;
-    // 没有缓存价格且原始价格为 0
-    if (cachedPrice == null && product.price < 0.01) return true;
   } else {
     // 其他平台：价格为 0 视为下架
     if (product.price < 0.01) return true;

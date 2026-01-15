@@ -152,6 +152,48 @@ class ScraperLogger {
   }
 }
 
+/// 管理员告警类型
+enum AlertType {
+  /// Cookie 过期告警
+  cookieExpired,
+  
+  /// 反爬虫检测告警  
+  antiBotDetected,
+  
+  /// 服务异常告警
+  serviceError,
+}
+
+/// 管理员告警条目
+class AlertEntry {
+  final String id;
+  final AlertType type;
+  final String message;
+  final DateTime timestamp;
+  final Map<String, dynamic> details;
+  
+  /// 是否已确认处理
+  bool acknowledged;
+
+  AlertEntry({
+    required this.id,
+    required this.type,
+    required this.message,
+    required this.timestamp,
+    this.details = const {},
+    this.acknowledged = false,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'type': type.name,
+    'message': message,
+    'timestamp': timestamp.toIso8601String(),
+    'details': details,
+    'acknowledged': acknowledged,
+  };
+}
+
 /// 错误处理器
 ///
 /// 负责错误识别、分类、记录和通知
@@ -161,9 +203,15 @@ class ErrorHandler {
 
   /// 错误历史记录
   final List<ErrorEntry> _errors = [];
+  
+  /// 管理员告警列表
+  final List<AlertEntry> _alerts = [];
 
   /// 最大错误记录数
   final int maxErrors;
+  
+  /// 最大告警记录数
+  final int maxAlerts;
 
   /// Cookie 过期回调
   final Future<void> Function()? onCookieExpired;
@@ -173,12 +221,20 @@ class ErrorHandler {
 
   /// 错误计数器（用于统计）
   final Map<ScraperErrorType, int> _errorCounts = {};
+  
+  /// Cookie 过期告警的冷却时间（避免频繁告警）
+  DateTime? _lastCookieExpiredAlert;
+  
+  /// 告警冷却时间（分钟）
+  final int alertCooldownMinutes;
 
   ErrorHandler({
     ScraperLogger? logger,
     this.maxErrors = 1000,
+    this.maxAlerts = 100,
     this.onCookieExpired,
     this.onAntiBotDetected,
+    this.alertCooldownMinutes = 5,
   }) : logger = logger ?? ScraperLogger();
 
   /// 识别错误类型
@@ -249,21 +305,197 @@ class ErrorHandler {
       },
     );
 
-    // 触发回调
+    // 触发回调和管理员告警
     switch (errorType) {
       case ScraperErrorType.cookieExpired:
+      case ScraperErrorType.loginRequired:
+        // 创建 Cookie 过期告警（带冷却时间）
+        await _createCookieExpiredAlert(
+          pageUrl: pageUrl,
+          details: details,
+        );
         if (onCookieExpired != null) {
           await onCookieExpired!();
         }
         break;
       case ScraperErrorType.antiBotDetected:
+        // 创建反爬虫检测告警
+        _createAlert(
+          AlertType.antiBotDetected,
+          '检测到反爬虫系统拦截，可能需要更换 IP 或等待一段时间',
+          details: {
+            if (pageUrl != null) 'pageUrl': pageUrl,
+            if (details != null) ...details,
+          },
+        );
         if (onAntiBotDetected != null) {
           await onAntiBotDetected!();
         }
         break;
+      case ScraperErrorType.timeout:
+        // 超时可能是因为跳转到登录页导致，检查是否频繁超时
+        _checkFrequentTimeouts();
+        break;
       default:
         break;
     }
+  }
+  
+  /// 检查是否频繁超时，如果是则提示可能是 Cookie 问题
+  void _checkFrequentTimeouts() {
+    final now = DateTime.now();
+    final recentTimeouts = _errors.where((e) => 
+      e.type == ScraperErrorType.timeout &&
+      now.difference(e.timestamp).inMinutes < 10
+    ).length;
+    
+    // 如果10分钟内超时超过3次，可能是Cookie问题
+    if (recentTimeouts >= 3) {
+      logger.warning(
+        '⚠️ 检测到频繁超时 (10分钟内 $recentTimeouts 次)，可能是 Cookie 已失效导致页面跳转到登录页',
+        module: 'ErrorHandler',
+      );
+      
+      // 创建服务异常告警
+      _createAlert(
+        AlertType.serviceError,
+        '检测到频繁超时，可能是 Cookie 已失效，建议检查并更新 Cookie',
+        details: {
+          'recentTimeouts': recentTimeouts,
+          'suggestion': '请检查京东联盟 Cookie 是否有效，如果无效请重新登录获取',
+        },
+      );
+    }
+  }
+  
+  /// 创建 Cookie 过期告警（带冷却时间避免频繁告警）
+  Future<void> _createCookieExpiredAlert({
+    String? pageUrl,
+    Map<String, dynamic>? details,
+  }) async {
+    final now = DateTime.now();
+    
+    // 检查冷却时间
+    if (_lastCookieExpiredAlert != null) {
+      final diff = now.difference(_lastCookieExpiredAlert!);
+      if (diff.inMinutes < alertCooldownMinutes) {
+        logger.debug(
+          'Cookie 过期告警冷却中，跳过 (上次告警: ${diff.inMinutes}分钟前)',
+          module: 'ErrorHandler',
+        );
+        return;
+      }
+    }
+    
+    _lastCookieExpiredAlert = now;
+    
+    _createAlert(
+      AlertType.cookieExpired,
+      '⚠️ 京东联盟 Cookie 已过期，需要管理员重新登录获取新的 Cookie',
+      details: {
+        if (pageUrl != null) 'pageUrl': pageUrl,
+        'action': '请管理员登录京东联盟后台获取新的 Cookie，并通过 /api/jd/cookie/update 接口更新',
+        if (details != null) ...details,
+      },
+    );
+    
+    // 输出醒目的控制台警告
+    logger.warning(
+      '\n'
+      '╔════════════════════════════════════════════════════════════════╗\n'
+      '║  ⚠️  京东联盟 Cookie 已过期！                                   ║\n'
+      '║                                                                ║\n'
+      '║  请管理员尽快执行以下操作：                                      ║\n'
+      '║  1. 登录京东联盟后台 (union.jd.com)                            ║\n'
+      '║  2. 使用浏览器开发者工具获取 Cookie                             ║\n'
+      '║  3. 通过 POST /api/jd/cookie/update 接口更新 Cookie            ║\n'
+      '║                                                                ║\n'
+      '║  在 Cookie 更新前，京东价格查询服务将无法正常工作               ║\n'
+      '╚════════════════════════════════════════════════════════════════╝\n',
+      module: 'ADMIN_ALERT',
+    );
+  }
+  
+  /// 创建管理员告警
+  void _createAlert(
+    AlertType type,
+    String message, {
+    Map<String, dynamic>? details,
+  }) {
+    final alert = AlertEntry(
+      id: 'alert_${DateTime.now().millisecondsSinceEpoch}_${_alerts.length}',
+      type: type,
+      message: message,
+      timestamp: DateTime.now(),
+      details: details ?? {},
+    );
+    
+    _alerts.add(alert);
+    
+    // 限制告警数量
+    if (_alerts.length > maxAlerts) {
+      _alerts.removeAt(0);
+    }
+    
+    // 记录到日志
+    logger.warning(
+      'Admin Alert: [${type.name}] $message',
+      context: details,
+      module: 'ErrorHandler',
+    );
+  }
+  
+  /// 获取管理员告警列表
+  List<AlertEntry> getAlerts({
+    AlertType? type,
+    bool? unacknowledgedOnly,
+    int? limit,
+  }) {
+    var alerts = List<AlertEntry>.from(_alerts);
+    
+    if (type != null) {
+      alerts = alerts.where((a) => a.type == type).toList();
+    }
+    
+    if (unacknowledgedOnly == true) {
+      alerts = alerts.where((a) => !a.acknowledged).toList();
+    }
+    
+    alerts.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    
+    if (limit != null) {
+      alerts = alerts.take(limit).toList();
+    }
+    
+    return alerts;
+  }
+  
+  /// 确认告警已处理
+  bool acknowledgeAlert(String alertId) {
+    final index = _alerts.indexWhere((a) => a.id == alertId);
+    if (index >= 0) {
+      _alerts[index].acknowledged = true;
+      logger.info('Alert acknowledged: $alertId', module: 'ErrorHandler');
+      return true;
+    }
+    return false;
+  }
+  
+  /// 获取未处理的 Cookie 过期告警数量
+  int getUnacknowledgedCookieAlertCount() {
+    return _alerts.where((a) => 
+      a.type == AlertType.cookieExpired && !a.acknowledged
+    ).length;
+  }
+  
+  /// 检查是否有活跃的 Cookie 过期告警
+  bool hasActiveCookieAlert() {
+    final now = DateTime.now();
+    return _alerts.any((a) => 
+      a.type == AlertType.cookieExpired && 
+      !a.acknowledged &&
+      now.difference(a.timestamp).inHours < 24  // 24小时内的告警视为活跃
+    );
   }
 
   /// 记录错误
@@ -339,6 +571,12 @@ class ErrorHandler {
       'byType': _errorCounts.map((k, v) => MapEntry(k.name, v)),
       'last24h': _errors.where((e) => e.timestamp.isAfter(last24h)).length,
       'lastHour': _errors.where((e) => e.timestamp.isAfter(lastHour)).length,
+      'alerts': {
+        'total': _alerts.length,
+        'unacknowledged': _alerts.where((a) => !a.acknowledged).length,
+        'cookieExpired': _alerts.where((a) => a.type == AlertType.cookieExpired).length,
+        'hasActiveCookieAlert': hasActiveCookieAlert(),
+      },
     };
   }
 

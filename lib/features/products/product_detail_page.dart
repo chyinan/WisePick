@@ -117,8 +117,9 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
       );
       final response = await http.get(uri).timeout(const Duration(minutes: 2));
 
+      final body = jsonDecode(response.body);
+      
       if (response.statusCode == 200) {
-        final body = jsonDecode(response.body);
         if (body['status'] == 'success' && body['data'] != null) {
           final data = body['data'];
           setState(() {
@@ -142,16 +143,32 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
           throw Exception('Backend failed to get promotion');
         }
       } else {
-        throw Exception('Server returned status ${response.statusCode}');
+        // 服务器返回错误状态码，尝试解析用户友好的错误消息
+        String errorMessage = '获取优惠失败，将使用原始链接';
+        if (body is Map) {
+          final userMessage = body['userMessage'] as String?;
+          if (userMessage != null && userMessage.isNotEmpty) {
+            errorMessage = userMessage;
+          }
+        }
+        throw Exception(errorMessage);
       }
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _fetchFailed = true;
       });
+      
+      // 显示错误消息
+      String errorMessage = e.toString();
+      // 清理 "Exception: " 前缀
+      if (errorMessage.startsWith('Exception: ')) {
+        errorMessage = errorMessage.substring('Exception: '.length);
+      }
+      
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('获取优惠失败，将使用原始链接')));
+      ).showSnackBar(SnackBar(content: Text(errorMessage)));
     } finally {
       if (!mounted) return;
       setState(() {
