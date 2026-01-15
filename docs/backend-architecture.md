@@ -2,7 +2,7 @@
 
 **版本**: 1.0  
 **创建日期**: 2024  
-**最后更新**: 2024  
+**最后更新**: 2026-01-15  
 **文档状态**: 正式版  
 **架构师**: Winston (Architect Agent)
 
@@ -109,7 +109,7 @@
 │  │ AI Proxy     │  │ Sign Service │  │ Link Service │      │
 │  └──────────────┘  └──────────────┘  └──────────────┘      │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │ Search Proxy │  │ Config Mgmt  │  │ Admin Auth   │      │
+│  │ Search Proxy │  │ JD Scraper   │  │ Admin Auth   │      │
 │  └──────────────┘  └──────────────┘  └──────────────┘      │
 └─────────────────────────────────────────────────────────────┘
                             │
@@ -488,6 +488,45 @@
 - 内存存储，应用重启后清空
 - 可配置过期时间
 
+### 4.9 京东高级爬虫模块 (JD Scraper)
+
+#### 4.9.1 模块职责
+
+- 模拟真实人类浏览行为获取京东商品数据
+- 规避京东联盟风控系统
+- 管理浏览器实例池
+- Cookie 持久化与有效性维护
+
+#### 4.9.2 核心组件
+
+**JdScraperService**:
+- 爬虫模块入口
+- 协调各组件完成抓取任务
+- 支持单商品和批量抓取
+
+**BrowserPool**:
+- 管理 Playwright 浏览器实例
+- 支持并发控制（默认最大 3 个实例）
+- 自动回收过期或失效实例
+
+**HumanBehaviorSimulator**:
+- 模拟人类操作（贝塞尔曲线移动鼠标、随机滚动、输入延迟）
+- 降低自动化工具被检测的风险
+
+**CookieManager**:
+- 负责 Cookie 的保存、加载和有效性检测
+- 支持在 Cookie 过期时触发通知或手动登录流程
+
+#### 4.9.3 爬虫 API 端点
+
+| 端点 | 方法 | 功能 |
+|------|------|------|
+| `/jd/product` | POST | 获取单个商品详情 |
+| `/jd/products/batch` | POST | 批量获取商品详情 |
+| `/jd/cookie/status` | GET | 查看 Cookie 有效状态 |
+| `/jd/cookie/refresh` | POST | 触发手动登录刷新 Cookie |
+| `/jd/errors` | GET | 查看爬虫错误日志 |
+
 ---
 
 ## 5. API 设计
@@ -521,6 +560,10 @@
 |------|------|------|
 | `/jd/union/goods/query` | GET | 商品搜索 |
 | `/jd/union/promotion/bysubunionid` | POST | 推广链接生成 |
+| `/jd/product` | POST | 获取单个商品信息（爬虫） |
+| `/jd/products/batch` | POST | 批量获取商品信息（爬虫） |
+| `/jd/cookie/status` | GET | 检查爬虫 Cookie 状态 |
+| `/jd/cookie/refresh` | POST | 触发手动登录刷新 Cookie |
 | `/proxy/test/jd_search` | GET | 测试搜索（调试用） |
 
 #### 5.1.5 拼多多端点
@@ -676,6 +719,28 @@ POST /{platform}/promotion
 解析推广链接
   ↓
 返回推广链接和相关信息
+```
+
+### 6.5 京东商品抓取数据流
+
+```
+前端请求
+  ↓
+POST /jd/product
+  ↓
+JdScraperService 接收请求
+  ↓
+BrowserPool 获取浏览器实例
+  ↓
+CookieManager 注入 Cookie
+  ↓
+HumanBehaviorSimulator 模拟操作
+  ↓
+ProductExtractor 提取页面数据
+  ↓
+CacheManager 存储结果
+  ↓
+返回标准商品 JSON
 ```
 
 ---

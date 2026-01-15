@@ -2,7 +2,7 @@
 
 **版本**: 1.0  
 **创建日期**: 2024  
-**最后更新**: 2024  
+**最后更新**: 2026-01-15  
 **文档状态**: 正式版  
 **架构师**: Winston (Architect Agent)
 
@@ -313,17 +313,17 @@ features/products/
 
 **TaobaoAdapter**:
 - 调用淘宝联盟 API
+- 集成 `TaobaoItemDetailService` 获取详情
 - 数据转换为 ProductModel
-- 错误处理和重试
 
 **JdAdapter**:
 - 调用京东联盟 API
-- OAuth 认证处理
-- 数据转换为 ProductModel
+- **Scraper 支持**: 当官方 API 不可用时，通过 `JdProductServiceExtension` 调用后端爬虫
+- **OAuth 认证**: 集成 `JdOAuthService` 处理授权流程
 
 **PddAdapter**:
 - 调用拼多多开放平台 API
-- 数据转换为 ProductModel
+- 集成 `PddGoodsDetailService` 获取详情
 
 #### 4.3.4 ProductModel 设计
 
