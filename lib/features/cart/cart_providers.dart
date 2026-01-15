@@ -16,4 +16,3 @@ final cartCountProvider = Provider<int>((ref) {
   final itemsAsync = ref.watch(cartItemsProvider);
   return itemsAsync.whenOrNull(data: (items) => items.length) ?? 0;
 });
-
