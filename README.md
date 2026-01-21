@@ -33,6 +33,8 @@
 - 🛒 **选品管理**: 提供购物车功能，方便用户收藏和比价
 - 💰 **价格监控**: 自动刷新商品价格，降价时及时通知
 - 🕷️ **高级爬虫**: 内置京东联盟高级网页爬虫，模拟人类行为，规避风控
+- 👤 **用户账号**: 支持邮箱注册登录，多设备管理
+- ☁️ **云端同步**: 购物车和会话记录自动云端同步，多端无缝切换
 
 ---
 
@@ -70,7 +72,22 @@
 - **Cookie 管理**: 自动检测过期、支持手动登录刷新
 - **并发控制**: 浏览器池管理，平衡性能与风险
 
-### 6. 管理员设置
+### 6. 用户账号系统
+- 邮箱注册与登录
+- JWT Token 认证（Access Token + Refresh Token）
+- 多设备登录管理
+- 安全的密码加密存储（bcrypt）
+- 个人资料编辑（昵称、头像）
+
+### 7. 云端数据同步
+- 购物车数据多端同步
+- 会话历史云端备份
+- 增量同步机制（基于版本号）
+- 冲突检测与自动解决
+- 离线使用，联网自动同步
+- 同步状态实时显示
+
+### 8. 管理员设置
 - OpenAI API Key 配置
 - 后端代理地址配置
 - AI 模型选择
@@ -148,8 +165,10 @@ flutter build web --release         # Web
 
 - **语言**: Dart
 - **框架**: Shelf
+- **数据库**: PostgreSQL（用户账号和同步数据存储）
+- **认证**: JWT（Access Token + Refresh Token）
 - **浏览器自动化**: Playwright (用于京东高级爬虫)
-- **功能**: 代理服务器、API 签名、转链、高级网页抓取
+- **功能**: 代理服务器、API 签名、转链、高级网页抓取、用户认证、数据同步
 
 ### 项目结构
 
@@ -157,15 +176,24 @@ flutter build web --release         # Web
 wisepick_dart_version/
 ├── lib/                      # Flutter 应用源码
 │   ├── core/                 # 核心功能（API 客户端、配置、OAuth）
-│   ├── features/             # 功能模块（聊天、商品、购物车）
+│   ├── features/             # 功能模块
+│   │   ├── auth/             # 用户认证（登录、注册、Token管理）
+│   │   ├── chat/             # AI 聊天
+│   │   ├── cart/             # 购物车
+│   │   └── products/         # 商品搜索
 │   ├── screens/              # 页面组件
-│   ├── services/             # 业务服务（AI Prompt、价格刷新、分享）
+│   ├── services/             # 业务服务
+│   │   └── sync/             # 数据同步（购物车、会话）
 │   ├── widgets/              # 通用组件
 │   └── models/               # 数据模型
 ├── server/                   # 后端代理服务
 │   ├── bin/
-│   │   └── proxy_server.dart # 代理服务器入口
+│   │   ├── proxy_server.dart # 代理服务器入口
+│   │   └── .env              # 环境变量配置
 │   ├── lib/
+│   │   ├── auth/             # 用户认证模块（JWT、中间件）
+│   │   ├── sync/             # 数据同步服务
+│   │   ├── db/               # 数据库连接
 │   │   └── jd_scraper/       # 京东高级爬虫模块
 │   └── pubspec.yaml
 ├── test/                     # 测试文件
@@ -197,6 +225,19 @@ wisepick_dart_version/
 
 - `ADMIN_PASSWORD`: 管理员密码（用于后台设置入口验证）
 
+#### 数据库配置（用户账号和云端同步）
+
+- `DB_HOST`: PostgreSQL 数据库主机（默认: `localhost`）
+- `DB_PORT`: 数据库端口（默认: `5432`）
+- `DB_NAME`: 数据库名称（默认: `wisepick`）
+- `DB_USER`: 数据库用户名（默认: `postgres`）
+- `DB_PASSWORD`: 数据库密码
+
+#### JWT 认证配置
+
+- `JWT_SECRET`: Access Token 签名密钥（必需，建议使用随机字符串）
+- `JWT_REFRESH_SECRET`: Refresh Token 签名密钥（必需，建议使用随机字符串）
+
 #### 可选配置（按需）
 
 **淘宝联盟**
@@ -217,32 +258,57 @@ wisepick_dart_version/
 
 ### 启动后端服务
 
-1. **进入服务器目录**
+1. **安装 PostgreSQL**
+   
+   下载并安装 PostgreSQL 数据库：https://www.postgresql.org/download/
+   
+   创建数据库：
+   ```sql
+   CREATE DATABASE wisepick;
+   ```
+   
+   > 注意：首次启动服务时会自动创建所需的表结构。
+
+2. **进入服务器目录**
    ```bash
    cd server
    ```
 
-2. **安装依赖**
+3. **安装依赖**
    ```bash
    dart pub get
    ```
 
-3. **配置环境变量**
+4. **配置环境变量**
    
-   创建 `.env` 文件（或使用系统环境变量）：
+   创建 `server/bin/.env` 文件（或使用系统环境变量）：
    ```bash
-   export TAOBAO_APP_SECRET="your_taobao_secret"
-   export JD_APP_SECRET="your_jd_secret"
-   export JD_APP_KEY="your_jd_app_key"
-   export JD_UNION_ID="your_jd_union_id"
-   export PDD_CLIENT_ID="your_pdd_client_id"
-   export PDD_CLIENT_SECRET="your_pdd_client_secret"
-   export PDD_PID="your_pdd_pid"
-   export ADMIN_PASSWORD="your_admin_password"
-   export PORT=9527
+   # 数据库配置
+   DB_HOST=localhost
+   DB_PORT=5432
+   DB_NAME=wisepick
+   DB_USER=postgres
+   DB_PASSWORD=your_db_password
+   
+   # JWT 认证配置
+   JWT_SECRET=your-jwt-secret-random-string
+   JWT_REFRESH_SECRET=your-refresh-secret-random-string
+   
+   # 电商联盟配置（可选）
+   TAOBAO_APP_SECRET=your_taobao_secret
+   JD_APP_SECRET=your_jd_secret
+   JD_APP_KEY=your_jd_app_key
+   JD_UNION_ID=your_jd_union_id
+   PDD_CLIENT_ID=your_pdd_client_id
+   PDD_CLIENT_SECRET=your_pdd_client_secret
+   PDD_PID=your_pdd_pid
+   
+   # 其他配置
+   ADMIN_PASSWORD=your_admin_password
+   PORT=9527
    ```
 
-4. **启动服务**
+5. **启动服务**
    ```bash
    dart run bin/proxy_server.dart
    ```
@@ -267,6 +333,27 @@ wisepick_dart_version/
 - `POST /jd/cookie/refresh`: 触发手动登录刷新 Cookie
 - `POST /sign/pdd`: 拼多多推广链接生成
 - `POST /admin/login`: 管理员登录验证
+
+#### 用户认证 API
+
+- `POST /api/v1/auth/register`: 用户注册（邮箱、密码）
+- `POST /api/v1/auth/login`: 用户登录（返回 Access Token 和 Refresh Token）
+- `POST /api/v1/auth/refresh`: 刷新 Access Token
+- `POST /api/v1/auth/logout`: 退出登录（使当前 Token 失效）
+- `POST /api/v1/auth/logout-all`: 退出所有设备
+- `GET /api/v1/auth/me`: 获取当前用户信息
+- `PUT /api/v1/auth/profile`: 更新用户资料
+- `PUT /api/v1/auth/password`: 修改密码
+- `GET /api/v1/auth/sessions`: 获取登录设备列表
+
+#### 数据同步 API
+
+- `POST /api/v1/sync/cart/pull`: 拉取购物车数据（增量同步）
+- `POST /api/v1/sync/cart/push`: 推送购物车数据
+- `GET /api/v1/sync/cart/version`: 获取购物车当前版本号
+- `POST /api/v1/sync/conversations/pull`: 拉取会话数据
+- `POST /api/v1/sync/conversations/push`: 推送会话数据
+- `GET /api/v1/sync/conversations/version`: 获取会话当前版本号
 
 ---
 
