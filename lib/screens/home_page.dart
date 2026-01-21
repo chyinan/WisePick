@@ -12,7 +12,12 @@ import '../core/theme/theme_provider.dart';
 import '../features/cart/cart_page.dart';
 import '../features/chat/chat_providers.dart';
 import '../features/chat/conversation_model.dart';
+import '../features/auth/auth_providers.dart';
+import '../features/auth/login_page.dart';
+import '../features/auth/profile_page.dart';
+import '../services/sync/sync_manager.dart';
 import '../widgets/macos_window_buttons.dart';
+import '../widgets/sync_status_indicator.dart';
 import 'admin_settings_page.dart';
 import 'chat_page.dart';
 import '../core/storage/hive_config.dart';
@@ -28,10 +33,43 @@ class HomePage extends ConsumerStatefulWidget {
   ConsumerState<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends ConsumerState<HomePage> {
+class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver {
   int _currentIndex = 0;
   int _aboutTapCount = 0;
   bool _showConversationPanel = false;  // 控制桌面端消息列表面板显示
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      // 应用恢复时自动同步
+      _syncOnResume();
+    }
+  }
+
+  Future<void> _syncOnResume() async {
+    try {
+      final isLoggedIn = ref.read(isLoggedInProvider);
+      if (isLoggedIn) {
+        final syncManager = ref.read(syncManagerProvider.notifier);
+        await syncManager.syncAll();
+      }
+    } catch (_) {
+      // 忽略同步错误，不影响用户体验
+    }
+  }
 
   Future<bool> _verifyAdminPassword(String password) async {
     final trimmed = password.trim();
@@ -347,6 +385,9 @@ class _SettingsPage extends ConsumerWidget {
     const String appName = '快淘帮';
     const String version = '1.0.0';
     final currentMode = ref.watch(themeProvider);
+    final authState = ref.watch(authStateProvider);
+    final isLoggedIn = authState.isLoggedIn;
+    final user = authState.user;
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -360,6 +401,19 @@ class _SettingsPage extends ConsumerWidget {
             padding: const EdgeInsets.all(24),
             children: [
               _buildInfoCard(context, appName, version),
+              const SizedBox(height: 24),
+              // 账号部分
+              const _SectionHeader(title: '账号'),
+              Card(
+                child: isLoggedIn && user != null
+                    ? _buildLoggedInCard(context, user)
+                    : _buildLoginCard(context),
+              ),
+              // 同步状态（仅登录后显示）
+              if (isLoggedIn) ...[
+                const SizedBox(height: 16),
+                const SyncStatusIndicator(),
+              ],
               const SizedBox(height: 24),
               const _SectionHeader(title: '外观设置'),
               Card(
@@ -461,17 +515,13 @@ class _SettingsPage extends ConsumerWidget {
         padding: const EdgeInsets.all(32.0),
         child: Column(
           children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Icon(
-                Icons.shopping_bag,
-                size: 40,
-                color: Theme.of(context).colorScheme.primary,
+            ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: Image.asset(
+                'assets/icon/app_logo.png',
+                width: 80,
+                height: 80,
+                fit: BoxFit.cover,
               ),
             ),
             const SizedBox(height: 16),
@@ -496,6 +546,60 @@ class _SettingsPage extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// 已登录状态的账号卡片
+  Widget _buildLoggedInCard(BuildContext context, user) {
+    final theme = Theme.of(context);
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundColor: theme.colorScheme.primaryContainer,
+        backgroundImage:
+            user.avatarUrl != null ? NetworkImage(user.avatarUrl!) : null,
+        child: user.avatarUrl == null
+            ? Text(
+                user.displayName[0].toUpperCase(),
+                style: TextStyle(
+                  color: theme.colorScheme.onPrimaryContainer,
+                  fontWeight: FontWeight.bold,
+                ),
+              )
+            : null,
+      ),
+      title: Text(user.displayName),
+      subtitle: Text(user.email),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const ProfilePage()),
+        );
+      },
+    );
+  }
+
+  /// 未登录状态的账号卡片
+  Widget _buildLoginCard(BuildContext context) {
+    final theme = Theme.of(context);
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundColor: theme.colorScheme.surfaceContainerHighest,
+        child: Icon(
+          Icons.person_outline,
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+      ),
+      title: const Text('登录 / 注册'),
+      subtitle: const Text('登录后可同步购物车和聊天记录'),
+      trailing: FilledButton(
+        onPressed: () async {
+          await Navigator.of(context).push<bool>(
+            MaterialPageRoute(builder: (_) => const LoginPage()),
+          );
+          // 登录成功后，页面会自动刷新（Riverpod 状态管理）
+        },
+        child: const Text('登录'),
       ),
     );
   }

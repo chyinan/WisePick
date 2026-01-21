@@ -1,0 +1,124 @@
+Analyzing wisepick_dart_version...                              
+
+warning - Unused import: 'dart:convert' - lib\core\jd_oauth_service.dart:2:8 - unused_import
+   info - Don't invoke 'print' in production code - lib\core\jd_oauth_service.dart:111:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\jd_oauth_service.dart:112:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\jd_oauth_service.dart:117:9 - avoid_print
+   info - Unnecessary braces in a string interpolation - lib\core\jd_oauth_service.dart:117:53 - unnecessary_brace_in_string_interps
+   info - Don't invoke 'print' in production code - lib\core\jd_oauth_service.dart:126:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\jd_oauth_service.dart:128:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\jd_oauth_service.dart:132:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\jd_oauth_service.dart:191:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\jd_oauth_service.dart:192:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\jd_oauth_service.dart:197:9 - avoid_print
+   info - Unnecessary braces in a string interpolation - lib\core\jd_oauth_service.dart:197:54 - unnecessary_brace_in_string_interps
+   info - Don't invoke 'print' in production code - lib\core\jd_oauth_service.dart:206:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\jd_oauth_service.dart:208:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\jd_oauth_service.dart:212:7 - avoid_print
+warning - Unused import: 'dart:convert' - lib\core\oauth_controller.dart:1:8 - unused_import
+warning - Unused import: 'dart:math' - lib\core\oauth_controller.dart:2:8 - unused_import
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\theme\app_theme.dart:129:56 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\theme\app_theme.dart:151:66 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\theme\app_theme.dart:370:56 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\theme\app_theme.dart:392:66 - deprecated_member_use
+   info - Don't invoke 'print' in production code - lib\features\auth\auth_providers.dart:190:11 - avoid_print
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\profile_page.dart:151:59 - deprecated_member_use
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\auth\profile_page.dart:218:31 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\auth\profile_page.dart:292:31 - use_build_context_synchronously
+   info - Don't invoke 'print' in production code - lib\features\auth\token_manager.dart:135:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\features\auth\token_manager.dart:148:7 - avoid_print
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\cart\cart_page.dart:116:83 - deprecated_member_use
+   info - Statements in a for should be enclosed in a block - lib\features\cart\cart_page.dart:140:39 - curly_braces_in_flow_control_structures
+   info - Statements in a for should be enclosed in a block - lib\features\cart\cart_page.dart:151:47 - curly_braces_in_flow_control_structures
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\cart\cart_page.dart:390:57 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\cart\cart_page.dart:391:64 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\cart\cart_page.dart:392:85 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\cart\cart_page.dart:442:52 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\cart\cart_page.dart:444:71 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\cart\cart_page.dart:634:98 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\cart\cart_page.dart:821:53 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\cart\cart_page.dart:822:82 - deprecated_member_use
+   info - Statements in a for should be enclosed in a block - lib\features\cart\cart_page.dart:840:37 - curly_braces_in_flow_control_structures
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\cart\cart_page.dart:886:61 - deprecated_member_use
+warning - Unused import: 'package:flutter/services.dart' - lib\features\chat\chat_providers.dart:2:8 - unused_import
+   info - The import of 'package:flutter_riverpod/flutter_riverpod.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter_riverpod/flutter_riverpod.dart' - lib\features\chat\chat_providers.dart:12:8 - unnecessary_import
+   info - Statements in an if should be enclosed in a block - lib\features\chat\chat_providers.dart:324:28 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\chat\chat_providers.dart:324:57 - curly_braces_in_flow_control_structures
+   info - Invalid regular expression syntax - lib\features\chat\chat_providers.dart:353:44 - valid_regexps
+   info - Invalid regular expression syntax - lib\features\chat\chat_providers.dart:363:42 - valid_regexps
+   info - Use interpolation to compose strings and values - lib\features\chat\chat_providers.dart:398:31 - prefer_interpolation_to_compose_strings
+   info - Use interpolation to compose strings and values - lib\features\chat\chat_providers.dart:401:20 - prefer_interpolation_to_compose_strings
+warning - The value of the local variable 'recs' isn't used - lib\features\chat\chat_providers.dart:406:15 - unused_local_variable
+   info - Use interpolation to compose strings and values - lib\features\chat\chat_providers.dart:427:26 - prefer_interpolation_to_compose_strings
+   info - Use interpolation to compose strings and values - lib\features\chat\chat_providers.dart:438:33 - prefer_interpolation_to_compose_strings
+   info - Use interpolation to compose strings and values - lib\features\chat\chat_providers.dart:439:24 - prefer_interpolation_to_compose_strings
+   info - Use interpolation to compose strings and values - lib\features\chat\chat_providers.dart:443:26 - prefer_interpolation_to_compose_strings
+   info - Use interpolation to compose strings and values - lib\features\chat\chat_providers.dart:443:49 - prefer_interpolation_to_compose_strings
+   info - Use interpolation to compose strings and values - lib\features\chat\chat_providers.dart:448:30 - prefer_interpolation_to_compose_strings
+   info - The 'if' statement could be replaced by a null-aware assignment - lib\features\chat\chat_providers.dart:500:17 - prefer_conditional_assignment
+warning - Unnecessary cast - lib\features\chat\chat_providers.dart:506:43 - unnecessary_cast
+warning - The operand can't be 'null', so the condition is always 'true' - lib\features\chat\chat_providers.dart:600:185 - unnecessary_null_comparison
+warning - Dead code - lib\features\chat\chat_providers.dart:600:219 - dead_code
+warning - The operand can't be 'null', so the condition is always 'true' - lib\features\chat\chat_providers.dart:606:27 - unnecessary_null_comparison
+   info - Use interpolation to compose strings and values - lib\features\chat\chat_providers.dart:636:41 - prefer_interpolation_to_compose_strings
+   info - Use interpolation to compose strings and values - lib\features\chat\chat_providers.dart:636:58 - prefer_interpolation_to_compose_strings
+   info - Invalid regular expression syntax - lib\features\chat\chat_providers.dart:637:44 - valid_regexps
+   info - Invalid regular expression syntax - lib\features\chat\chat_providers.dart:649:46 - valid_regexps
+   info - Invalid regular expression syntax - lib\features\chat\chat_providers.dart:660:44 - valid_regexps
+   info - Use interpolation to compose strings and values - lib\features\chat\chat_providers.dart:670:33 - prefer_interpolation_to_compose_strings
+   info - Invalid regular expression syntax - lib\features\chat\chat_providers.dart:672:39 - valid_regexps
+   info - Invalid regular expression syntax - lib\features\chat\chat_providers.dart:686:38 - valid_regexps
+   info - Use interpolation to compose strings and values - lib\features\chat\chat_providers.dart:701:32 - prefer_interpolation_to_compose_strings
+warning - The operand can't be 'null', so the condition is always 'true' - lib\features\chat\chat_providers.dart:701:61 - unnecessary_null_comparison
+warning - Dead code - lib\features\chat\chat_providers.dart:701:95 - dead_code
+   info - Use interpolation to compose strings and values - lib\features\chat\chat_providers.dart:701:103 - prefer_interpolation_to_compose_strings
+   info - Use interpolation to compose strings and values - lib\features\chat\chat_providers.dart:701:138 - prefer_interpolation_to_compose_strings
+   info - Use interpolation to compose strings and values - lib\features\chat\chat_providers.dart:735:27 - prefer_interpolation_to_compose_strings
+   info - Statements in an if should be enclosed in a block - lib\features\chat\chat_service.dart:64:47 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\chat\chat_service.dart:65:14 - curly_braces_in_flow_control_structures
+   info - Use interpolation to compose strings and values - lib\features\chat\chat_service.dart:137:20 - prefer_interpolation_to_compose_strings
+   info - Use interpolation to compose strings and values - lib\features\chat\chat_service.dart:168:30 - prefer_interpolation_to_compose_strings
+   info - Use interpolation to compose strings and values - lib\features\chat\chat_service.dart:309:26 - prefer_interpolation_to_compose_strings
+   info - Unnecessary braces in a string interpolation - lib\features\chat\chat_service.dart:379:60 - unnecessary_brace_in_string_interps
+   info - Unnecessary use of string interpolation - lib\features\chat\chat_service.dart:385:45 - unnecessary_string_interpolations
+   info - Use interpolation to compose strings and values - lib\features\chat\chat_service.dart:475:12 - prefer_interpolation_to_compose_strings
+   info - Use the null-aware operator '?.' rather than an explicit 'null' comparison - lib\features\chat\conversation_model.dart:52:23 - prefer_null_aware_operators
+warning - Unused import: 'jd_models.dart' - lib\features\products\jd_adapter.dart:9:8 - unused_import
+   info - Statements in an if should be enclosed in a block - lib\features\products\jd_adapter.dart:28:45 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\products\jd_adapter.dart:29:12 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\products\jd_adapter.dart:43:26 - curly_braces_in_flow_control_structures
+warning - Unnecessary cast - lib\features\products\jd_adapter.dart:43:34 - unnecessary_cast
+   info - Statements in an if should be enclosed in a block - lib\features\products\jd_adapter.dart:47:31 - curly_braces_in_flow_control_structures
+warning - Unnecessary cast - lib\features\products\jd_adapter.dart:47:39 - unnecessary_cast
+   info - Statements in an if should be enclosed in a block - lib\features\products\jd_adapter.dart:48:20 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\products\jd_adapter.dart:59:30 - curly_braces_in_flow_control_structures
+warning - Unnecessary cast - lib\features\products\jd_adapter.dart:59:38 - unnecessary_cast
+   info - Statements in an if should be enclosed in a block - lib\features\products\jd_adapter.dart:63:35 - curly_braces_in_flow_control_structures
+warning - Unnecessary cast - lib\features\products\jd_adapter.dart:63:43 - unnecessary_cast
+   info - Statements in an if should be enclosed in a block - lib\features\products\jd_adapter.dart:64:24 - curly_braces_in_flow_control_structures
+warning - Unnecessary cast - lib\features\products\jd_adapter.dart:74:17 - unnecessary_cast
+   info - Statements in an if should be enclosed in a block - lib\features\products\jd_adapter.dart:99:51 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\products\jd_adapter.dart:100:18 - curly_braces_in_flow_control_structures
+warning - The declaration '_formatJdTimestamp' isn't referenced - lib\features\products\jd_adapter.dart:156:10 - unused_element
+warning - The declaration '_md5Sign' isn't referenced - lib\features\products\jd_adapter.dart:162:10 - unused_element
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\products\keyword_prompt.dart:49:65 - deprecated_member_use
+   info - Statements in an if should be enclosed in a block - lib\features\products\pdd_adapter.dart:36:65 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\products\pdd_adapter.dart:37:29 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\products\pdd_adapter.dart:55:49 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\products\pdd_adapter.dart:56:16 - curly_braces_in_flow_control_structures
+warning - The value of the local variable 'tags' isn't used - lib\features\products\pdd_adapter.dart:95:20 - unused_local_variable
+   info - Statements in an if should be enclosed in a block - lib\features\products\pdd_adapter.dart:98:25 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\products\pdd_adapter.dart:99:32 - curly_braces_in_flow_control_structures
+warning - Unused import: 'package:hive/hive.dart' - lib\features\products\pdd_goods_detail_service.dart:3:8 - unused_import
+   info - Statements in a for should be enclosed in a block - lib\features\products\pdd_goods_detail_service.dart:66:37 - curly_braces_in_flow_control_structures
+warning - The value of the field '_lastCartPrice' isn't used - lib\features\products\product_detail_page.dart:53:11 - unused_field
+   info - Use of 'return' in a 'finally' clause - lib\features\products\product_detail_page.dart:173:21 - control_flow_in_finally
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\products\product_detail_page.dart:416:45 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\products\product_detail_page.dart:531:67 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\products\product_detail_page.dart:567:74 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\products\product_detail_page.dart:575:71 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\products\product_detail_page.dart:582:75 - deprecated_member_use
+   info - Statements in an if should be enclosed in a block - lib\features\products\product_detail_page.dart:703:7 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\products\product_detail_page.dart:752:9 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\products\product_detail_page.dart:781:9 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\products\product_detail_page.dart:792:9 - curly_braces_in_flow_con

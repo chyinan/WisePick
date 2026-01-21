@@ -8,6 +8,8 @@ import 'package:wisepick_dart_version/features/products/product_model.dart';
 import 'package:wisepick_dart_version/features/products/product_detail_page.dart';
 import 'package:wisepick_dart_version/features/products/jd_price_provider.dart';
 import 'package:wisepick_dart_version/features/cart/cart_providers.dart';
+import 'package:wisepick_dart_version/features/auth/auth_providers.dart';
+import 'package:wisepick_dart_version/services/sync/sync_manager.dart';
 import 'package:wisepick_dart_version/widgets/product_card.dart';
 import 'package:wisepick_dart_version/widgets/cached_product_image.dart';
 import 'package:wisepick_dart_version/services/price_refresh_service.dart';
@@ -59,9 +61,23 @@ class CartPage extends ConsumerWidget {
                   Expanded(
                     child: RefreshIndicator(
                       onRefresh: () async {
+                        // 刷新价格
                         await PriceRefreshService().refreshCartPrices();
                         ref.invalidate(cartItemsProvider);
                         ref.invalidate(jdPriceCacheProvider); // 刷新京东价格缓存
+                        
+                        // 如果已登录，同步云端数据
+                        final isLoggedIn = ref.read(isLoggedInProvider);
+                        if (isLoggedIn) {
+                          try {
+                            final syncManager = ref.read(syncManagerProvider.notifier);
+                            await syncManager.syncCart();
+                            // 同步后重新加载本地数据
+                            ref.invalidate(cartItemsProvider);
+                          } catch (_) {
+                            // 忽略同步错误
+                          }
+                        }
                       },
                       child: isDesktop 
                         ? _DesktopCartList(groups: groups, list: list)

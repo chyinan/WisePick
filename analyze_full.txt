@@ -1,0 +1,1051 @@
+Analyzing wisepick_dart_version...                              
+
+warning - Unused import: 'dart:convert' - lib\core\jd_oauth_service.dart:2:8 - unused_import
+   info - Don't invoke 'print' in production code - lib\core\jd_oauth_service.dart:111:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\jd_oauth_service.dart:112:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\jd_oauth_service.dart:117:9 - avoid_print
+   info - Unnecessary braces in a string interpolation - lib\core\jd_oauth_service.dart:117:53 - unnecessary_brace_in_string_interps
+   info - Don't invoke 'print' in production code - lib\core\jd_oauth_service.dart:126:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\jd_oauth_service.dart:128:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\jd_oauth_service.dart:132:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\jd_oauth_service.dart:191:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\jd_oauth_service.dart:192:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\jd_oauth_service.dart:197:9 - avoid_print
+   info - Unnecessary braces in a string interpolation - lib\core\jd_oauth_service.dart:197:54 - unnecessary_brace_in_string_interps
+   info - Don't invoke 'print' in production code - lib\core\jd_oauth_service.dart:206:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\jd_oauth_service.dart:208:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\jd_oauth_service.dart:212:7 - avoid_print
+warning - Unused import: 'dart:convert' - lib\core\oauth_controller.dart:1:8 - unused_import
+warning - Unused import: 'dart:math' - lib\core\oauth_controller.dart:2:8 - unused_import
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\theme\app_theme.dart:129:56 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\theme\app_theme.dart:151:66 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\theme\app_theme.dart:370:56 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\theme\app_theme.dart:392:66 - deprecated_member_use
+   info - Don't invoke 'print' in production code - lib\features\auth\auth_providers.dart:190:11 - avoid_print
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\profile_page.dart:151:59 - deprecated_member_use
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\auth\profile_page.dart:218:31 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\auth\profile_page.dart:292:31 - use_build_context_synchronously
+   info - Don't invoke 'print' in production code - lib\features\auth\token_manager.dart:135:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\features\auth\token_manager.dart:148:7 - avoid_print
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\cart\cart_page.dart:116:83 - deprecated_member_use
+   info - Statements in a for should be enclosed in a block - lib\features\cart\cart_page.dart:140:39 - curly_braces_in_flow_control_structures
+   info - Statements in a for should be enclosed in a block - lib\features\cart\cart_page.dart:151:47 - curly_braces_in_flow_control_structures
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\cart\cart_page.dart:390:57 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\cart\cart_page.dart:391:64 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\cart\cart_page.dart:392:85 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\cart\cart_page.dart:442:52 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\cart\cart_page.dart:444:71 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\cart\cart_page.dart:634:98 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\cart\cart_page.dart:821:53 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\cart\cart_page.dart:822:82 - deprecated_member_use
+   info - Statements in a for should be enclosed in a block - lib\features\cart\cart_page.dart:840:37 - curly_braces_in_flow_control_structures
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\cart\cart_page.dart:886:61 - deprecated_member_use
+warning - Unused import: 'package:flutter/services.dart' - lib\features\chat\chat_providers.dart:2:8 - unused_import
+   info - The import of 'package:flutter_riverpod/flutter_riverpod.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter_riverpod/flutter_riverpod.dart' - lib\features\chat\chat_providers.dart:12:8 - unnecessary_import
+   info - Statements in an if should be enclosed in a block - lib\features\chat\chat_providers.dart:324:28 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\chat\chat_providers.dart:324:57 - curly_braces_in_flow_control_structures
+   info - Invalid regular expression syntax - lib\features\chat\chat_providers.dart:353:44 - valid_regexps
+   info - Invalid regular expression syntax - lib\features\chat\chat_providers.dart:363:42 - valid_regexps
+   info - Use interpolation to compose strings and values - lib\features\chat\chat_providers.dart:398:31 - prefer_interpolation_to_compose_strings
+   info - Use interpolation to compose strings and values - lib\features\chat\chat_providers.dart:401:20 - prefer_interpolation_to_compose_strings
+warning - The value of the local variable 'recs' isn't used - lib\features\chat\chat_providers.dart:406:15 - unused_local_variable
+   info - Use interpolation to compose strings and values - lib\features\chat\chat_providers.dart:427:26 - prefer_interpolation_to_compose_strings
+   info - Use interpolation to compose strings and values - lib\features\chat\chat_providers.dart:438:33 - prefer_interpolation_to_compose_strings
+   info - Use interpolation to compose strings and values - lib\features\chat\chat_providers.dart:439:24 - prefer_interpolation_to_compose_strings
+   info - Use interpolation to compose strings and values - lib\features\chat\chat_providers.dart:443:26 - prefer_interpolation_to_compose_strings
+   info - Use interpolation to compose strings and values - lib\features\chat\chat_providers.dart:443:49 - prefer_interpolation_to_compose_strings
+   info - Use interpolation to compose strings and values - lib\features\chat\chat_providers.dart:448:30 - prefer_interpolation_to_compose_strings
+   info - The 'if' statement could be replaced by a null-aware assignment - lib\features\chat\chat_providers.dart:500:17 - prefer_conditional_assignment
+warning - Unnecessary cast - lib\features\chat\chat_providers.dart:506:43 - unnecessary_cast
+warning - The operand can't be 'null', so the condition is always 'true' - lib\features\chat\chat_providers.dart:600:185 - unnecessary_null_comparison
+warning - Dead code - lib\features\chat\chat_providers.dart:600:219 - dead_code
+warning - The operand can't be 'null', so the condition is always 'true' - lib\features\chat\chat_providers.dart:606:27 - unnecessary_null_comparison
+   info - Use interpolation to compose strings and values - lib\features\chat\chat_providers.dart:636:41 - prefer_interpolation_to_compose_strings
+   info - Use interpolation to compose strings and values - lib\features\chat\chat_providers.dart:636:58 - prefer_interpolation_to_compose_strings
+   info - Invalid regular expression syntax - lib\features\chat\chat_providers.dart:637:44 - valid_regexps
+   info - Invalid regular expression syntax - lib\features\chat\chat_providers.dart:649:46 - valid_regexps
+   info - Invalid regular expression syntax - lib\features\chat\chat_providers.dart:660:44 - valid_regexps
+   info - Use interpolation to compose strings and values - lib\features\chat\chat_providers.dart:670:33 - prefer_interpolation_to_compose_strings
+   info - Invalid regular expression syntax - lib\features\chat\chat_providers.dart:672:39 - valid_regexps
+   info - Invalid regular expression syntax - lib\features\chat\chat_providers.dart:686:38 - valid_regexps
+   info - Use interpolation to compose strings and values - lib\features\chat\chat_providers.dart:701:32 - prefer_interpolation_to_compose_strings
+warning - The operand can't be 'null', so the condition is always 'true' - lib\features\chat\chat_providers.dart:701:61 - unnecessary_null_comparison
+warning - Dead code - lib\features\chat\chat_providers.dart:701:95 - dead_code
+   info - Use interpolation to compose strings and values - lib\features\chat\chat_providers.dart:701:103 - prefer_interpolation_to_compose_strings
+   info - Use interpolation to compose strings and values - lib\features\chat\chat_providers.dart:701:138 - prefer_interpolation_to_compose_strings
+   info - Use interpolation to compose strings and values - lib\features\chat\chat_providers.dart:735:27 - prefer_interpolation_to_compose_strings
+   info - Statements in an if should be enclosed in a block - lib\features\chat\chat_service.dart:64:47 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\chat\chat_service.dart:65:14 - curly_braces_in_flow_control_structures
+   info - Use interpolation to compose strings and values - lib\features\chat\chat_service.dart:137:20 - prefer_interpolation_to_compose_strings
+   info - Use interpolation to compose strings and values - lib\features\chat\chat_service.dart:168:30 - prefer_interpolation_to_compose_strings
+   info - Use interpolation to compose strings and values - lib\features\chat\chat_service.dart:309:26 - prefer_interpolation_to_compose_strings
+   info - Unnecessary braces in a string interpolation - lib\features\chat\chat_service.dart:379:60 - unnecessary_brace_in_string_interps
+   info - Unnecessary use of string interpolation - lib\features\chat\chat_service.dart:385:45 - unnecessary_string_interpolations
+   info - Use interpolation to compose strings and values - lib\features\chat\chat_service.dart:475:12 - prefer_interpolation_to_compose_strings
+   info - Use the null-aware operator '?.' rather than an explicit 'null' comparison - lib\features\chat\conversation_model.dart:52:23 - prefer_null_aware_operators
+warning - Unused import: 'jd_models.dart' - lib\features\products\jd_adapter.dart:9:8 - unused_import
+   info - Statements in an if should be enclosed in a block - lib\features\products\jd_adapter.dart:28:45 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\products\jd_adapter.dart:29:12 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\products\jd_adapter.dart:43:26 - curly_braces_in_flow_control_structures
+warning - Unnecessary cast - lib\features\products\jd_adapter.dart:43:34 - unnecessary_cast
+   info - Statements in an if should be enclosed in a block - lib\features\products\jd_adapter.dart:47:31 - curly_braces_in_flow_control_structures
+warning - Unnecessary cast - lib\features\products\jd_adapter.dart:47:39 - unnecessary_cast
+   info - Statements in an if should be enclosed in a block - lib\features\products\jd_adapter.dart:48:20 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\products\jd_adapter.dart:59:30 - curly_braces_in_flow_control_structures
+warning - Unnecessary cast - lib\features\products\jd_adapter.dart:59:38 - unnecessary_cast
+   info - Statements in an if should be enclosed in a block - lib\features\products\jd_adapter.dart:63:35 - curly_braces_in_flow_control_structures
+warning - Unnecessary cast - lib\features\products\jd_adapter.dart:63:43 - unnecessary_cast
+   info - Statements in an if should be enclosed in a block - lib\features\products\jd_adapter.dart:64:24 - curly_braces_in_flow_control_structures
+warning - Unnecessary cast - lib\features\products\jd_adapter.dart:74:17 - unnecessary_cast
+   info - Statements in an if should be enclosed in a block - lib\features\products\jd_adapter.dart:99:51 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\products\jd_adapter.dart:100:18 - curly_braces_in_flow_control_structures
+warning - The declaration '_formatJdTimestamp' isn't referenced - lib\features\products\jd_adapter.dart:156:10 - unused_element
+warning - The declaration '_md5Sign' isn't referenced - lib\features\products\jd_adapter.dart:162:10 - unused_element
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\products\keyword_prompt.dart:49:65 - deprecated_member_use
+   info - Statements in an if should be enclosed in a block - lib\features\products\pdd_adapter.dart:36:65 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\products\pdd_adapter.dart:37:29 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\products\pdd_adapter.dart:55:49 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\products\pdd_adapter.dart:56:16 - curly_braces_in_flow_control_structures
+warning - The value of the local variable 'tags' isn't used - lib\features\products\pdd_adapter.dart:95:20 - unused_local_variable
+   info - Statements in an if should be enclosed in a block - lib\features\products\pdd_adapter.dart:98:25 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\products\pdd_adapter.dart:99:32 - curly_braces_in_flow_control_structures
+warning - Unused import: 'package:hive/hive.dart' - lib\features\products\pdd_goods_detail_service.dart:3:8 - unused_import
+   info - Statements in a for should be enclosed in a block - lib\features\products\pdd_goods_detail_service.dart:66:37 - curly_braces_in_flow_control_structures
+warning - The value of the field '_lastCartPrice' isn't used - lib\features\products\product_detail_page.dart:53:11 - unused_field
+   info - Use of 'return' in a 'finally' clause - lib\features\products\product_detail_page.dart:173:21 - control_flow_in_finally
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\products\product_detail_page.dart:416:45 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\products\product_detail_page.dart:531:67 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\products\product_detail_page.dart:567:74 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\products\product_detail_page.dart:575:71 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\products\product_detail_page.dart:582:75 - deprecated_member_use
+   info - Statements in an if should be enclosed in a block - lib\features\products\product_detail_page.dart:703:7 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\products\product_detail_page.dart:752:9 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\products\product_detail_page.dart:781:9 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\products\product_detail_page.dart:792:9 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\products\product_detail_page.dart:808:9 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\products\product_detail_page.dart:869:9 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\products\product_detail_page.dart:898:9 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\products\product_detail_page.dart:909:9 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\products\product_detail_page.dart:925:9 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\products\product_detail_page.dart:984:9 - curly_braces_in_flow_control_structures
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\products\product_detail_page.dart:1168:34 - deprecated_member_use
+warning - The declaration '_extractRecommendationsFromLooseJson' isn't referenced - lib\features\products\product_detail_page.dart:1322:30 - unused_element
+   info - Invalid regular expression syntax - lib\features\products\product_detail_page.dart:1359:7 - valid_regexps
+   info - Invalid regular expression syntax - lib\features\products\product_detail_page.dart:1362:7 - valid_regexps
+   info - Invalid regular expression syntax - lib\features\products\product_detail_page.dart:1364:29 - valid_regexps
+   info - Unnecessary use of '??' with 'null' - lib\features\products\product_detail_page.dart:1376:73 - unnecessary_null_in_if_null_operators
+   info - Statements in an if should be enclosed in a block - lib\features\products\product_detail_page.dart:1416:25 - curly_braces_in_flow_control_structures
+   info - Unnecessary use of string interpolation - lib\features\products\product_detail_page.dart:1658:33 - unnecessary_string_interpolations
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\products\product_detail_page.dart:1687:40 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\products\product_detail_page.dart:1689:59 - deprecated_member_use
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\products\product_detail_page.dart:1772:46 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\products\product_detail_page.dart:1780:27 - use_build_context_synchronously
+   info - Statements in an if should be enclosed in a block - lib\features\products\product_detail_page.dart:1865:37 - curly_braces_in_flow_control_structures
+   info - Don't use 'BuildContext's across async gaps - lib\features\products\product_detail_page.dart:1896:35 - use_build_context_synchronously
+   info - Statements in an if should be enclosed in a block - lib\features\products\product_detail_page.dart:1900:39 - curly_braces_in_flow_control_structures
+   info - Use interpolation to compose strings and values - lib\features\products\product_detail_page.dart:1900:52 - prefer_interpolation_to_compose_strings
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\products\product_detail_page.dart:1933:57 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\products\product_detail_page.dart:1950:55 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\products\product_detail_page.dart:1973:64 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\products\product_detail_page.dart:1976:53 - use_build_context_synchronously
+   info - Statements in an if should be enclosed in a block - lib\features\products\product_detail_page.dart:2010:39 - curly_braces_in_flow_control_structures
+   info - Don't use 'BuildContext's across async gaps - lib\features\products\product_detail_page.dart:2011:41 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\products\product_detail_page.dart:2016:58 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\products\product_detail_page.dart:2022:37 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\products\product_detail_page.dart:2061:59 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\products\product_detail_page.dart:2078:57 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\products\product_detail_page.dart:2101:66 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\products\product_detail_page.dart:2104:55 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\products\product_detail_page.dart:2132:52 - use_build_context_synchronously
+   info - The local variable '_num' starts with an underscore - lib\features\products\product_model.dart:116:10 - no_leading_underscores_for_local_identifiers
+   info - Unnecessary escape in string literal - lib\features\products\product_model.dart:122:67 - unnecessary_string_escapes
+   info - The local variable '_str' starts with an underscore - lib\features\products\product_model.dart:130:13 - no_leading_underscores_for_local_identifiers
+warning - Unnecessary cast - lib\features\products\product_model.dart:169:16 - unnecessary_cast
+warning - Unused import: '../../core/config.dart' - lib\features\products\product_service.dart:3:8 - unused_import
+   info - Statements in an if should be enclosed in a block - lib\features\products\product_service.dart:117:47 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\products\product_service.dart:118:14 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\products\product_service.dart:171:35 - curly_braces_in_flow_control_structures
+   info - Statements in a for should be enclosed in a block - lib\features\products\product_service.dart:207:41 - curly_braces_in_flow_control_structures
+   info - Unnecessary braces in a string interpolation - lib\features\products\product_service.dart:241:51 - unnecessary_brace_in_string_interps
+   info - Statements in an if should be enclosed in a block - lib\features\products\product_service.dart:296:33 - curly_braces_in_flow_control_structures
+   info - Use interpolation to compose strings and values - lib\features\products\search_service.dart:25:27 - prefer_interpolation_to_compose_strings
+   info - Use interpolation to compose strings and values - lib\features\products\search_service.dart:38:27 - prefer_interpolation_to_compose_strings
+warning - Unnecessary cast - lib\features\products\search_service.dart:48:71 - unnecessary_cast
+warning - Unnecessary cast - lib\features\products\search_service.dart:51:73 - unnecessary_cast
+   info - Statements in an if should be enclosed in a block - lib\features\products\search_service.dart:80:75 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\products\search_service.dart:81:108 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\products\search_service.dart:94:74 - curly_braces_in_flow_control_structures
+   info - Use interpolation to compose strings and values - lib\features\products\search_service.dart:99:79 - prefer_interpolation_to_compose_strings
+warning - The value of the local variable 'backend' isn't used - lib\features\products\taobao_adapter.dart:43:18 - unused_local_variable
+warning - The value of the field '_models' isn't used - lib\screens\admin_settings_page.dart:20:16 - unused_field
+warning - The value of the field '_loadingModels' isn't used - lib\screens\admin_settings_page.dart:21:8 - unused_field
+warning - The value of the field '_modelError' isn't used - lib\screens\admin_settings_page.dart:22:11 - unused_field
+   info - 'surfaceVariant' is deprecated and shouldn't be used. Use surfaceContainerHighest instead. This feature was deprecated after v3.18.0-0.1.pre - lib\screens\admin_settings_page.dart:112:50 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\screens\admin_settings_page.dart:123:25 - deprecated_member_use
+   info - 'surfaceVariant' is deprecated and shouldn't be used. Use surfaceContainerHighest instead. This feature was deprecated after v3.18.0-0.1.pre - lib\screens\admin_settings_page.dart:132:50 - deprecated_member_use
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\screens\admin_settings_page.dart:209:46 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\screens\admin_settings_page.dart:210:38 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\screens\admin_settings_page.dart:213:46 - use_build_context_synchronously
+warning - Unused import: 'package:wisepick_dart_version/features/cart/cart_providers.dart' - lib\screens\chat_page.dart:12:8 - unused_import
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\chat_page.dart:132:93 - deprecated_member_use
+   info - Unnecessary braces in a string interpolation - lib\screens\chat_page.dart:195:28 - unnecessary_brace_in_string_interps
+   info - Unnecessary braces in a string interpolation - lib\screens\chat_page.dart:195:37 - unnecessary_brace_in_string_interps
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\chat_page.dart:228:39 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\chat_page.dart:301:29 - deprecated_member_use
+   info - Use interpolation to compose strings and values - lib\screens\chat_page.dart:430:30 - prefer_interpolation_to_compose_strings
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\chat_page.dart:456:62 - deprecated_member_use
+warning - Unnecessary cast - lib\screens\chat_page.dart:517:26 - unnecessary_cast
+warning - Unnecessary cast - lib\screens\chat_page.dart:518:26 - unnecessary_cast
+warning - Unnecessary cast - lib\screens\chat_page.dart:519:27 - unnecessary_cast
+warning - The member 'state' can only be used within 'package:state_notifier/state_notifier.dart' or a test - lib\screens\chat_page.dart:579:62 - invalid_use_of_visible_for_testing_member
+warning - The member 'state' can only be used within instance members of subclasses of 'StateNotifier' - lib\screens\chat_page.dart:579:62 - invalid_use_of_protected_member
+warning - The member 'state' can only be used within 'package:state_notifier/state_notifier.dart' or a test - lib\screens\chat_page.dart:579:115 - invalid_use_of_visible_for_testing_member
+warning - The member 'state' can only be used within instance members of subclasses of 'StateNotifier' - lib\screens\chat_page.dart:579:115 - invalid_use_of_protected_member
+warning - The member 'state' can only be used within 'package:state_notifier/state_notifier.dart' or a test - lib\screens\chat_page.dart:635:63 - invalid_use_of_visible_for_testing_member
+warning - The member 'state' can only be used within instance members of subclasses of 'StateNotifier' - lib\screens\chat_page.dart:635:63 - invalid_use_of_protected_member
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\chat_page.dart:737:43 - deprecated_member_use
+   info - Don't use 'BuildContext's across async gaps - lib\screens\home_drawer.dart:64:18 - use_build_context_synchronously
+   info - Statements in an if should be enclosed in a block - lib\screens\home_drawer.dart:69:38 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\screens\home_drawer.dart:70:12 - curly_braces_in_flow_control_structures
+warning - The declaration '_getPriceNotificationEnabled' isn't referenced - lib\screens\home_page.dart:97:16 - unused_element
+warning - The declaration '_setPriceNotificationEnabled' isn't referenced - lib\screens\home_page.dart:102:16 - unused_element
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\home_page.dart:722:62 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\home_page.dart:756:68 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\home_page.dart:794:72 - deprecated_member_use
+   info - 'surfaceVariant' is deprecated and shouldn't be used. Use surfaceContainerHighest instead. This feature was deprecated after v3.18.0-0.1.pre - lib\screens\user_settings_page.dart:161:48 - deprecated_member_use
+   info - 'surfaceVariant' is deprecated and shouldn't be used. Use surfaceContainerHighest instead. This feature was deprecated after v3.18.0-0.1.pre - lib\screens\user_settings_page.dart:185:48 - deprecated_member_use
+   info - 'surfaceVariant' is deprecated and shouldn't be used. Use surfaceContainerHighest instead. This feature was deprecated after v3.18.0-0.1.pre - lib\screens\user_settings_page.dart:228:54 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\screens\user_settings_page.dart:245:25 - deprecated_member_use
+   info - 'surfaceVariant' is deprecated and shouldn't be used. Use surfaceContainerHighest instead. This feature was deprecated after v3.18.0-0.1.pre - lib\screens\user_settings_page.dart:261:50 - deprecated_member_use
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\screens\user_settings_page.dart:304:25 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\screens\user_settings_page.dart:306:36 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\screens\user_settings_page.dart:310:25 - use_build_context_synchronously
+   info - Dangling library doc comment - lib\services\ai_prompt_service.dart:2:1 - dangling_library_doc_comments
+   info - Angle brackets will be interpreted as HTML - lib\services\ai_prompt_service.dart:18:16 - unintended_html_in_doc_comment
+   info - Use interpolation to compose strings and values - lib\services\ai_prompt_service.dart:52:11 - prefer_interpolation_to_compose_strings
+   info - Use interpolation to compose strings and values - lib\services\ai_prompt_service.dart:95:12 - prefer_interpolation_to_compose_strings
+   info - Use interpolation to compose strings and values - lib\services\ai_prompt_service.dart:95:34 - prefer_interpolation_to_compose_strings
+warning - The value of the field '_cartService' isn't used - lib\services\price_refresh_service.dart:24:21 - unused_field
+   info - Don't invoke 'print' in production code - lib\services\sync\cart_sync_client.dart:354:7 - avoid_print
+   info - Dangling library doc comment - lib\services\sync\conflict_resolver.dart:6:1 - dangling_library_doc_comments
+   info - Don't invoke 'print' in production code - lib\services\sync\conversation_sync_client.dart:417:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\sync\conversation_sync_client.dart:437:7 - avoid_print
+   info - Dangling library doc comment - lib\services\sync\sync.dart:1:1 - dangling_library_doc_comments
+warning - The value of the field '_ref' isn't used - lib\services\sync\sync_manager.dart:101:13 - unused_field
+   info - Don't invoke 'print' in production code - lib\services\sync\sync_manager.dart:268:7 - avoid_print
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\widgets\product_card.dart:183:47 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\widgets\product_card.dart:238:52 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\widgets\product_card.dart:240:71 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\widgets\product_card.dart:297:47 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\widgets\product_card.dart:373:54 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\widgets\product_card.dart:375:73 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\widgets\product_card.dart:436:47 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\widgets\product_card.dart:492:52 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\widgets\product_card.dart:494:71 - deprecated_member_use
+warning - Unused import: 'dart:ui' - lib\widgets\shimmer_loading.dart:2:8 - unused_import
+   info - 'surfaceVariant' is deprecated and shouldn't be used. Use surfaceContainerHighest instead. This feature was deprecated after v3.18.0-0.1.pre - lib\widgets\shimmer_loading.dart:54:39 - deprecated_member_use
+   info - 'surfaceVariant' is deprecated and shouldn't be used. Use surfaceContainerHighest instead. This feature was deprecated after v3.18.0-0.1.pre - lib\widgets\shimmer_loading.dart:107:48 - deprecated_member_use
+   info - 'surfaceVariant' is deprecated and shouldn't be used. Use surfaceContainerHighest instead. This feature was deprecated after v3.18.0-0.1.pre - lib\widgets\shimmer_loading.dart:132:48 - deprecated_member_use
+   info - 'surfaceVariant' is deprecated and shouldn't be used. Use surfaceContainerHighest instead. This feature was deprecated after v3.18.0-0.1.pre - lib\widgets\shimmer_loading.dart:251:54 - deprecated_member_use
+   info - Can't use a relative path to import a library in 'lib' - scripts\call_jd_find_images.dart:3:8 - avoid_relative_lib_imports
+   info - Can't use a relative path to import a library in 'lib' - scripts\call_jd_find_images.dart:4:8 - avoid_relative_lib_imports
+   info - Can't use a relative path to import a library in 'lib' - scripts\call_jd_find_images.dart:5:8 - avoid_relative_lib_imports
+   info - Don't invoke 'print' in production code - scripts\call_jd_find_images.dart:31:3 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\call_jd_find_images.dart:32:28 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\call_jd_find_images.dart:37:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\call_jd_find_images.dart:38:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\call_jd_find_images.dart:39:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\call_jd_find_images.dart:41:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\call_jd_find_images.dart:42:5 - avoid_print
+   info - Can't use a relative path to import a library in 'lib' - scripts\call_jd_search_sku.dart:3:8 - avoid_relative_lib_imports
+   info - Can't use a relative path to import a library in 'lib' - scripts\call_jd_search_sku.dart:4:8 - avoid_relative_lib_imports
+   info - Can't use a relative path to import a library in 'lib' - scripts\call_jd_search_sku.dart:5:8 - avoid_relative_lib_imports
+   info - Don't invoke 'print' in production code - scripts\call_jd_search_sku.dart:11:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\call_jd_search_sku.dart:40:3 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\call_jd_search_sku.dart:41:28 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\call_jd_search_sku.dart:46:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\call_jd_search_sku.dart:47:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\call_jd_search_sku.dart:48:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\call_jd_search_sku.dart:50:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\call_jd_search_sku.dart:51:5 - avoid_print
+   info - Can't use a relative path to import a library in 'lib' - scripts\get_jd_images.dart:5:8 - avoid_relative_lib_imports
+   info - Can't use a relative path to import a library in 'lib' - scripts\get_jd_images.dart:6:8 - avoid_relative_lib_imports
+   info - Can't use a relative path to import a library in 'lib' - scripts\get_jd_images.dart:7:8 - avoid_relative_lib_imports
+   info - Can't use a relative path to import a library in 'lib' - scripts\get_jd_images.dart:8:8 - avoid_relative_lib_imports
+   info - Can't use a relative path to import a library in 'lib' - scripts\get_jd_images.dart:9:8 - avoid_relative_lib_imports
+   info - Can't use a relative path to import a library in 'lib' - scripts\get_jd_images.dart:10:8 - avoid_relative_lib_imports
+   info - Can't use a relative path to import a library in 'lib' - scripts\get_jd_images.dart:11:8 - avoid_relative_lib_imports
+   info - Don't invoke 'print' in production code - scripts\get_jd_images.dart:21:3 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\get_jd_images.dart:26:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\get_jd_images.dart:27:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\get_jd_images.dart:28:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\get_jd_images.dart:29:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\get_jd_images.dart:43:3 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\get_jd_images.dart:44:3 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\get_jd_images.dart:45:3 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\get_jd_images.dart:55:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\get_jd_images.dart:67:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\get_jd_images.dart:68:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\get_jd_images.dart:71:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\get_jd_images.dart:78:9 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\get_jd_images.dart:94:11 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\get_jd_images.dart:114:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\get_jd_images.dart:115:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\get_jd_images.dart:119:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\get_jd_images.dart:137:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\get_jd_images.dart:145:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\get_jd_images.dart:152:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\get_jd_images.dart:159:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\get_jd_images.dart:160:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\get_jd_images.dart:162:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\get_jd_images.dart:163:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\get_jd_images.dart:167:3 - avoid_print
+   info - Dangling library doc comment - scripts\pdd_authority_check.dart:1:1 - dangling_library_doc_comments
+   info - Can't use a relative path to import a library in 'lib' - scripts\pdd_authority_check.dart:14:8 - avoid_relative_lib_imports
+   info - Can't use a relative path to import a library in 'lib' - scripts\pdd_authority_check.dart:15:8 - avoid_relative_lib_imports
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:18:3 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:19:3 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:20:3 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:21:3 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:25:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:26:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:30:3 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:31:3 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:32:3 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:33:3 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:45:3 - avoid_print
+   info - Unnecessary use of string interpolation - scripts\pdd_authority_check.dart:45:9 - unnecessary_string_interpolations
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:46:3 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:47:3 - avoid_print
+   info - Unnecessary use of string interpolation - scripts\pdd_authority_check.dart:47:9 - unnecessary_string_interpolations
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:59:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:61:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:69:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:70:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:72:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:73:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:77:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:78:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:79:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:80:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:81:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:82:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:84:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:85:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:88:3 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:94:5 - avoid_print
+   info - Unnecessary use of string interpolation - scripts\pdd_authority_check.dart:94:11 - unnecessary_string_interpolations
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:95:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:96:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:97:5 - avoid_print
+   info - Unnecessary use of string interpolation - scripts\pdd_authority_check.dart:97:11 - unnecessary_string_interpolations
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:110:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:112:9 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:122:9 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:123:9 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:126:11 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:127:11 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:128:11 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:132:11 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:133:11 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:134:11 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:138:11 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:139:11 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:140:11 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:144:11 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:145:11 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:146:11 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:151:11 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:152:11 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:153:11 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:155:13 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:158:13 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:160:11 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:163:9 - avoid_print
+   info - Unnecessary use of string interpolation - scripts\pdd_authority_check.dart:163:15 - unnecessary_string_interpolations
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:164:9 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:165:9 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:166:9 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:167:9 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:168:9 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:169:9 - avoid_print
+   info - Unnecessary use of string interpolation - scripts\pdd_authority_check.dart:169:15 - unnecessary_string_interpolations
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:171:9 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:172:9 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:177:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:178:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:179:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:180:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:181:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:182:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:188:9 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:189:9 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:190:9 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:193:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:194:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:197:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:198:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:201:3 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:202:3 - avoid_print
+   info - Unnecessary use of string interpolation - scripts\pdd_authority_check.dart:202:9 - unnecessary_string_interpolations
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:203:3 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:204:3 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:205:3 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_authority_check.dart:206:3 - avoid_print
+   info - Unnecessary use of string interpolation - scripts\pdd_authority_check.dart:206:9 - unnecessary_string_interpolations
+   info - Don't invoke 'print' in production code - scripts\pdd_sign_debug.dart:51:3 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_sign_debug.dart:52:3 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_sign_debug.dart:53:3 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_sign_debug.dart:54:3 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_sign_debug.dart:55:3 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_sign_debug.dart:56:3 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_sign_debug.dart:57:3 - avoid_print
+   info - Statements in an if should be enclosed in a block - scripts\pdd_sign_debug.dart:63:32 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - scripts\pdd_sign_debug.dart:64:10 - curly_braces_in_flow_control_structures
+   info - Don't invoke 'print' in production code - scripts\pdd_sign_debug.dart:71:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\pdd_sign_debug.dart:72:5 - avoid_print
+   info - Can't use a relative path to import a library in 'lib' - scripts\search_pdd.dart:4:8 - avoid_relative_lib_imports
+   info - Can't use a relative path to import a library in 'lib' - scripts\search_pdd.dart:5:8 - avoid_relative_lib_imports
+   info - Don't invoke 'print' in production code - scripts\search_pdd.dart:9:3 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\search_pdd.dart:10:3 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\search_pdd.dart:11:3 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\search_pdd.dart:12:3 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\search_pdd.dart:13:3 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\search_pdd.dart:26:3 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\search_pdd.dart:42:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\search_pdd.dart:43:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\search_pdd.dart:57:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\search_pdd.dart:58:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\search_pdd.dart:59:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\search_pdd.dart:60:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\search_pdd.dart:61:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\search_pdd.dart:62:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\search_pdd.dart:66:5 - avoid_print
+   info - Can't use a relative path to import a library in 'lib' - scripts\search_pdd_var.dart:4:8 - avoid_relative_lib_imports
+   info - Can't use a relative path to import a library in 'lib' - scripts\search_pdd_var.dart:5:8 - avoid_relative_lib_imports
+   info - Don't invoke 'print' in production code - scripts\search_pdd_var.dart:8:3 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\search_pdd_var.dart:52:3 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\search_pdd_var.dart:67:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\search_pdd_var.dart:68:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\search_pdd_var.dart:70:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\search_pdd_var.dart:84:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\search_pdd_var.dart:85:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\search_pdd_var.dart:86:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\search_pdd_var.dart:87:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\search_pdd_var.dart:88:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\search_pdd_var.dart:89:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\search_pdd_var.dart:93:5 - avoid_print
+   info - Dangling library doc comment - scripts\test_all_apis.dart:1:1 - dangling_library_doc_comments
+   info - Can't use a relative path to import a library in 'lib' - scripts\test_all_apis.dart:16:8 - avoid_relative_lib_imports
+   info - Can't use a relative path to import a library in 'lib' - scripts\test_all_apis.dart:17:8 - avoid_relative_lib_imports
+   info - Can't use a relative path to import a library in 'lib' - scripts\test_all_apis.dart:18:8 - avoid_relative_lib_imports
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:80:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:81:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:82:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:83:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:84:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:85:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:90:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:91:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:92:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:111:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:112:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:113:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:114:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:115:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:116:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:117:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:128:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:157:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:167:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:334:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:344:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:536:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:546:7 - avoid_print
+   info - Use interpolation to compose strings and values - scripts\test_all_apis.dart:812:23 - prefer_interpolation_to_compose_strings
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:876:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:878:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:881:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:885:9 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:887:9 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:898:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:899:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:900:5 - avoid_print
+   info - Unnecessary use of string interpolation - scripts\test_all_apis.dart:900:11 - unnecessary_string_interpolations
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:901:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:902:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:903:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:904:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:905:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:906:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:909:7 - avoid_print
+   info - Unnecessary use of string interpolation - scripts\test_all_apis.dart:909:13 - unnecessary_string_interpolations
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:910:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:912:9 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:913:32 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:917:5 - avoid_print
+   info - Unnecessary use of string interpolation - scripts\test_all_apis.dart:917:11 - unnecessary_string_interpolations
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:921:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:923:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_all_apis.dart:925:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_promotion.dart:13:3 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_promotion.dart:17:3 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_promotion.dart:22:3 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_promotion.dart:26:3 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_promotion.dart:39:5 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_promotion.dart:42:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_promotion.dart:44:7 - avoid_print
+   info - Don't invoke 'print' in production code - scripts\test_promotion.dart:48:5 - avoid_print
+warning - Unused import: 'package:shelf/shelf_io.dart' - server\bin\proxy_server.dart:5:8 - unused_import
+   info - Can't use a relative path to import a library in 'lib' - server\bin\proxy_server.dart:12:8 - avoid_relative_lib_imports
+   info - Can't use a relative path to import a library in 'lib' - server\bin\proxy_server.dart:15:8 - avoid_relative_lib_imports
+   info - Can't use a relative path to import a library in 'lib' - server\bin\proxy_server.dart:16:8 - avoid_relative_lib_imports
+   info - Can't use a relative path to import a library in 'lib' - server\bin\proxy_server.dart:17:8 - avoid_relative_lib_imports
+   info - Use interpolation to compose strings and values - server\bin\proxy_server.dart:48:14 - prefer_interpolation_to_compose_strings
+   info - Unnecessary braces in a string interpolation - server\bin\proxy_server.dart:54:41 - unnecessary_brace_in_string_interps
+   info - Use interpolation to compose strings and values - server\bin\proxy_server.dart:58:12 - prefer_interpolation_to_compose_strings
+   info - Don't invoke 'print' in production code - server\bin\proxy_server.dart:179:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\proxy_server.dart:184:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\proxy_server.dart:189:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\proxy_server.dart:191:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\proxy_server.dart:192:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\proxy_server.dart:195:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\proxy_server.dart:196:5 - avoid_print
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:294:9 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:322:7 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:337:7 - curly_braces_in_flow_control_structures
+   info - The local variable '_safeMatchCount' starts with an underscore - server\bin\proxy_server.dart:344:7 - no_leading_underscores_for_local_identifiers
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:354:11 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:362:11 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:369:13 - curly_braces_in_flow_control_structures
+   info - The local variable '_walk' starts with an underscore - server\bin\proxy_server.dart:374:12 - no_leading_underscores_for_local_identifiers
+   info - Statements in a for should be enclosed in a block - server\bin\proxy_server.dart:377:33 - curly_braces_in_flow_control_structures
+   info - Statements in a for should be enclosed in a block - server\bin\proxy_server.dart:379:40 - curly_braces_in_flow_control_structures
+   info - The local variable '_generateCandidates' starts with an underscore - server\bin\proxy_server.dart:392:16 - no_leading_underscores_for_local_identifiers
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:454:7 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:479:13 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:541:19 - curly_braces_in_flow_control_structures
+   info - Unnecessary braces in a string interpolation - server\bin\proxy_server.dart:543:60 - unnecessary_brace_in_string_interps
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:565:19 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:601:15 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:643:13 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:652:15 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:654:15 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:664:15 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:666:15 - curly_braces_in_flow_control_structures
+warning - Unnecessary cast - server\bin\proxy_server.dart:696:53 - unnecessary_cast
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:727:25 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:791:11 - curly_braces_in_flow_control_structures
+warning - The value of the local variable 'veApiKey' isn't used - server\bin\proxy_server.dart:813:15 - unused_local_variable
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:821:15 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:853:19 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:866:19 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:904:19 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:925:17 - curly_braces_in_flow_control_structures
+   info - The local variable '_findListOfMaps' starts with an underscore - server\bin\proxy_server.dart:944:22 - no_leading_underscores_for_local_identifiers
+warning - Unnecessary type check; the result is always 'true' - server\bin\proxy_server.dart:966:11 - unnecessary_type_check
+warning - Unnecessary type check; the result is always 'true' - server\bin\proxy_server.dart:978:11 - unnecessary_type_check
+warning - Unnecessary type check; the result is always 'true' - server\bin\proxy_server.dart:990:11 - unnecessary_type_check
+   info - The 'if' statement could be replaced by a null-aware assignment - server\bin\proxy_server.dart:1003:7 - prefer_conditional_assignment
+warning - Unnecessary type check; the result is always 'true' - server\bin\proxy_server.dart:1010:13 - unnecessary_type_check
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:1011:11 - curly_braces_in_flow_control_structures
+warning - Unnecessary type check; the result is always 'true' - server\bin\proxy_server.dart:1012:31 - unnecessary_type_check
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:1042:23 - curly_braces_in_flow_control_structures
+warning - Unnecessary type check; the result is always 'true' - server\bin\proxy_server.dart:1056:33 - unnecessary_type_check
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:1080:21 - curly_braces_in_flow_control_structures
+warning - Unnecessary type check; the result is always 'true' - server\bin\proxy_server.dart:1097:13 - unnecessary_type_check
+warning - Unnecessary type check; the result is always 'true' - server\bin\proxy_server.dart:1110:32 - unnecessary_type_check
+   info - The local variable '_paras' starts with an underscore - server\bin\proxy_server.dart:1111:33 - no_leading_underscores_for_local_identifiers
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:1133:19 - curly_braces_in_flow_control_structures
+warning - The operand can't be 'null', so the condition is always 'false' - server\bin\proxy_server.dart:1134:31 - unnecessary_null_comparison
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:1141:21 - curly_braces_in_flow_control_structures
+warning - The operand can't be 'null', so the condition is always 'true' - server\bin\proxy_server.dart:1144:30 - unnecessary_null_comparison
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:1161:19 - curly_braces_in_flow_control_structures
+warning - The operand can't be 'null', so the condition is always 'false' - server\bin\proxy_server.dart:1171:30 - unnecessary_null_comparison
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:1176:21 - curly_braces_in_flow_control_structures
+warning - The left operand can't be null, so the right operand is never executed - server\bin\proxy_server.dart:1182:34 - dead_null_aware_expression
+warning - The left operand can't be null, so the right operand is never executed - server\bin\proxy_server.dart:1184:35 - dead_null_aware_expression
+warning - The left operand can't be null, so the right operand is never executed - server\bin\proxy_server.dart:1189:42 - dead_null_aware_expression
+warning - The left operand can't be null, so the right operand is never executed - server\bin\proxy_server.dart:1192:33 - dead_null_aware_expression
+warning - The left operand can't be null, so the right operand is never executed - server\bin\proxy_server.dart:1194:41 - dead_null_aware_expression
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:1217:17 - curly_braces_in_flow_control_structures
+   info - The local variable '_num' starts with an underscore - server\bin\proxy_server.dart:1346:20 - no_leading_underscores_for_local_identifiers
+   info - Unnecessary escape in string literal - server\bin\proxy_server.dart:1353:66 - unnecessary_string_escapes
+warning - Unnecessary type check; the result is always 'true' - server\bin\proxy_server.dart:1361:25 - unnecessary_type_check
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:1368:25 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:1372:25 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:1382:35 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:1387:35 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:1393:35 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:1402:37 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:1409:35 - curly_braces_in_flow_control_structures
+warning - The left operand can't be null, so the right operand is never executed - server\bin\proxy_server.dart:1434:57 - dead_null_aware_expression
+   info - The local variable '_str' starts with an underscore - server\bin\proxy_server.dart:1449:23 - no_leading_underscores_for_local_identifiers
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:1644:25 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:1648:23 - curly_braces_in_flow_control_structures
+   info - The local variable '_walkPrices' starts with an underscore - server\bin\proxy_server.dart:1671:28 - no_leading_underscores_for_local_identifiers
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:1679:33 - curly_braces_in_flow_control_structures
+   info - Statements in a for should be enclosed in a block - server\bin\proxy_server.dart:1683:51 - curly_braces_in_flow_control_structures
+   info - Unnecessary escape in string literal - server\bin\proxy_server.dart:1694:68 - unnecessary_string_escapes
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:1733:23 - curly_braces_in_flow_control_structures
+warning - The left operand can't be null, so the right operand is never executed - server\bin\proxy_server.dart:1756:49 - dead_null_aware_expression
+warning - The operand can't be 'null', so the condition is always 'false' - server\bin\proxy_server.dart:1757:56 - unnecessary_null_comparison
+warning - The operand can't be 'null', so the condition is always 'false' - server\bin\proxy_server.dart:1772:58 - unnecessary_null_comparison
+   info - Unnecessary braces in a string interpolation - server\bin\proxy_server.dart:1774:64 - unnecessary_brace_in_string_interps
+   info - Unnecessary escape in string literal - server\bin\proxy_server.dart:1796:62 - unnecessary_string_escapes
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:1971:15 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:1973:15 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:1983:15 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:1985:15 - curly_braces_in_flow_control_structures
+warning - Unnecessary cast - server\bin\proxy_server.dart:2015:59 - unnecessary_cast
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:2047:29 - curly_braces_in_flow_control_structures
+warning - Unnecessary type check; the result is always 'true' - server\bin\proxy_server.dart:2102:13 - unnecessary_type_check
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:2107:13 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:2111:13 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:2125:23 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:2136:23 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:2144:25 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:2152:23 - curly_braces_in_flow_control_structures
+warning - The left operand can't be null, so the right operand is never executed - server\bin\proxy_server.dart:2176:45 - dead_null_aware_expression
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:2201:17 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:2203:17 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:2204:42 - curly_braces_in_flow_control_structures
+   info - The local variable '_normalize' starts with an underscore - server\bin\proxy_server.dart:2212:14 - no_leading_underscores_for_local_identifiers
+   info - The local variable '_score' starts with an underscore - server\bin\proxy_server.dart:2219:14 - no_leading_underscores_for_local_identifiers
+warning - The left operand can't be null, so the right operand is never executed - server\bin\proxy_server.dart:2236:66 - dead_null_aware_expression
+   info - Use interpolation to compose strings and values - server\bin\proxy_server.dart:2237:38 - prefer_interpolation_to_compose_strings
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:2246:11 - curly_braces_in_flow_control_structures
+   info - The local variable '_cmpByField' starts with an underscore - server\bin\proxy_server.dart:2274:11 - no_leading_underscores_for_local_identifiers
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:2308:9 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:2310:9 - curly_braces_in_flow_control_structures
+   info - The local variable '_priceFutures' starts with an underscore - server\bin\proxy_server.dart:2315:34 - no_leading_underscores_for_local_identifiers
+   info - Unnecessary escape in string literal - server\bin\proxy_server.dart:2365:69 - unnecessary_string_escapes
+   info - The local variable '_tryRecoverUtf8' starts with an underscore - server\bin\proxy_server.dart:2451:12 - no_leading_underscores_for_local_identifiers
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:2466:7 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:2489:7 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:2491:7 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:2494:7 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:2496:7 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:2498:7 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:2500:7 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:2503:7 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:2549:9 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:2781:7 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:2847:7 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:2911:9 - curly_braces_in_flow_control_structures
+warning - The operand can't be 'null', so the condition is always 'false' - server\bin\proxy_server.dart:2936:16 - unnecessary_null_comparison
+warning - The operand can't be 'null', so the condition is always 'false' - server\bin\proxy_server.dart:2937:19 - unnecessary_null_comparison
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:3029:7 - curly_braces_in_flow_control_structures
+warning - The operand can't be 'null', so the condition is always 'true' - server\bin\proxy_server.dart:3030:24 - unnecessary_null_comparison
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:3031:7 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:3048:7 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:3050:7 - curly_braces_in_flow_control_structures
+   info - Unnecessary braces in a string interpolation - server\bin\proxy_server.dart:3073:52 - unnecessary_brace_in_string_interps
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:3110:11 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:3277:47 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:3424:9 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:3448:9 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:3461:13 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:3471:9 - curly_braces_in_flow_control_structures
+   info - Use interpolation to compose strings and values - server\bin\proxy_server.dart:3471:15 - prefer_interpolation_to_compose_strings
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:3480:9 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:3501:11 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:3503:11 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:3513:11 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:3515:11 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:3542:9 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:3554:13 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:3568:11 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:3574:15 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:3576:15 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:3589:9 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:3601:9 - curly_braces_in_flow_control_structures
+   info - Use interpolation to compose strings and values - server\bin\proxy_server.dart:3601:15 - prefer_interpolation_to_compose_strings
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:3631:11 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:3633:11 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:3643:11 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:3645:11 - curly_braces_in_flow_control_structures
+   info - Don't invoke 'print' in production code - server\bin\proxy_server.dart:3663:9 - avoid_print
+   info - Use interpolation to compose strings and values - server\bin\proxy_server.dart:3663:15 - prefer_interpolation_to_compose_strings
+   info - Don't invoke 'print' in production code - server\bin\proxy_server.dart:3684:11 - avoid_print
+   info - Use interpolation to compose strings and values - server\bin\proxy_server.dart:3684:17 - prefer_interpolation_to_compose_strings
+   info - Don't invoke 'print' in production code - server\bin\proxy_server.dart:3700:9 - avoid_print
+   info - Use interpolation to compose strings and values - server\bin\proxy_server.dart:3700:15 - prefer_interpolation_to_compose_strings
+   info - Don't invoke 'print' in production code - server\bin\proxy_server.dart:3721:9 - avoid_print
+   info - Use interpolation to compose strings and values - server\bin\proxy_server.dart:3721:15 - prefer_interpolation_to_compose_strings
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:3761:9 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:3773:13 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:3782:9 - curly_braces_in_flow_control_structures
+   info - Use interpolation to compose strings and values - server\bin\proxy_server.dart:3782:15 - prefer_interpolation_to_compose_strings
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:3796:9 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:3816:11 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:3818:11 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:3828:11 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - server\bin\proxy_server.dart:3830:11 - curly_braces_in_flow_control_structures
+   info - Don't invoke 'print' in production code - server\bin\proxy_server.dart:3974:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\proxy_server.dart:4001:7 - avoid_print
+   info - Unnecessary braces in a string interpolation - server\bin\proxy_server.dart:4097:24 - unnecessary_brace_in_string_interps
+   info - Can't use a relative path to import a library in 'lib' - server\bin\test_browser_pool.dart:5:8 - avoid_relative_lib_imports
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:19:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:20:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:21:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:62:9 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:67:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:68:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:74:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:79:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:80:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:84:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:85:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:86:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:87:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:88:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:89:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:92:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:95:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:104:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:105:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:107:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:110:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:111:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:118:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:122:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:127:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:129:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:133:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:140:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:141:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:146:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:154:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:168:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:169:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:170:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:171:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:172:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:177:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:179:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:183:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:188:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:189:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:192:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:197:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:202:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:207:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:215:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:221:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:222:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:227:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:236:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:240:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:244:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:246:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:253:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:254:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:259:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:261:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:264:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:268:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_browser_pool.dart:273:3 - avoid_print
+   info - Can't use a relative path to import a library in 'lib' - server\bin\test_cookie_manager.dart:3:8 - avoid_relative_lib_imports
+   info - Can't use a relative path to import a library in 'lib' - server\bin\test_cookie_manager.dart:4:8 - avoid_relative_lib_imports
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:21:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:22:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:23:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:39:11 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:40:11 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:57:9 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:62:9 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:70:9 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:75:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:77:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:78:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:83:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:88:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:89:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:93:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:96:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:97:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:98:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:99:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:103:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:104:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:106:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:109:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:116:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:117:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:122:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:123:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:124:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:129:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:130:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:134:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:138:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:144:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:151:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:152:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:156:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:162:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:163:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:167:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:176:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:177:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:180:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:186:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:187:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:188:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:189:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:193:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:194:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:197:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_cookie_manager.dart:203:3 - avoid_print
+   info - Can't use a relative path to import a library in 'lib' - server\bin\test_human_behavior.dart:5:8 - avoid_relative_lib_imports
+   info - Can't use a relative path to import a library in 'lib' - server\bin\test_human_behavior.dart:6:8 - avoid_relative_lib_imports
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:20:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:21:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:22:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:73:9 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:78:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:79:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:85:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:91:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:92:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:99:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:111:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:116:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:117:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:126:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:127:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:134:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:138:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:142:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:147:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:149:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:158:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:159:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:166:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:169:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:174:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:177:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:178:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:187:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:188:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:195:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:206:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:212:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:214:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:215:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:224:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:225:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:232:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:238:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:241:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:245:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:248:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:250:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:256:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:258:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:260:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:263:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_human_behavior.dart:271:3 - avoid_print
+   info - Can't use a relative path to import a library in 'lib' - server\bin\test_jd_scraper.dart:3:8 - avoid_relative_lib_imports
+   info - Angle brackets will be interpreted as HTML - server\bin\test_jd_scraper.dart:12:14 - unintended_html_in_doc_comment
+   info - Angle brackets will be interpreted as HTML - server\bin\test_jd_scraper.dart:13:11 - unintended_html_in_doc_comment
+   info - Angle brackets will be interpreted as HTML - server\bin\test_jd_scraper.dart:14:13 - unintended_html_in_doc_comment
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:17:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:18:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:19:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:36:11 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:37:11 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:45:11 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:46:11 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:54:11 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:55:11 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:71:9 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:76:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:78:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:79:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:81:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:87:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:92:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:93:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:98:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:99:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:100:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:102:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:104:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:106:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:107:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:108:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:109:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:112:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:114:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:115:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:116:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:117:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:119:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:121:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:122:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:123:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:124:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:125:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:126:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:128:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:130:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:131:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:132:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:134:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:136:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:140:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:142:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:143:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:145:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:147:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:149:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:151:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:152:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:153:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:158:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:159:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:163:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:164:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:165:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:170:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:171:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:179:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:180:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:186:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:187:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:195:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:196:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:199:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:206:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:207:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:210:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:213:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:214:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:215:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:216:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:219:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:222:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:224:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:227:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:228:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:229:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:230:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:233:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:239:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:240:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:241:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:243:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:246:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:249:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:252:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:255:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:257:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:258:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_jd_scraper.dart:263:3 - avoid_print
+   info - Can't use a relative path to import a library in 'lib' - server\bin\test_scraper_server.dart:8:8 - avoid_relative_lib_imports
+   info - Don't invoke 'print' in production code - server\bin\test_scraper_server.dart:19:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_scraper_server.dart:20:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_scraper_server.dart:21:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_scraper_server.dart:67:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_scraper_server.dart:68:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_scraper_server.dart:69:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_scraper_server.dart:70:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_scraper_server.dart:71:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_scraper_server.dart:72:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_scraper_server.dart:73:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_scraper_server.dart:74:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_scraper_server.dart:75:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_scraper_server.dart:76:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_scraper_server.dart:77:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_scraper_server.dart:78:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_scraper_server.dart:79:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_scraper_server.dart:80:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_scraper_server.dart:81:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_scraper_server.dart:82:3 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_scraper_server.dart:86:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\bin\test_scraper_server.dart:89:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\auth\auth_handler.dart:120:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\auth\auth_handler.dart:169:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\auth\auth_handler.dart:206:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\auth\auth_handler.dart:245:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\auth\auth_handler.dart:271:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\auth\auth_handler.dart:303:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\auth\auth_handler.dart:330:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\auth\auth_handler.dart:381:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\auth\auth_handler.dart:418:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\auth\auth_service.dart:80:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\auth\auth_service.dart:109:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\auth\auth_service.dart:136:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\auth\auth_service.dart:222:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\auth\auth_service.dart:411:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\auth\auth_service.dart:509:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\auth\auth_service.dart:525:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\auth\auth_service.dart:649:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\auth\jwt_service.dart:83:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\auth\jwt_service.dart:86:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\auth\jwt_service.dart:110:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\auth\jwt_service.dart:113:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\database\database.dart:50:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\database\database.dart:51:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\database\database.dart:73:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\database\database.dart:75:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\database\database.dart:86:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\database\database.dart:144:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\database\database.dart:151:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\database\database.dart:174:9 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\database\database.dart:180:9 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\database\database.dart:184:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\jd_scraper\browser_pool.dart:101:5 - avoid_print
+   info - Unnecessary 'const' keyword - server\lib\jd_scraper\browser_pool.dart:166:23 - unnecessary_const
+   info - Unnecessary 'const' keyword - server\lib\jd_scraper\browser_pool.dart:167:20 - unnecessary_const
+   info - Don't invoke 'print' in production code - server\lib\jd_scraper\browser_pool.dart:522:5 - avoid_print
+   info - Parameter 'config' could be a super parameter - server\lib\jd_scraper\cache_manager.dart:215:3 - use_super_parameters
+   info - Don't invoke 'print' in production code - server\lib\jd_scraper\cache_manager.dart:242:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\jd_scraper\cache_manager.dart:244:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\jd_scraper\cache_manager.dart:281:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\jd_scraper\cache_manager.dart:283:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\jd_scraper\cookie_manager.dart:264:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\jd_scraper\error_handler.dart:105:7 - avoid_print
+   info - Unnecessary braces in a string interpolation - server\lib\jd_scraper\human_behavior_simulator.dart:123:31 - unnecessary_brace_in_string_interps
+warning - The operand can't be 'null', so the condition is always 'true' - server\lib\jd_scraper\human_behavior_simulator.dart:229:14 - unnecessary_null_comparison
+warning - The operand can't be 'null', so the condition is always 'false' - server\lib\jd_scraper\human_behavior_simulator.dart:262:17 - unnecessary_null_comparison
+   info - Unnecessary braces in a string interpolation - server\lib\jd_scraper\human_behavior_simulator.dart:291:17 - unnecessary_brace_in_string_interps
+warning - The operand can't be 'null', so the condition is always 'true' - server\lib\jd_scraper\human_behavior_simulator.dart:400:16 - unnecessary_null_comparison
+warning - The operand can't be 'null', so the condition is always 'true' - server\lib\jd_scraper\human_behavior_simulator.dart:421:19 - unnecessary_null_comparison
+   info - Don't invoke 'print' in production code - server\lib\jd_scraper\human_behavior_simulator.dart:449:7 - avoid_print
+warning - The operand can't be 'null', so the condition is always 'true' - server\lib\jd_scraper\jd_scraper_service.dart:431:20 - unnecessary_null_comparison
+warning - The operand can't be 'null', so the condition is always 'true' - server\lib\jd_scraper\jd_scraper_service.dart:453:17 - unnecessary_null_comparison
+warning - The operand can't be 'null', so the condition is always 'true' - server\lib\jd_scraper\jd_scraper_service.dart:483:20 - unnecessary_null_comparison
+warning - The operand can't be 'null', so the condition is always 'false' - server\lib\jd_scraper\jd_scraper_service.dart:574:19 - unnecessary_null_comparison
+   info - Don't invoke 'print' in production code - server\lib\jd_scraper\jd_scraper_service.dart:666:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\jd_scraper\models\product_info.dart:87:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\jd_scraper\models\product_info.dart:88:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\jd_scraper\models\product_info.dart:102:9 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\jd_scraper\models\product_info.dart:112:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\jd_scraper\models\product_info.dart:127:9 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\jd_scraper\models\product_info.dart:147:5 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\jd_scraper\models\product_info.dart:155:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\sync\cart_sync_service.dart:194:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\sync\conversation_sync_service.dart:247:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\sync\conversation_sync_service.dart:361:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\sync\sync_handler.dart:65:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\sync\sync_handler.dart:91:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\sync\sync_handler.dart:142:7 - avoid_print
+   info - Don't invoke 'print' in production code - server\lib\sync\sync_handler.dart:170:7 - avoid_print
+   info - Angle brackets will be interpreted as HTML - server\lib\sync\sync_handler.dart:178:38 - unintended_html_in_doc_comment
+   info - Don't invoke 'print' in production code - server\lib\sync\sync_handler.dart:195:7 - avoid_print
+   info - 'overrideWithProvider' is deprecated and shouldn't be used. Will be removed in 3.0.0. Use overrideWith instead - test\cart_page_widget_test.dart:30:45 - deprecated_member_use
+  error - '_FakeCartService.addOrUpdateItem' ('Future<void> Function(ProductModel, {int qty})') isn't a valid override of 'CartService.addOrUpdateItem' ('Future<void> Function(ProductModel, {int qty, String? rawJson})') - test\cart_page_widget_test.dart:54:16 - invalid_override
+  error - '_FakeChatService.getAiReply' ('Future<String> Function(String)') isn't a valid override of 'ChatService.getAiReply' ('Future<String> Function(String, {bool includeTitleInstruction})') - test\chat_add_to_cart_test.dart:13:18 - invalid_override
+  error - '_FakeCartService.addOrUpdateItem' ('Future<void> Function(ProductModel, {int qty})') isn't a valid override of 'CartService.addOrUpdateItem' ('Future<void> Function(ProductModel, {int qty, String? rawJson})') - test\chat_add_to_cart_test.dart:23:16 - invalid_override
+   info - 'overrideWithProvider' is deprecated and shouldn't be used. Will be removed in 3.0.0. Use overrideWith instead - test\chat_add_to_cart_test.dart:59:45 - deprecated_member_use
+  error - The name 'WisePickApp' isn't a class - test\chat_add_to_cart_test.dart:61:114 - creation_with_non_type
+  error - '_FakeChatService.getAiReply' ('Future<String> Function(String)') isn't a valid override of 'ChatService.getAiReply' ('Future<String> Function(String, {bool includeTitleInstruction})') - test\chat_page_widget_test.dart:13:18 - invalid_override
+  error - The name 'WisePickApp' isn't a class - test\chat_page_widget_test.dart:25:82 - creation_with_non_type
+  error - '_MockChatService.getAiReply' ('Future<String> Function(String)') isn't a valid override of 'ChatService.getAiReply' ('Future<String> Function(String, {bool includeTitleInstruction})') - test\chat_state_notifier_test.dart:9:18 - invalid_override
+  error - The argument type 'Future<void> Function()' can't be assigned to the parameter type 'ValueChanged<ProductModel>?'.  - test\product_card_widget_test.dart:27:25 - argument_type_not_assignable
+  error - Invalid constant value - test\widget_test.dart:16:56 - invalid_constant
+  error - The function 'WisePickApp' isn't defined - test\widget_test.dart:16:56 - undefined_function
+

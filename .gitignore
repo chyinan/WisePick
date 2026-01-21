@@ -89,3 +89,5 @@ bmad-core*/
 
 # Chrome related folders
 server/.local-chrome/
+server/verify_db.bat
+/.local-chrome

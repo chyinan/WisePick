@@ -1,7 +1,5 @@
 import 'dart:async';
 
-import 'package:hive/hive.dart';
-
 import '../../core/config.dart';
 import '../../core/pdd_client.dart';
 
