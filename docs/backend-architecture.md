@@ -416,7 +416,34 @@
 
 ### 4.7 认证授权模块
 
-#### 4.7.1 管理员登录
+#### 4.7.1 用户认证 API
+
+**基础路径**: `/api/v1/auth`
+
+**端点列表**:
+| 端点 | 方法 | 功能 | 认证 |
+|------|------|------|------|
+| `/register` | POST | 用户注册 | 否 |
+| `/login` | POST | 用户登录 | 否 |
+| `/refresh` | POST | 刷新 Token | 否 |
+| `/logout` | POST | 登出当前设备 | 是 |
+| `/logout-all` | POST | 登出所有设备 | 是 |
+| `/me` | GET | 获取当前用户信息 | 是 |
+| `/sessions` | GET | 获取登录会话列表 | 是 |
+| `/change-password` | POST | 修改密码 | 是 |
+| `/profile` | PATCH | 更新用户资料 | 是 |
+
+**JWT Token 配置**:
+- Access Token: 15分钟有效期
+- Refresh Token: 30天有效期
+- 算法: HMAC-SHA256
+- 密钥环境变量: `JWT_SECRET`, `JWT_REFRESH_SECRET`
+
+**密码安全**:
+- 使用 bcrypt 加密（cost = 12）
+- 登录失败限制：5次/15分钟
+
+#### 4.7.2 管理员登录
 
 **端点**: `POST /admin/login`
 
@@ -444,7 +471,55 @@
 - 密码通过环境变量 `ADMIN_PASSWORD` 配置
 - 支持 JSON 和表单格式请求
 
-### 4.8 调试支持模块
+### 4.8 数据同步模块
+
+#### 4.8.1 模块职责
+
+- 多设备数据同步（购物车、会话、消息）
+- 离线变更队列管理
+- 版本号冲突检测和解决
+- 增量同步支持
+
+#### 4.8.2 同步 API
+
+**基础路径**: `/api/v1/sync`
+
+**端点列表**:
+| 端点 | 方法 | 功能 |
+|------|------|------|
+| `/cart` | GET | 获取购物车数据 |
+| `/cart/sync` | POST | 同步购物车变更 |
+| `/cart/version` | GET | 获取购物车版本号 |
+| `/conversations` | GET | 获取会话列表 |
+| `/conversations/sync` | POST | 同步会话变更 |
+| `/conversations/{id}/messages` | GET | 获取会话消息 |
+
+**所有同步端点需要认证**（Authorization: Bearer {access_token}）
+
+#### 4.8.3 同步流程
+
+```
+客户端请求
+    ↓
+认证中间件 (requireAuth)
+    ↓
+验证 JWT Token
+    ↓
+提取 userId 到请求上下文
+    ↓
+同步处理器执行业务逻辑
+    ↓
+返回同步结果
+```
+
+#### 4.8.4 版本号机制
+
+- 每个实体有 `sync_version` 字段
+- 服务器端递增版本号
+- 客户端同步时携带 `last_sync_version`
+- 支持 `ON CONFLICT` UPSERT 操作
+
+### 4.9 调试支持模块
 
 #### 4.8.1 调试端点
 
@@ -575,7 +650,32 @@
 | `/pdd/rp/prom/generate` | POST | 推广链接生成 |
 | `/pdd/search_debug` | POST | 搜索调试 |
 
-#### 5.1.6 管理端点
+#### 5.1.6 用户认证端点
+
+| 端点 | 方法 | 功能 | 认证 |
+|------|------|------|------|
+| `/api/v1/auth/register` | POST | 用户注册 | 否 |
+| `/api/v1/auth/login` | POST | 用户登录 | 否 |
+| `/api/v1/auth/refresh` | POST | 刷新 Token | 否 |
+| `/api/v1/auth/logout` | POST | 登出当前设备 | 是 |
+| `/api/v1/auth/logout-all` | POST | 登出所有设备 | 是 |
+| `/api/v1/auth/me` | GET | 获取当前用户信息 | 是 |
+| `/api/v1/auth/sessions` | GET | 获取登录会话列表 | 是 |
+| `/api/v1/auth/change-password` | POST | 修改密码 | 是 |
+| `/api/v1/auth/profile` | PATCH | 更新用户资料 | 是 |
+
+#### 5.1.7 数据同步端点
+
+| 端点 | 方法 | 功能 | 认证 |
+|------|------|------|------|
+| `/api/v1/sync/cart` | GET | 获取购物车数据 | 是 |
+| `/api/v1/sync/cart/sync` | POST | 同步购物车变更 | 是 |
+| `/api/v1/sync/cart/version` | GET | 获取购物车版本号 | 是 |
+| `/api/v1/sync/conversations` | GET | 获取会话列表 | 是 |
+| `/api/v1/sync/conversations/sync` | POST | 同步会话变更 | 是 |
+| `/api/v1/sync/conversations/{id}/messages` | GET | 获取会话消息 | 是 |
+
+#### 5.1.8 管理端点
 
 | 端点 | 方法 | 功能 |
 |------|------|------|
@@ -1417,6 +1517,19 @@ server {
 
 - `ADMIN_PASSWORD`: 管理员密码
 
+#### 数据库配置（用户账号功能必需）
+
+- `DB_HOST`: 数据库主机（默认: localhost）
+- `DB_PORT`: 数据库端口（默认: 5432）
+- `DB_NAME`: 数据库名（默认: wisepick）
+- `DB_USER`: 数据库用户（默认: postgres）
+- `DB_PASSWORD`: 数据库密码
+
+#### JWT 认证配置（用户账号功能必需）
+
+- `JWT_SECRET`: Access Token 签名密钥
+- `JWT_REFRESH_SECRET`: Refresh Token 签名密钥
+
 #### 可选配置（按需）
 
 **OpenAI**:
@@ -1470,11 +1583,25 @@ server {
 - `GET /__settings` - 获取配置信息
 - `GET /__debug/last_return` - 调试信息查看
 
+#### 用户认证端点
+- `POST /api/v1/auth/register` - 用户注册
+- `POST /api/v1/auth/login` - 用户登录
+- `POST /api/v1/auth/refresh` - 刷新 Token
+- `POST /api/v1/auth/logout` - 登出
+- `GET /api/v1/auth/me` - 获取当前用户
+
+#### 数据同步端点
+- `GET /api/v1/sync/cart` - 获取购物车
+- `POST /api/v1/sync/cart/sync` - 同步购物车
+- `GET /api/v1/sync/conversations` - 获取会话列表
+- `POST /api/v1/sync/conversations/sync` - 同步会话
+
 ### 16.5 变更日志
 
 | 版本 | 日期 | 变更内容 | 作者 |
 |------|------|----------|------|
 | 1.0 | 2024 | 初始后端架构文档 | CHYINAN (Architect) |
+| 1.1 | 2026-01-21 | 添加用户认证和数据同步模块文档 | AI Assistant |
 
 ---
 

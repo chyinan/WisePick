@@ -8,6 +8,7 @@ import 'package:window_manager/window_manager.dart';
 
 import 'app.dart';
 import 'core/storage/hive_config.dart';
+import 'features/auth/token_manager.dart';
 import 'services/notification_service.dart';
 import 'services/price_refresh_service.dart';
 
@@ -48,6 +49,9 @@ Future<void> main() async {
 
   // 初始化 Hive 本地存储（包括注册 Adapter 和打开 Box）
   await HiveConfig.init();
+
+  // 初始化 Token 管理器（用户认证）
+  await TokenManager.instance.init();
 
   // 运行应用
   runApp(const ProviderScope(child: WisePickApp()));

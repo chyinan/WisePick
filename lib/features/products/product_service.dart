@@ -1,6 +1,5 @@
 import 'dart:convert';
 import '../../core/api_client.dart';
-import '../../core/config.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'product_model.dart';
 import 'taobao_adapter.dart';

@@ -1,7 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../core/api_client.dart';
+import '../../services/sync/sync_manager.dart';
+import '../auth/auth_providers.dart';
 import 'chat_service.dart';
 import 'conversation_model.dart';
 import 'chat_message.dart';
@@ -53,11 +54,21 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
 
   ChatStateNotifier({required this.service, required Ref ref}) : _ref = ref, super(ChatState());
 
-  /// 清除当前对话状态，重置为初始状态（即“新对话”）
+  /// 清除当前对话状态，重置为初始状态（即"新对话"）
   void clearConversation() {
      state = ChatState();
      // 如果需要自动创建新 ID 可在此处处理，或等待用户发送第一条消息时处理
      // 这里仅重置 UI 状态
+  }
+
+  /// 更新消息列表（用于外部更新消息，如重试搜索）
+  void updateMessages(List<ChatMessage> messages) {
+    state = state.copyWith(messages: messages);
+  }
+
+  /// 清除调试通知
+  void clearDebugNotification() {
+    state = state.copyWith(debugNotification: null);
   }
 
   /// 发送用户消息并请求 AI 推荐（AI 回复可能包含 ProductModel 信息）
@@ -839,6 +850,20 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
     final repo = _ref.read(conversationRepositoryProvider);
     final conv = ConversationModel(id: id, title: title, messages: state.messages);
     await repo.saveConversation(conv);
+    
+    // 如果已登录，触发云端同步
+    try {
+      final isLoggedIn = _ref.read(isLoggedInProvider);
+      if (isLoggedIn) {
+        final syncManager = _ref.read(syncManagerProvider.notifier);
+        await syncManager.addConversationChange(conv);
+        // 同步最新的消息
+        if (state.messages.isNotEmpty) {
+          await syncManager.addMessageChange(id, state.messages.last);
+        }
+        syncManager.scheduleSyncConversations();
+      }
+    } catch (_) {}
   }
 
   /// Load a conversation
@@ -849,11 +874,29 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
 
   Future<void> deleteConversationById(String id) async {
     final repo = _ref.read(conversationRepositoryProvider);
+    
+    // 获取会话信息用于同步删除
+    ConversationModel? convToDelete;
+    try {
+      convToDelete = await repo.getConversation(id);
+    } catch (_) {}
+    
     await repo.deleteConversation(id);
+    
     // if current conversation is deleted, clear state
     if (state.currentConversationId == id) {
       state = ChatState();
     }
+    
+    // 如果已登录，同步删除操作
+    try {
+      final isLoggedIn = _ref.read(isLoggedInProvider);
+      if (isLoggedIn && convToDelete != null) {
+        final syncManager = _ref.read(syncManagerProvider.notifier);
+        await syncManager.addConversationChange(convToDelete, isDeleted: true);
+        syncManager.scheduleSyncConversations();
+      }
+    } catch (_) {}
   }
 }
 

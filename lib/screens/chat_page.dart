@@ -9,7 +9,6 @@ import 'home_drawer.dart';
 import '../../features/chat/chat_message.dart';
 import '../../widgets/product_card.dart';
 import '../../features/products/product_detail_page.dart';
-import 'package:wisepick_dart_version/features/cart/cart_providers.dart';
 import '../../features/products/keyword_prompt.dart';
 import '../../features/products/search_service.dart';
 import '../../features/products/product_model.dart';
@@ -576,7 +575,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                    aiParsedRaw: originalMessage.aiParsedRaw
                 );
                 msgs[idx] = updated;
-                ref.read(chatStateNotifierProvider.notifier).state = ref.read(chatStateNotifierProvider.notifier).state.copyWith(messages: msgs);
+                ref.read(chatStateNotifierProvider.notifier).updateMessages(msgs);
              }
           }
        } catch (e) {
@@ -632,7 +631,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
               _lastShownDebugNotification = notif;
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(notif)));
               WidgetsBinding.instance.addPostFrameCallback((_) {
-                 ref.read(chatStateNotifierProvider.notifier).state = next.copyWith(debugNotification: null);
+                 ref.read(chatStateNotifierProvider.notifier).clearDebugNotification();
               });
               Future.delayed(const Duration(seconds: 2), () {
                  if (mounted) _lastShownDebugNotification = null;

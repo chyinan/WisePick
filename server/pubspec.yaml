@@ -11,6 +11,14 @@ dependencies:
   crypto: ^3.0.2
   puppeteer: ^3.14.0
   path: ^1.8.0
+  # 新增：用户账号和同步功能
+  postgres: ^3.5.3           # PostgreSQL 数据库驱动
+  dbcrypt: ^2.0.0            # bcrypt 密码加密
+  dart_jsonwebtoken: ^2.14.1 # JWT Token 处理
+  uuid: ^4.5.1               # UUID 生成
+  web_socket_channel: ^3.0.2 # WebSocket 支持
+  mailer: ^6.2.0             # 邮件发送（验证码）
+  dotenv: ^4.2.0             # 环境变量管理
 
 dev_dependencies:
   test: ^1.24.0

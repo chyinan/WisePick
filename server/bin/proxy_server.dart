@@ -11,6 +11,11 @@ import 'dart:async';
 // 导入京东爬虫服务
 import '../lib/jd_scraper/jd_scraper.dart';
 
+// 导入认证模块
+import '../lib/database/database.dart';
+import '../lib/auth/auth_handler.dart';
+import '../lib/sync/sync_handler.dart';
+
 // NOTE: veapi support removed per user request
 
 // In-memory last-return debug store. Use the endpoint /__debug/last_return to inspect.
@@ -153,13 +158,51 @@ Future<Response> _handleProxy(Request req) async {
 Future<void> runServer(List<String> args) async {
   final router = Router();
 
+  // 初始化数据库连接（如果配置了数据库）
+  final env = Platform.environment;
+  final dbConfigured = env['DB_HOST'] != null && env['DB_HOST']!.isNotEmpty;
+  
+  if (dbConfigured) {
+    try {
+      // 设置环境变量到数据库配置
+      Database.setEnvVars({
+        'DB_HOST': env['DB_HOST'] ?? 'localhost',
+        'DB_PORT': env['DB_PORT'] ?? '5432',
+        'DB_NAME': env['DB_NAME'] ?? 'wisepick',
+        'DB_USER': env['DB_USER'] ?? 'postgres',
+        'DB_PASSWORD': env['DB_PASSWORD'] ?? 'postgres',
+        'JWT_SECRET': env['JWT_SECRET'] ?? 'wisepick-jwt-secret-key-change-in-production',
+        'JWT_REFRESH_SECRET': env['JWT_REFRESH_SECRET'] ?? 'wisepick-refresh-secret-key-change-in-production',
+      });
+      
+      await Database.instance.connect();
+      print('[Server] Database connected successfully');
+      
+      // 注册认证路由
+      final authHandler = AuthHandler(Database.instance);
+      router.mount('/api/v1/auth', authHandler.router.call);
+      print('[Server] Auth routes registered at /api/v1/auth/*');
+      
+      // 注册同步路由（使用带认证的 handler）
+      final syncHandler = SyncHandler();
+      router.mount('/api/v1/sync', syncHandler.handler);
+      print('[Server] Sync routes registered at /api/v1/sync/*');
+    } catch (e) {
+      print('[Server] Database connection failed: $e');
+      print('[Server] Auth features will be disabled');
+    }
+  } else {
+    print('[Server] Database not configured. Auth features disabled.');
+    print('[Server] Set DB_HOST, DB_USER, DB_PASSWORD to enable user accounts.');
+  }
+
   router.options(
       '/<ignore|.*>',
       (Request r) => Response(200, headers: {
             'access-control-allow-origin': '*',
-            'access-control-allow-methods': 'GET, POST, OPTIONS',
+            'access-control-allow-methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
             'access-control-allow-headers':
-                'Origin, Content-Type, Accept, Authorization, x-ts'
+                'Origin, Content-Type, Accept, Authorization, x-ts, X-Device-Id, X-Device-Name, X-Device-Type'
           }));
 
   // Simple settings endpoint for clients to read backend_base (optional)

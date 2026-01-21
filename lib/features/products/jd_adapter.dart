@@ -6,7 +6,6 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../../core/api_client.dart';
 import '../../core/config.dart';
 import 'product_model.dart';
-import 'jd_models.dart';
 
 /// JD Adapter：负责调用京东联盟 API 并映射到 ProductModel
 class JdAdapter {
