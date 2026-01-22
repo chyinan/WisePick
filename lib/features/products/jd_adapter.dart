@@ -1,11 +1,14 @@
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:crypto/crypto.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import '../../core/api_client.dart';
 import '../../core/config.dart';
 import 'product_model.dart';
+
+// ignore_for_file: unused_element
 
 /// JD Adapter：负责调用京东联盟 API 并映射到 ProductModel
 class JdAdapter {
@@ -39,12 +42,16 @@ class JdAdapter {
         } else if (body['queryResult'] is Map) {
           final qr = body['queryResult'] as Map;
           final d = qr['data'];
-          if (d is List) items = d as List<dynamic>;
-          else if (d is Map) {
+          if (d is List) {
+            items = d;
+          } else if (d is Map) {
             if (d['goodsResp'] != null) {
               final gr = d['goodsResp'];
-              if (gr is List) items = gr as List<dynamic>;
-              else items = [gr];
+              if (gr is List) {
+                items = gr;
+              } else {
+                items = [gr];
+              }
             } else {
               items = [d];
             }
@@ -55,12 +62,16 @@ class JdAdapter {
             if (v is Map && v['queryResult'] is Map) {
               final qr = v['queryResult'] as Map;
               final d = qr['data'];
-              if (d is List) items = d as List<dynamic>;
-              else if (d is Map) {
+              if (d is List) {
+                items = d;
+              } else if (d is Map) {
                 if (d['goodsResp'] != null) {
                   final gr = d['goodsResp'];
-                  if (gr is List) items = gr as List<dynamic>;
-                  else items = [gr];
+                  if (gr is List) {
+                    items = gr;
+                  } else {
+                    items = [gr];
+                  }
                 } else {
                   items = [d];
                 }
@@ -70,14 +81,14 @@ class JdAdapter {
           }
         }
       } else if (body is List) {
-        items = body as List<dynamic>;
+        items = body;
       }
     } catch (_) {
       items = [];
     }
 
     final futures = items.map((e) async {
-      final map = Map<String, dynamic>.from(e as Map);
+      final map = Map<String, dynamic>.from(e);
       final price = (map['priceInfo'] != null && map['priceInfo'] is Map && map['priceInfo']['price'] != null)
           ? (map['priceInfo']['price'] as num).toDouble()
           : (map['price'] as num?)?.toDouble() ?? 0.0;

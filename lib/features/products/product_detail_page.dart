@@ -50,7 +50,8 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
   double? _taobaoLatestPrice;
   double? _pddLatestPrice;
   double? _initialCartPrice;
-  double? _lastCartPrice;
+  // ignore: unused_field
+  double? _lastCartPrice; // 保留供后续价格跟踪功能使用
   bool _hasCartRecord = false;
   // AI 智能介绍相关状态
   bool _isLoadingAiIntro = false;
