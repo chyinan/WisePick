@@ -60,9 +60,7 @@ class SyncedCartNotifier extends StateNotifier<AsyncValue<List<Map<String, dynam
         syncManager.scheduleSyncCart();
       } catch (_) {}
     }
-  }
-
-  /// 设置商品数量
+  }  /// 设置商品数量
   Future<void> setQuantity(String productId, int qty) async {
     await _cartService.setQuantity(productId, qty);
     await _loadItems();    // 如果已登录，同步变更

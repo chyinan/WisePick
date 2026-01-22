@@ -1,9 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'dart:async';
+
 import '../../features/auth/token_manager.dart';
 import '../../features/auth/auth_providers.dart';
-import '../../features/auth/auth_service.dart';
 import '../../features/cart/cart_service.dart';
 import '../../features/chat/conversation_repository.dart';
 import '../../features/chat/conversation_model.dart';

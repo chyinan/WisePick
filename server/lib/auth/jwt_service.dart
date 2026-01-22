@@ -82,7 +82,7 @@ class JwtService {
       );
     } on JWTExpiredException {
       return null;
-    } on JWTException catch (e) {
+    } on JWTException {
       return null;
     }
   }
@@ -107,7 +107,7 @@ class JwtService {
       );
     } on JWTExpiredException {
       return null;
-    } on JWTException catch (e) {
+    } on JWTException {
       return null;
     }
   }

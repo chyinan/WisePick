@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:shelf/shelf_io.dart';
+
 import 'package:shelf/shelf.dart';
-import 'package:shelf/shelf_io.dart' as shelf_io;
+import 'package:shelf/shelf_io.dart' show serve;
 import 'package:shelf_router/shelf_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:crypto/crypto.dart';

@@ -1,16 +1,17 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+
 import '../../core/api_client.dart';
 import '../../services/sync/sync_manager.dart';
 import '../auth/auth_providers.dart';
+import 'chat_message.dart';
 import 'chat_service.dart';
 import 'conversation_model.dart';
-import 'chat_message.dart';
-import '../products/product_model.dart';
 import 'conversation_repository.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart' show Ref;
-import 'dart:convert'; // Added for jsonDecode
-import 'dart:async';
+import '../products/product_model.dart';
 
 /// 提供 ChatService 的 Provider
 final chatServiceProvider = Provider<ChatService>((ref) {
@@ -412,7 +413,7 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
       } catch (_) {}
 
       if (parsedMap != null && parsedMap.containsKey('recommendations')) {
-        final recs = (parsedMap['recommendations'] as List<dynamic>);
+        // recommendations 存在，用于提取关键词（不直接作为产品列表使用）
         final products = <ProductModel>[];
         // Do NOT convert AI recommendation items into product cards immediately.
         // Instead, only populate products if the AI returned a concrete `products` list
@@ -501,8 +502,8 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
               if (rec is Map<String, dynamic>) {
                 // Prefer nested goods.title
                 try {
-                  if (rec.containsKey('goods') && rec['goods'] is Map && (rec['goods']['title'] is String)) {
-                    candidate = (rec['goods']['title'] as String);
+                  if (rec.containsKey('goods') && rec['goods'] is Map && rec['goods']['title'] is String) {
+                    candidate = rec['goods']['title'] as String;
                   }
                 } catch (_) {}
                 // Fallbacks
@@ -606,21 +607,21 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
           } catch (_) {}
         }
 
-        finalMsg = ChatMessage(id: DateTime.now().microsecondsSinceEpoch.toString(), text: finalText, isUser: false, products: products, keywords: keywordsList, aiParsedRaw: parsedMap != null ? jsonEncode(parsedMap) : null, failed: failed, retryForText: failed ? text : null);
+        finalMsg = ChatMessage(id: DateTime.now().microsecondsSinceEpoch.toString(), text: finalText, isUser: false, products: products, keywords: keywordsList, aiParsedRaw: jsonEncode(parsedMap), failed: failed, retryForText: failed ? text : null);
         // 尝试优先从 parsedMap 中读取显式标题（如果 AI 以结构化字段返回 title），否则回退到在 metaText 与 buffer 中匹配 'title/标题:' 形式
         try {
           String? extracted;
           // 1) parsedMap 优先
           try {
-            if (parsedMap != null) {
-              // 1a) top-level title fields
-              if (parsedMap.containsKey('title') && parsedMap['title'] is String && (parsedMap['title'] as String).trim().isNotEmpty) {
-                extracted = (parsedMap['title'] as String).trim();
-              } else if (parsedMap.containsKey('conversation_title') && parsedMap['conversation_title'] is String && (parsedMap['conversation_title'] as String).trim().isNotEmpty) {
-                extracted = (parsedMap['conversation_title'] as String).trim();
-              } else if (parsedMap.containsKey('conversationTitle') && parsedMap['conversationTitle'] is String && (parsedMap['conversationTitle'] as String).trim().isNotEmpty) {
-                extracted = (parsedMap['conversationTitle'] as String).trim();
-              }
+            // parsedMap 在此处非空（已在上层 if 中检查过）
+            // 1a) top-level title fields
+            if (parsedMap.containsKey('title') && parsedMap['title'] is String && (parsedMap['title'] as String).trim().isNotEmpty) {
+              extracted = (parsedMap['title'] as String).trim();
+            } else if (parsedMap.containsKey('conversation_title') && parsedMap['conversation_title'] is String && (parsedMap['conversation_title'] as String).trim().isNotEmpty) {
+              extracted = (parsedMap['conversation_title'] as String).trim();
+            } else if (parsedMap.containsKey('conversationTitle') && parsedMap['conversationTitle'] is String && (parsedMap['conversationTitle'] as String).trim().isNotEmpty) {
+              extracted = (parsedMap['conversationTitle'] as String).trim();
+            }
 
               // 1b) some responses put the title inside a `meta` object
               try {
@@ -635,7 +636,6 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
                   }
                 }
               } catch (_) {}
-            }
           } catch (_) {}
 
           // 2) 回退到文本正则匹配
@@ -707,7 +707,7 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
                 final box = Hive.box('settings');
                 final bool debug = box.get('debug_ai_response') as bool? ?? false;
                 if (debug) {
-                  final full = 'PARSED_MAP:\n' + (parsedMap != null ? jsonEncode(parsedMap) : '{}') + '\n\nCLEANED_BUFFER:\n' + buffer + '\n\nMETA_TEXT:\n' + metaText;
+                  final full = 'PARSED_MAP:\n${jsonEncode(parsedMap)}\n\nCLEANED_BUFFER:\n$buffer\n\nMETA_TEXT:\n$metaText';
                   // 不直接在 provider 写入剪贴板（可能在非 UI 线程导致问题），改为把完整文本放到 state.debugFullResponse，由 UI 层负责写入剪贴板并弹窗
                   fullDebug = full;
                   copied = true;

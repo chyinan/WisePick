@@ -91,12 +91,16 @@ class PddAdapter {
         shopTitle = (m['brand_name'] ?? m['mall_name'] ?? m['mallName'] ?? m['opt_name'] ?? '')?.toString() ?? '';
       } catch (_) {}
 
-      // tags: unified_tags
+      // tags: unified_tags (当前未使用，但保留解析供后续功能)
+      // ignore: unused_local_variable
       List<String> tags = [];
       try {
         final ut = m['unified_tags'] ?? m['unifiedTags'];
-        if (ut is List) tags = ut.map((e) => e.toString()).toList();
-        else if (ut is String) tags = [ut];
+        if (ut is List) {
+          tags = ut.map((e) => e.toString()).toList();
+        } else if (ut is String) {
+          tags = [ut];
+        }
       } catch (_) {}
 
       return ProductModel(
