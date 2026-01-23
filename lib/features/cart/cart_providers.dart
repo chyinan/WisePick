@@ -19,14 +19,10 @@ final cartSelectionProvider = StateProvider<Map<String, bool>>((ref) => <String,
 final cartCountProvider = Provider<int>((ref) {
   final itemsAsync = ref.watch(cartItemsProvider);
   return itemsAsync.whenOrNull(data: (items) => items.length) ?? 0;
-});
-
-/// 带云端同步的购物车操作管理器
+});/// 带云端同步的购物车操作管理器
 class SyncedCartNotifier extends StateNotifier<AsyncValue<List<Map<String, dynamic>>>> {
   final CartService _cartService;
-  final Ref _ref;
-
-  SyncedCartNotifier(this._cartService, this._ref) : super(const AsyncValue.loading()) {
+  final Ref _ref;  SyncedCartNotifier(this._cartService, this._ref) : super(const AsyncValue.loading()) {
     _loadItems();
   }  Future<void> _loadItems() async {
     state = const AsyncValue.loading();
@@ -36,14 +32,10 @@ class SyncedCartNotifier extends StateNotifier<AsyncValue<List<Map<String, dynam
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
-  }
-
-  /// 刷新购物车（从本地重新加载）
+  }  /// 刷新购物车（从本地重新加载）
   Future<void> refresh() async {
     await _loadItems();
-  }
-
-  /// 添加或更新商品到购物车
+  }  /// 添加或更新商品到购物车
   Future<void> addOrUpdateItem(ProductModel product, {int qty = 1, String? rawJson}) async {
     await _cartService.addOrUpdateItem(product, qty: qty, rawJson: rawJson);
     

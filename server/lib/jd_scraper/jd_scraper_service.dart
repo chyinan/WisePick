@@ -298,7 +298,7 @@ class JdScraperService {
     return results;
   }
 
-  /// 获取商品信息的核心实现
+  /// 获取商品信息的核心实现（京东联盟）
   Future<JdProductInfo> _fetchProductInfo(String skuId) async {
     final pageWithInstance = await browserPool.acquirePage();
     final page = pageWithInstance.page;
@@ -308,7 +308,7 @@ class JdScraperService {
       await _setupCookies(page);
 
       // 2. 访问京东联盟推广页面
-      _log('访问京东联盟推广页面...');
+      _log('[京东联盟] 访问推广页面...');
       try {
         await page.goto(
           'https://union.jd.com/proManager/custompromotion',
@@ -319,10 +319,10 @@ class JdScraperService {
         // 页面导航可能超时，但可能已经跳转到了登录页
         // 检查当前URL是否是登录页
         final currentUrl = page.url ?? '';
-        _log('页面导航异常，当前URL: $currentUrl');
+        _log('[京东联盟] 页面导航异常，当前URL: $currentUrl');
         
         if (await _isLoginRequired(page)) {
-          _log('⚠️ 页面导航时检测到跳转至登录页');
+          _log('[京东联盟] ⚠️ 页面导航时检测到跳转至登录页');
           await cookieManager.updateValidationStatus(false);
           throw ScraperException.cookieExpired('Cookie 已过期，需要重新登录');
         }
@@ -341,14 +341,14 @@ class JdScraperService {
       await behaviorSimulator.randomWait(minMs: 500, maxMs: 1000);
 
       // 5. 输入商品 ID
-      _log('输入商品 ID: $skuId');
+      _log('[京东联盟] 输入商品 ID: $skuId');
       const inputSelector = 'div.el-textarea textarea';
       await page.waitForSelector(inputSelector, timeout: config.requestTimeout);
       await behaviorSimulator.clearAndType(page, inputSelector, skuId);
       await behaviorSimulator.randomWait(minMs: 300, maxMs: 800);
 
       // 6. 点击获取推广链接按钮
-      _log('点击获取推广链接按钮...');
+      _log('[京东联盟] 点击获取推广链接按钮...');
       final clicked = await _clickPromotionButton(page);
       if (!clicked) {
         throw ScraperException(
@@ -358,13 +358,13 @@ class JdScraperService {
       }
 
       // 7. 等待结果加载
-      _log('等待结果加载...');
+      _log('[京东联盟] 等待结果加载...');
       const resultSelector = '.result-text';
       await page.waitForSelector(resultSelector, timeout: config.requestTimeout);
       await behaviorSimulator.randomWait(minMs: 800, maxMs: 1500);
 
       // 8. 提取商品信息
-      _log('提取商品信息...');
+      _log('[京东联盟] 提取推广信息...');
       final productInfo = await _extractProductInfo(page, skuId);
 
       // 更新 Cookie 验证状态
@@ -400,7 +400,7 @@ class JdScraperService {
   /// 1. URL 跳转到京东 passport 登录页
   /// 2. URL 跳转到京东联盟登录页 (union.jd.com 的登录相关页面)
   /// 3. URL 包含 returnUrl 参数（通常是登录重定向）
-  /// 4. 页面内容包含登录相关提示
+  /// 4. 页面内容包含登录相关提示（仅用于京东联盟页面）
   Future<bool> _isLoginRequired(Page page) async {
     final url = page.url ?? '';
 
@@ -423,15 +423,20 @@ class JdScraperService {
       return true;
     }
 
-    // 检查页面内容
+    // 对于京东商品详情页（item.jd.com），不需要检查页面文本
+    // 因为导航栏总是有"请登录"链接，这不代表需要登录才能查看商品
+    if (url.contains('item.jd.com') || url.contains('item.m.jd.com')) {
+      return false;
+    }
+
+    // 检查页面内容（仅用于京东联盟等需要登录的页面）
     try {
       final bodyText = await page.evaluate<String>(
         '() => document.body.innerText',
       );
       if (bodyText != null) {
-        // 检测常见的登录提示文本
+        // 检测常见的登录提示文本（排除导航栏的"请登录"）
         final loginIndicators = [
-          '请登录',
           '未登录', 
           '登录后查看',
           '请使用京东账号登录',
@@ -521,7 +526,7 @@ class JdScraperService {
     return false;
   }
 
-  /// 提取商品信息
+  /// 提取商品信息（京东联盟转链结果）
   Future<JdProductInfo> _extractProductInfo(Page page, String skuId) async {
     try {
       // 等待页面完全加载转链结果
@@ -553,21 +558,21 @@ class JdScraperService {
                   text.contains('到手价') ||
                   text.contains('抢购链接')) {
                 content = text;
-                _log('通过选择器 $selector 获取到有效内容');
+                _log('[京东联盟] 通过选择器 $selector 获取到有效内容');
                 break;
               }
             }
           }
           if (content != null) break;
         } catch (e) {
-          _log('选择器 $selector 失败: $e');
+          _log('[京东联盟] 选择器 $selector 失败: $e');
           continue;
         }
       }
       
       // 如果上面方法都失败，尝试获取整个页面的文本
       if (content == null || content.isEmpty) {
-        _log('尝试从页面整体获取内容...');
+        _log('[京东联盟] 尝试从页面整体获取内容...');
         content = await page.evaluate<String>('document.body.innerText');
       }
 
@@ -578,9 +583,9 @@ class JdScraperService {
         );
       }
       
-      _log('获取到的原始内容长度: ${content.length}');
+      _log('[京东联盟] 获取到的原始内容长度: ${content.length}');
       // 打印前500字符用于调试
-      _log('内容预览: ${content.substring(0, content.length > 500 ? 500 : content.length)}');
+      _log('[京东联盟] 内容预览: ${content.substring(0, content.length > 500 ? 500 : content.length)}');
 
       // 解析结果
       return JdProductInfo.fromPromotionText(content, skuId);
@@ -588,6 +593,62 @@ class JdScraperService {
       if (e is ScraperException) rethrow;
       throw ScraperException.unknown(e);
     }
+  }
+
+  // ==================== 京东首页商品详情爬取 ====================
+
+  // ==================== 获取商品信息（京东联盟） ====================
+
+  /// 获取商品完整信息
+  /// 
+  /// 从京东联盟获取商品信息，包括：
+  /// - 商品标题、价格
+  /// - 推广链接、佣金信息
+  /// 
+  /// [skuId] 商品 SKU ID
+  /// [forceRefresh] 是否强制刷新（忽略缓存）
+  /// 
+  /// 注意：京东首页爬取因风控严格已移除，仅使用京东联盟
+  Future<JdProductInfo> getProductInfoEnhanced(
+    String skuId, {
+    bool forceRefresh = false,
+  }) async {
+    // 直接调用京东联盟的 getProductInfo
+    return getProductInfo(skuId, forceRefresh: forceRefresh);
+  }
+
+  /// 批量获取商品完整信息
+  /// 
+  /// 注意：京东首页爬取因风控严格已移除，仅使用京东联盟
+  Future<List<JdProductInfo>> getBatchProductInfoEnhanced(
+    List<String> skuIds, {
+    int maxConcurrency = 2,
+  }) async {
+    _ensureNotClosed();
+    await _ensureInitialized();
+
+    final results = <JdProductInfo>[];
+    final errors = <String, dynamic>{};
+
+    final semaphore = _Semaphore(maxConcurrency);
+
+    await Future.wait(
+      skuIds.map((skuId) async {
+        await semaphore.acquire();
+        try {
+          final info = await getProductInfoEnhanced(skuId);
+          results.add(info);
+        } catch (e) {
+          errors[skuId] = e;
+          _log('批量增强获取失败 [$skuId]: $e');
+        } finally {
+          semaphore.release();
+        }
+      }),
+    );
+
+    _log('批量增强获取完成: ${results.length}/${skuIds.length} 成功');
+    return results;
   }
 
   // ==================== 缓存管理 ====================

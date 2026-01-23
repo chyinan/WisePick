@@ -4,6 +4,7 @@
 
 ## 功能特性
 
+- ✅ **双源爬取** - 同时从京东联盟和京东首页获取信息，数据更完整
 - ✅ **人类行为模拟** - 贝塞尔曲线鼠标移动、随机输入延迟、自然滚动
 - ✅ **反检测机制** - Stealth 模式、指纹随机化、User-Agent 轮换
 - ✅ **Cookie 管理** - 自动加载、过期检测、远程更新
@@ -13,11 +14,20 @@
 - ✅ **错误处理** - 自动分类、日志记录、回调通知
 - ✅ **性能监控** - 请求耗时、成功率、P95/P99 统计
 
+## 数据来源
+
+| 数据来源 | 获取内容 | 使用场景 |
+|---------|---------|---------|
+| **京东联盟** | 推广链接、佣金、短链接 | 生成带货推广链接 |
+| **京东首页** | 店铺名、商品图片、最新价格 | 获取完整商品信息 |
+
+两个来源共用同一份 Cookie（京东联盟登录后的 Cookie）。
+
 ## API 端点
 
 ### 商品信息
 
-#### 获取单个商品
+#### 获取推广链接（京东联盟）
 ```
 GET /api/jd/scraper/product/:skuId
 ```
@@ -45,7 +55,72 @@ GET /api/jd/scraper/product/:skuId
 }
 ```
 
-#### 批量获取商品
+#### 获取商品详情（京东首页）
+```
+GET /api/jd/scraper/product/:skuId/detail
+```
+
+通过京东首页搜索获取商品详细信息，包括店铺名、图片等。
+
+**参数:**
+- `skuId` (路径参数) - 商品 SKU ID
+
+**响应:**
+```json
+{
+  "success": true,
+  "data": {
+    "skuId": "10183999034312",
+    "title": "商品标题",
+    "price": 899.0,
+    "originalPrice": 999.0,
+    "shopName": "京东自营店",
+    "imageUrl": "https://img.jd.com/xxx.jpg",
+    "fetchTime": "2026-01-14T10:30:00Z"
+  },
+  "source": "jd_main_page"
+}
+```
+
+#### 获取完整信息（双源爬取）⭐ 推荐
+```
+GET /api/jd/scraper/product/:skuId/enhanced
+```
+
+同时从京东联盟和京东首页获取信息，合并返回最完整的数据。
+
+**参数:**
+- `skuId` (路径参数) - 商品 SKU ID
+- `forceRefresh` (查询参数, 可选) - 设为 `true` 强制刷新缓存
+- `includePromotion` (查询参数, 可选) - 是否包含推广链接，默认 `true`
+- `includeDetail` (查询参数, 可选) - 是否包含详细信息，默认 `true`
+
+**响应:**
+```json
+{
+  "success": true,
+  "data": {
+    "skuId": "10183999034312",
+    "title": "商品标题",
+    "price": 899.0,
+    "originalPrice": 999.0,
+    "commission": 45.0,
+    "commissionRate": 0.05,
+    "promotionLink": "https://...",
+    "shortLink": "https://u.jd.com/xxx",
+    "shopName": "京东自营店",
+    "imageUrl": "https://img.jd.com/xxx.jpg",
+    "cached": false,
+    "fetchTime": "2026-01-14T10:30:00Z"
+  },
+  "sources": {
+    "promotion": true,
+    "detail": true
+  }
+}
+```
+
+#### 批量获取推广链接
 ```
 POST /api/jd/scraper/products/batch
 Content-Type: application/json
@@ -63,6 +138,33 @@ Content-Type: application/json
   "data": [...],
   "total": 3,
   "success_count": 3
+}
+```
+
+#### 批量获取完整信息（双源爬取）⭐ 推荐
+```
+POST /api/jd/scraper/products/batch/enhanced
+Content-Type: application/json
+
+{
+  "skuIds": ["sku1", "sku2", "sku3"],
+  "maxConcurrency": 2,
+  "includePromotion": true,
+  "includeDetail": true
+}
+```
+
+**响应:**
+```json
+{
+  "success": true,
+  "data": [...],
+  "total": 3,
+  "success_count": 3,
+  "sources": {
+    "promotion": true,
+    "detail": true
+  }
 }
 ```
 
@@ -197,13 +299,27 @@ curl -X POST -H "Content-Type: application/json" \
   -d '{"cookie":"your_cookie_string"}' \
   http://localhost:9527/api/jd/cookie/update
 
-# 获取商品信息
+# 获取推广链接（京东联盟）
 curl http://localhost:9527/api/jd/scraper/product/10183999034312
 
-# 批量获取
+# 获取商品详情（京东首页）
+curl http://localhost:9527/api/jd/scraper/product/10183999034312/detail
+
+# 获取完整信息（双源爬取，推荐）⭐
+curl http://localhost:9527/api/jd/scraper/product/10183999034312/enhanced
+
+# 仅获取详情，不获取推广链接
+curl "http://localhost:9527/api/jd/scraper/product/10183999034312/enhanced?includePromotion=false"
+
+# 批量获取推广链接
 curl -X POST -H "Content-Type: application/json" \
   -d '{"skuIds":["sku1","sku2"]}' \
   http://localhost:9527/api/jd/scraper/products/batch
+
+# 批量双源爬取（推荐）⭐
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"skuIds":["sku1","sku2"],"includePromotion":true,"includeDetail":true}' \
+  http://localhost:9527/api/jd/scraper/products/batch/enhanced
 ```
 
 ### Dart 代码调用
@@ -217,15 +333,25 @@ void main() async {
   await service.initialize();
 
   try {
-    // 获取单个商品
-    final info = await service.getProductInfo('10183999034312');
-    print('价格: ${info.price}');
-    print('推广链接: ${info.promotionLink}');
+    // 方式1: 仅获取推广链接（京东联盟）
+    final promoInfo = await service.getProductInfo('10183999034312');
+    print('推广链接: ${promoInfo.promotionLink}');
 
-    // 批量获取
-    final results = await service.getBatchProductInfo(['sku1', 'sku2']);
+    // 方式2: 仅获取商品详情（京东首页）
+    final detailInfo = await service.getProductDetailFromJdMain('10183999034312');
+    print('店铺名: ${detailInfo.shopName}');
+    print('图片: ${detailInfo.imageUrl}');
+
+    // 方式3: 双源爬取，获取完整信息（推荐）⭐
+    final fullInfo = await service.getProductInfoEnhanced('10183999034312');
+    print('价格: ${fullInfo.price}');
+    print('店铺名: ${fullInfo.shopName}');
+    print('推广链接: ${fullInfo.promotionLink}');
+
+    // 批量双源爬取
+    final results = await service.getBatchProductInfoEnhanced(['sku1', 'sku2']);
     for (final item in results) {
-      print('${item.skuId}: ${item.title}');
+      print('${item.skuId}: ${item.title} - ${item.shopName}');
     }
   } finally {
     await service.close();

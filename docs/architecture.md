@@ -1,8 +1,8 @@
 # 快淘帮 WisePick - 技术架构文档
 
-**版本**: 1.0  
+**版本**: 2.0  
 **创建日期**: 2024  
-**最后更新**: 2024  
+**最后更新**: 2026-01-22  
 **文档状态**: 正式版  
 **架构师**: Winston (Architect Agent)
 
@@ -63,6 +63,9 @@
 | 网络请求 | Dio | 5.1.2 | HTTP 客户端 |
 | UI 框架 | Material Design 3 | - | 设计系统 |
 | 字体 | Noto Sans SC | - | 中文字体支持 |
+| 图表库 | fl_chart | - | 数据可视化 |
+| PDF生成 | pdf / printing | - | 报告生成 |
+| Excel导出 | excel | - | 数据导出 |
 
 #### 后端技术栈
 
@@ -72,6 +75,9 @@
 | Web 框架 | Shelf | latest | HTTP 服务器框架 |
 | 路由 | shelf_router | latest | 路由管理 |
 | HTTP 客户端 | http | latest | 外部 API 调用 |
+| 数据库 | PostgreSQL | 12.0+ | 关系型数据库 |
+| 数据库驱动 | postgres | latest | PostgreSQL 驱动 |
+| 浏览器自动化 | Playwright | latest | 网页抓取（京东爬虫） |
 
 ### 2.3 现有架构模式
 
@@ -126,6 +132,14 @@ wisepick_dart_version/
 ├── server/                        # 后端代理服务
 │   ├── bin/
 │   │   └── proxy_server.dart      # 服务器入口
+│   ├── lib/
+│   │   ├── auth/                  # 用户认证模块
+│   │   ├── sync/                  # 数据同步模块
+│   │   ├── database/              # 数据库模块
+│   │   │   └── migrations/        # 数据库迁移脚本
+│   │   ├── analytics/              # 数据分析模块（新增）
+│   │   └── jd_scraper/            # 京东爬虫模块
+│   │   └── admin/                 # 管理员后台服务模块（后端API，新增）
 │   └── pubspec.yaml
 ├── test/                          # 测试文件
 ├── assets/                        # 资源文件
@@ -334,6 +348,138 @@ ApiClient.post('/sign/{platform}')
 返回给用户
 ```
 
+#### 3.3.4 数据分析数据流（新增）
+
+```
+用户请求数据分析
+  │
+  ▼
+AnalyticsPage (UI)
+  │
+  ▼
+AnalyticsService.getConsumptionStructure()
+  │
+  ├── 检查本地缓存
+  │   └── 命中则直接返回
+  │
+  ▼
+读取购物车和会话历史数据
+  │
+  ├── 本地数据（Hive）
+  └── 云端数据（如已登录，从后端获取）
+  │
+  ▼
+统计分析计算
+  ├── 品类分布统计
+  ├── 价格区间统计
+  └── 平台偏好统计
+  │
+  ▼
+生成图表数据
+  │
+  ▼
+缓存结果（1 小时）
+  │
+  ▼
+UI 展示图表
+```
+
+#### 3.3.5 价格历史数据流（新增）
+
+```
+价格刷新服务
+  │
+  ▼
+PriceRefreshService 检测价格变化
+  │
+  ▼
+PriceHistoryService.recordPriceHistory()
+  │
+  ├── 记录到 Hive（本地）
+  └── 记录到 PostgreSQL（如已登录）
+  │
+  ▼
+用户查看价格历史
+  │
+  ▼
+PriceHistoryService.getPriceHistory()
+  │
+  ├── 从 Hive 读取本地数据
+  └── 从后端获取云端数据（如已登录）
+  │
+  ▼
+生成价格曲线图数据
+  │
+  ▼
+UI 展示价格曲线
+```
+
+#### 3.3.6 购物决策数据流（新增）
+
+```
+用户请求商品对比/评分
+  │
+  ▼
+DecisionService.compareProducts() / calculateScore()
+  │
+  ├── 获取商品详细信息
+  ├── 获取价格历史数据
+  └── 调用 AI 生成决策理由
+  │
+  ▼
+多维度评分计算
+  ├── 价格评分
+  ├── 评价评分
+  ├── 销量评分
+  ├── 趋势评分
+  └── 平台评分
+  │
+  ▼
+生成综合评分和决策理由
+  │
+  ▼
+返回给用户
+```
+
+#### 3.3.7 管理员后台数据流（新增）
+
+```
+管理员访问独立Web应用
+  │
+  ▼
+管理员登录页面（独立项目）
+  │
+  ▼
+AdminService.authenticate() → 后端 /api/v1/admin/login
+  │
+  ▼
+获取JWT Token，保存到本地
+  │
+  ▼
+管理员后台仪表板页面（独立项目）
+  │
+  ▼
+调用后端管理API（带JWT Token）
+  ├── /api/v1/admin/users/stats
+  ├── /api/v1/admin/system/stats
+  └── /api/v1/admin/search/keywords
+  │
+  ▼
+后端查询数据库
+  ├── 用户统计（从users表查询）
+  ├── 系统统计（从日志和数据库聚合）
+  └── 搜索热词（从messages表keywords字段聚合）
+  │
+  ▼
+数据聚合和计算
+  │
+  ▼
+返回统计数据（JSON）
+  │
+  ▼
+独立Web应用UI展示数据面板和图表
+```
+
 ---
 
 ## 4. 组件架构
@@ -474,16 +620,52 @@ class CartService {
 - HTTP 请求路由
 - API 代理转发
 - 签名和转链服务
+- 用户认证和数据同步
+- 数据分析和统计
 
 **路由设计**:
 ```dart
 Router router = Router()
+  // AI 相关
   ..post('/v1/chat/completions', _handleProxy)
+  
+  // 签名服务
   ..post('/sign/taobao', _handleTaobaoSign)
   ..post('/sign/jd', _handleJdSign)
   ..post('/sign/pdd', _handlePddSign)
+  
+  // 转链服务
   ..post('/taobao/convert', _handleTaobaoConvert)
   ..post('/jd/union/promotion/bysubunionid', _handleJdPromotion)
+  
+  // 用户认证
+  ..post('/api/v1/auth/register', _handleRegister)
+  ..post('/api/v1/auth/login', _handleLogin)
+  ..post('/api/v1/auth/refresh', _handleRefresh)
+  
+  // 数据同步
+  ..post('/api/v1/sync/cart/pull', _handleCartPull)
+  ..post('/api/v1/sync/cart/push', _handleCartPush)
+  
+  // 数据分析（新增）
+  ..get('/api/v1/analytics/consumption-structure', _handleConsumptionStructure)
+  ..get('/api/v1/analytics/preferences', _handlePreferences)
+  ..get('/api/v1/analytics/shopping-time', _handleShoppingTime)
+  
+  // 价格历史（新增）
+  ..get('/api/v1/price-history/{productId}', _handlePriceHistory)
+  ..post('/api/v1/price-history/batch', _handlePriceHistoryBatch)
+  
+  // 购物决策（新增）
+  ..post('/api/v1/decision/compare', _handleCompare)
+  ..post('/api/v1/decision/score', _handleScore)
+  
+  // 管理员后台（新增）
+  ..get('/api/v1/admin/users/stats', _handleUserStats)
+  ..get('/api/v1/admin/system/stats', _handleSystemStats)
+  ..get('/api/v1/admin/search/keywords', _handleSearchKeywords)
+  
+  // 管理端点
   ..post('/admin/login', _handleAdminLogin);
 ```
 
@@ -492,6 +674,9 @@ Router router = Router()
 - 环境变量配置管理
 - 交互式启动（提示未配置项）
 - 配置持久化（.env 文件）
+- PostgreSQL 数据库集成
+- JWT 认证和授权
+- 数据同步服务
 
 #### 4.2.2 签名服务组件
 
@@ -509,6 +694,72 @@ Router router = Router()
 **拼多多签名** (`/sign/pdd`):
 - 使用拼多多开放平台签名算法
 - 支持批量商品推广链接生成
+
+#### 4.2.3 数据分析服务组件（新增）
+
+**位置**: `server/lib/analytics/analytics_service.dart`
+
+**职责**:
+- 消费结构分析计算
+- 用户偏好分析
+- 购物欲望时间分析
+- 数据聚合和统计
+
+**关键方法**:
+- `getConsumptionStructure()`: 计算消费结构（品类、价格区间、平台偏好）
+- `getUserPreferences()`: 分析用户购物偏好
+- `getShoppingTimeAnalysis()`: 分析购物时间分布
+
+#### 4.2.4 价格历史服务组件（新增）
+
+**位置**: `server/lib/price_history/price_history_service.dart`
+
+**职责**:
+- 价格历史数据存储和查询
+- 价格趋势分析
+- 最佳购买时机计算
+
+**关键方法**:
+- `recordPriceHistory()`: 记录价格历史
+- `getPriceHistory()`: 获取价格历史数据
+- `analyzePriceTrend()`: 分析价格趋势
+
+#### 4.2.5 购物决策服务组件（新增）
+
+**位置**: `server/lib/decision/decision_service.dart`
+
+**职责**:
+- 多商品对比分析
+- 购买建议评分计算
+- 替代商品推荐
+
+**关键方法**:
+- `compareProducts()`: 对比多个商品
+- `calculateScore()`: 计算购买建议评分
+- `findAlternatives()`: 查找替代商品
+
+#### 4.2.6 管理员后台服务组件（新增）
+
+**位置**: `server/lib/admin/admin_service.dart`（后端服务）
+
+**说明**: 这是后端服务组件，为独立的管理员后台 Web 应用提供 API 接口。
+
+**职责**:
+- 用户数据统计（查询数据库）
+- 系统使用情况分析（聚合日志和数据库数据）
+- 搜索热词统计（从 messages 表聚合）
+- 数据导出（生成 Excel/CSV）
+
+**关键方法**:
+- `getUserStats()`: 返回用户统计数据（JSON）
+- `getSystemStats()`: 返回系统使用情况（JSON）
+- `getSearchKeywords()`: 返回搜索热词统计（JSON）
+- `exportData()`: 生成并返回导出文件
+
+**API端点**:
+- `GET /api/v1/admin/users/stats` - 需要管理员权限
+- `GET /api/v1/admin/system/stats` - 需要管理员权限
+- `GET /api/v1/admin/search/keywords` - 需要管理员权限
 
 ---
 
@@ -576,6 +827,121 @@ class Conversation {
 }
 ```
 
+#### 5.1.4 价格历史模型 (PriceHistory)（新增）
+
+**位置**: `lib/features/price_history/price_history_model.dart`
+
+**定义**:
+```dart
+@HiveType(typeId: 10)
+class PriceHistoryEntry {
+  @HiveField(0) final String productId;      // 商品 ID
+  @HiveField(1) final String platform;       // 平台标识
+  @HiveField(2) final DateTime timestamp;    // 记录时间
+  @HiveField(3) final double price;           // 价格
+  @HiveField(4) final double? originalPrice; // 原价（如有）
+  @HiveField(5) final double priceChange;     // 价格变化（相对于上次）
+  @HiveField(6) final double priceChangePercent; // 价格变化百分比
+}
+```
+
+**特点**:
+- 时间序列数据，按时间排序
+- 支持价格变化计算
+- 使用 Hive 存储本地历史
+
+#### 5.1.5 用户偏好模型 (UserPreference)（新增）
+
+**位置**: `lib/features/analytics/user_preference_model.dart`
+
+**定义**:
+```dart
+@HiveType(typeId: 11)
+class UserPreference {
+  @HiveField(0) final String? userId;              // 用户 ID（如已登录）
+  @HiveField(1) final List<String> preferredCategories; // 偏好品类列表
+  @HiveField(2) final PriceRange priceRange;        // 价格偏好区间
+  @HiveField(3) final List<String> preferredPlatforms;  // 偏好平台列表
+  @HiveField(4) final double shoppingFrequency;     // 购物频率（次/月）
+  @HiveField(5) final DateTime lastUpdated;         // 最后更新时间
+}
+
+class PriceRange {
+  final double min;
+  final double max;
+}
+```
+
+**特点**:
+- 基于历史购物行为分析生成
+- 支持本地和云端存储
+- 定期更新
+
+#### 5.1.6 购物决策模型 (PurchaseDecision)（新增）
+
+**位置**: `lib/features/decision/purchase_decision_model.dart`
+
+**定义**:
+```dart
+class PurchaseDecision {
+  final String productId;              // 商品 ID
+  final double score;                  // 综合评分 (0-100)
+  final double priceScore;             // 价格评分 (0-25)
+  final double ratingScore;            // 评价评分 (0-25)
+  final double salesScore;             // 销量评分 (0-20)
+  final double trendScore;             // 趋势评分 (0-15)
+  final double platformScore;          // 平台评分 (0-15)
+  final String reasoning;               // 决策理由（AI生成）
+  final List<String> alternatives;      // 替代商品ID列表
+  final DateTime createdAt;             // 创建时间
+}
+```
+
+**特点**:
+- 多维度评分系统
+- AI 生成决策理由
+- 支持替代商品推荐
+
+#### 5.1.7 统计数据模型 (StatisticsData)（新增）
+
+**位置**: 
+- 后端: `server/lib/admin/models/statistics_data.dart`（API响应模型）
+- 前端（独立项目）: `wisepick_admin/lib/models/statistics_data.dart`（前端数据模型）
+
+**定义**:
+```dart
+class StatisticsData {
+  // 用户统计
+  final int totalUsers;
+  final ActiveUsers activeUsers;       // 日活、周活、月活
+  final RetentionRate retentionRate;   // 留存率
+  
+  // 系统统计
+  final ApiCallStats apiCalls;         // API调用统计
+  final SearchStats searchStats;       // 搜索统计
+  
+  // 时间范围
+  final DateTimeRange period;          // 统计周期
+}
+
+class ActiveUsers {
+  final int daily;
+  final int weekly;
+  final int monthly;
+}
+
+class RetentionRate {
+  final double day1;
+  final double day7;
+  final double day30;
+}
+```
+
+**特点**:
+- 聚合统计数据
+- 支持时间范围查询
+- 用于管理员后台展示
+
 ### 5.2 数据存储设计
 
 #### 5.2.1 Hive 存储结构
@@ -625,7 +991,55 @@ class Conversation {
    }
    ```
 
-#### 5.2.2 缓存策略
+5. **price_history** (价格历史)
+   ```dart
+   Map<String, List<PriceHistoryEntry>>  // key: productId
+   {
+     'timestamp': int,      // 时间戳（毫秒）
+     'price': double,       // 价格
+     'priceChange': double,  // 价格变化
+     'priceChangePercent': double  // 价格变化百分比
+   }
+   ```
+
+6. **user_preferences** (用户偏好)
+   ```dart
+   {
+     'preferredCategories': List<String>,
+     'priceRange': {'min': double, 'max': double},
+     'preferredPlatforms': List<String>,
+     'shoppingFrequency': double,
+     'lastUpdated': int  // 时间戳
+   }
+   ```
+
+7. **analytics_cache** (数据分析缓存)
+   ```dart
+   {
+     'consumptionStructure': Map<String, dynamic>,
+     'preferences': Map<String, dynamic>,
+     'shoppingTime': Map<String, dynamic>,
+     'cachedAt': int  // 缓存时间戳
+   }
+   ```
+
+#### 5.2.2 PostgreSQL 数据库存储
+
+**数据库**: PostgreSQL 12.0+
+
+**主要表**:
+- `users`: 用户账号信息
+- `user_sessions`: 用户登录会话
+- `cart_items`: 购物车数据（支持云端同步）
+- `conversations`: 会话数据（支持云端同步）
+- `messages`: 消息数据（支持云端同步）
+- `sync_versions`: 同步版本跟踪
+- `login_attempts`: 登录尝试记录
+- `email_verifications`: 邮箱验证码
+
+**详细设计**: 参见 [数据库架构文档](./database-architecture.md)
+
+#### 5.2.3 缓存策略
 
 **推广链接缓存**:
 - **存储位置**: 内存缓存 + Hive 持久化
@@ -636,6 +1050,16 @@ class Conversation {
 - **存储位置**: 内存缓存
 - **有效期**: 可配置（默认较短）
 - **用途**: 减少重复 API 调用
+
+**价格历史缓存**:
+- **存储位置**: Hive 本地存储 + PostgreSQL 云端存储
+- **保留期限**: 至少 90 天
+- **采集频率**: 每次价格刷新时记录
+
+**数据分析缓存**:
+- **存储位置**: Hive 本地缓存
+- **有效期**: 1 小时（或用户手动刷新）
+- **用途**: 减少重复计算，提升响应速度
 
 ---
 
@@ -1530,6 +1954,7 @@ if (platform == 'newplatform') {
 
 | 版本 | 日期 | 变更内容 | 作者 |
 |------|------|----------|------|
+| 2.0 | 2026-01-22 | 新增数据分析、价格历史、购物决策、管理员后台模块架构说明 | Winston (Architect) |
 | 1.0 | 2025 | 初始架构文档 | CHYINAN (Architect) |
 
 ---

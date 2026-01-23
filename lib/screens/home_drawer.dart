@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../features/chat/chat_providers.dart';
 import '../features/chat/conversation_model.dart';
+import '../features/analytics/analytics_page.dart';
+import '../features/decision/product_comparison_page.dart';
+import '../features/admin/admin_dashboard_page.dart';
 import 'user_settings_page.dart';
-// import '../features/chat/chat_service.dart';
 
 /// 侧边菜单：展示会话列表并支持新建会话
 class HomeDrawer extends ConsumerStatefulWidget {
@@ -114,6 +116,60 @@ class _HomeDrawerState extends ConsumerState<HomeDrawer> {
     }
   }
 
+  Future<void> _checkAdminAccess(BuildContext context) async {
+    final passwordController = TextEditingController();
+    final verified = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('管理员验证'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('请输入管理员密码 (默认: admin)'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: passwordController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: '密码',
+              ),
+              autofocus: true,
+              onSubmitted: (value) {
+                Navigator.of(ctx).pop(value == 'admin');
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(ctx).pop(passwordController.text == 'admin');
+            },
+            child: const Text('确认'),
+          ),
+        ],
+      ),
+    );
+
+    if (verified == true) {
+      if (!mounted) return;
+      Navigator.of(context).pop(); // Close drawer
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const AdminDashboardPage()),
+      );
+    } else if (verified == false) {
+       // do nothing or show error
+       if (!mounted) return;
+       // We can optionally show a snackbar if explicitly failed (not cancelled)
+       // But verified is bool?, assume false is cancel/fail.
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Drawer(
@@ -176,6 +232,32 @@ class _HomeDrawerState extends ConsumerState<HomeDrawer> {
                   );
                 },
               ),
+            ),
+            const Divider(),
+            // 功能入口区域
+            ListTile(
+              contentPadding: const EdgeInsetsDirectional.only(start: 12, end: 0),
+              leading: Icon(Icons.analytics_outlined, color: Theme.of(context).colorScheme.primary),
+              title: const Text('数据分析'),
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AnalyticsPage()));
+              },
+            ),
+            ListTile(
+              contentPadding: const EdgeInsetsDirectional.only(start: 12, end: 0),
+              leading: Icon(Icons.compare_arrows, color: Theme.of(context).colorScheme.primary),
+              title: const Text('商品对比'),
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProductComparisonPage()));
+              },
+            ),
+            ListTile(
+              contentPadding: const EdgeInsetsDirectional.only(start: 12, end: 0),
+              leading: Icon(Icons.admin_panel_settings_outlined, color: Theme.of(context).colorScheme.primary),
+              title: const Text('管理后台'),
+              onTap: () => _checkAdminAccess(context),
             ),
             const Divider(),
             // 将设置入口填满宽度，去掉右侧多余间隙，使用内容内边距控制左右间距

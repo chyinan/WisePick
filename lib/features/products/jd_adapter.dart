@@ -122,6 +122,22 @@ class JdAdapter {
         link = '';
       }
 
+      int sales = (map['inOrderCount30Days'] as num?)?.toInt() ?? 0;
+      int comments = (map['comments'] as num?)?.toInt() ?? 0;
+      double rating = (map['goodCommentsShare'] as num?)?.toDouble() ?? 0.0;
+
+      // 如果没有找到30天销量，则使用评论数作为销量兜底
+      if (sales == 0) {
+        sales = comments;
+      }
+
+      // 启发式修复: 用户反馈JD接口有时会将好评率(如96)放在comments字段，而goodCommentsShare为空
+      // 如果我们通过inOrderCount30Days获取到了真实销量，且rating为空，且comments看起来像好评率(80-100)，
+      // 则尝试将comments作为rating使用
+      if (rating <= 0.01 && sales > 0 && sales != comments && comments >= 80 && comments <= 100) {
+        rating = comments.toDouble();
+      }
+
       return ProductModel(
         id: map['skuId']?.toString() ?? '',
         platform: 'jd',
@@ -131,8 +147,8 @@ class JdAdapter {
         coupon: 0.0,
         finalPrice: price,
         imageUrl: image,
-        sales: (map['comments'] as num?)?.toInt() ?? 0,
-        rating: (map['goodCommentsShare'] as num?)?.toDouble() ?? 0.0,
+        sales: sales,
+        rating: rating,
         link: link,
         commission: commission,
       );

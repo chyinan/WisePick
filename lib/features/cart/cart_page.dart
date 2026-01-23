@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:dio/dio.dart';
-import 'package:hive/hive.dart';
-import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wisepick_dart_version/features/products/product_model.dart';
 import 'package:wisepick_dart_version/features/products/product_detail_page.dart';
@@ -13,6 +10,7 @@ import 'package:wisepick_dart_version/services/sync/sync_manager.dart';
 import 'package:wisepick_dart_version/widgets/product_card.dart';
 import 'package:wisepick_dart_version/widgets/cached_product_image.dart';
 import 'package:wisepick_dart_version/services/price_refresh_service.dart';
+import 'package:wisepick_dart_version/services/jd_scraper_client.dart';
 
 /// 桌面端宽度阈值
 const double _kDesktopBreakpoint = 800.0;
@@ -350,7 +348,7 @@ class _DesktopCartItemState extends ConsumerState<_DesktopCartItem> {
     final theme = Theme.of(context);
     final m = widget.item;
     final p = ProductModel.fromMap(m);
-    final qty = m['qty'] as int? ?? 1;
+    final qty = int.tryParse(m['qty']?.toString() ?? '1') ?? 1;
     final sel = ref.watch(cartSelectionProvider);
     final isSelected = sel[p.id] ?? false;
     final jdCachedPrice = _getJdCachedPrice(p, ref);
@@ -703,7 +701,7 @@ class _CartGroupCard extends ConsumerWidget {
             // Items
             ...items.map((m) {
               final p = ProductModel.fromMap(m);
-              final qty = m['qty'] as int? ?? 1;
+              final qty = int.tryParse(m['qty']?.toString() ?? '1') ?? 1;
               return Dismissible(
                 key: Key(p.id),
                 direction: DismissDirection.endToStart,
@@ -802,7 +800,7 @@ class _CartBottomBar extends ConsumerWidget {
     for (final m in list) {
        if (sel[m['id']] == true) {
           final p = ProductModel.fromMap(m);
-          final qty = m['qty'] as int? ?? 1;
+          final qty = int.tryParse(m['qty']?.toString() ?? '1') ?? 1;
           final effectivePrice = _getEffectivePrice(p, jdPrices);
           total += effectivePrice * qty;
           totalOriginal += (p.originalPrice > 0 ? p.originalPrice : effectivePrice) * qty;
@@ -971,22 +969,7 @@ class _CheckoutLinkDialog extends StatefulWidget {
 class _CheckoutLinkDialogState extends State<_CheckoutLinkDialog> {
   final Map<String, String> _promotionLinks = {};
   final Map<String, bool> _loadingStates = {};
-  final _dio = Dio();
-
-  Future<String> _getBackendBase() async {
-    String backend = 'http://localhost:9527';
-    try {
-      if (!Hive.isBoxOpen('settings')) await Hive.openBox('settings');
-      final box = Hive.box('settings');
-      final String? b = box.get('backend_base') as String?;
-      if (b != null && b.trim().isNotEmpty) {
-        backend = b.trim();
-      } else {
-        backend = Platform.environment['BACKEND_BASE'] ?? backend;
-      }
-    } catch (_) {}
-    return backend;
-  }
+  final JdScraperClient _jdScraperClient = JdScraperClient();
 
   Future<void> _fetchAndCopyLink(ProductModel p) async {
     setState(() => _loadingStates[p.id] = true);
@@ -994,54 +977,20 @@ class _CheckoutLinkDialogState extends State<_CheckoutLinkDialog> {
     try {
       String? link = p.link;
       
-      // 如果是京东商品且没有有效链接，调用后端获取推广链接
+      // 如果是京东商品且没有有效链接，使用新的双源爬取 API 获取推广链接
       if (p.platform == 'jd' && (link.isEmpty || !link.contains('u.jd.com'))) {
-        final backend = await _getBackendBase();
         try {
-          final response = await _dio.get(
-            '$backend/api/get-jd-promotion',
-            queryParameters: {'sku': p.id},
-          );
+          final result = await _jdScraperClient.getProductEnhanced(p.id);
           
-          if (response.data != null && response.data is Map) {
-            final data = response.data as Map<String, dynamic>;
-            
-            // 检查是否返回了错误
-            if (data['status'] == 'error') {
-              // 获取用户友好的错误消息
-              final userMessage = data['userMessage'] as String?;
-              if (userMessage != null && mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(userMessage)),
-                );
-              }
-            } else if (data['status'] == 'success' && data['data'] != null) {
-              final resultData = data['data'] as Map<String, dynamic>;
-              // 尝试从响应中提取推广链接
-              link = resultData['promotionUrl'] as String? ??
-                     resultData['promotionLink'] as String? ??
-                     resultData['shortLink'] as String? ??
-                     resultData['link'] as String? ??
-                     '';
-            } else {
-              // 直接从响应中提取推广链接（旧版响应格式）
-              link = data['promotionLink'] as String? ??
-                     data['shortLink'] as String? ??
-                     data['link'] as String? ??
-                     '';
-            }
-          }
-        } on DioException catch (e) {
-          debugPrint('获取京东推广链接失败: $e');
-          // 尝试解析错误响应中的用户友好消息
-          if (e.response?.data != null && e.response!.data is Map) {
-            final errorData = e.response!.data as Map<String, dynamic>;
-            final userMessage = errorData['userMessage'] as String?;
-            if (userMessage != null && mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(userMessage)),
-              );
-            }
+          if (result.isSuccess && result.data != null) {
+            final info = result.data!;
+            // 获取推广链接（优先短链接）
+            link = info.effectivePromotionLink ?? '';
+          } else if (result.errorMessage != null && mounted) {
+            // 显示用户友好的错误消息
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(result.errorMessage!)),
+            );
           }
         } catch (e) {
           debugPrint('获取京东推广链接失败: $e');

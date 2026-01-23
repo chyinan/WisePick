@@ -90,23 +90,45 @@ class ProductModel {
       }
     } catch (_) {}
 
+    // Helper for robust number parsing
+    double? parseDouble(dynamic v) {
+      if (v == null) return null;
+      if (v is num) return v.toDouble();
+      if (v is String) return double.tryParse(v.replaceAll(RegExp(r'[^0-9\.-]'), ''));
+      return null;
+    }
+
+    int? parseInt(dynamic v) {
+      if (v == null) return null;
+      if (v is num) return v.toInt();
+      if (v is String) return int.tryParse(v.replaceAll(RegExp(r'[^0-9\.-]'), ''));
+      return null;
+    }
+
+    String normalizeUrl(String? url) {
+      if (url == null || url.isEmpty) return '';
+      if (url.startsWith('//')) return 'https:$url';
+      if (!url.startsWith('http')) return 'https://$url';
+      return url;
+    }
+
     return ProductModel(
-      id: m['id'] as String,
+      id: (m['id'] ?? '').toString(),
       platform: m['platform'] as String?,
-      title: m['title'] as String,
-      price: (m['price'] as num?)?.toDouble(),
-      originalPrice: (m['original_price'] as num?)?.toDouble(),
-      coupon: (m['coupon'] as num?)?.toDouble(),
-      finalPrice: (m['final_price'] as num?)?.toDouble(),
-      imageUrl: m['image_url'] as String?,
-      sales: (m['sales'] as num?)?.toInt(),
-      rating: (m['rating'] as num?)?.toDouble(),
+      title: (m['title'] ?? '').toString(),
+      price: parseDouble(m['price']),
+      originalPrice: parseDouble(m['original_price']),
+      coupon: parseDouble(m['coupon']),
+      finalPrice: parseDouble(m['final_price']),
+      imageUrl: normalizeUrl(m['image_url'] as String?),
+      sales: parseInt(m['sales']),
+      rating: parseDouble(m['rating']),
       shopTitle: shopTitle ?? '',
       link: m['link'] as String?,
-      commission: (m['commission'] as num?)?.toDouble(),
+      commission: parseDouble(m['commission']),
       description: desc ?? '',
       sourceUrl: m['sourceUrl'] as String? ?? m['source_url'] as String?,
-      reviewCount: (m['reviewCount'] as num?)?.toInt() ?? (m['review_count'] as num?)?.toInt(),
+      reviewCount: parseInt(m['reviewCount']) ?? parseInt(m['review_count']),
     );
   }
 
@@ -134,9 +156,16 @@ class ProductModel {
       return null;
     }
 
+    String normalizeUrl(String? url) {
+      if (url == null || url.isEmpty) return '';
+      if (url.startsWith('//')) return 'https:$url';
+      if (!url.startsWith('http')) return 'https://$url';
+      return url;
+    }
+
     final id = _str(m, ['num_iid', 'id', 'item_id', 'goods_id']) ?? _str(m, ['id']) ?? '';
     final title = (_str(m, ['title', 'item_title', 'name']) ?? '').trim();
-    final imageUrl = _str(m, ['pic_url', 'pict_url', 'small_images', 'image_url']) ?? '';
+    final imageUrl = normalizeUrl(_str(m, ['pic_url', 'pict_url', 'small_images', 'image_url']));
     final price = (_num(m, ['zk_final_price', 'price', 'reserve_price', 'final_price']) ?? 0).toDouble();
     final originalPrice = (_num(m, ['reserve_price', 'original_price', 'price']) ?? price).toDouble();
     final coupon = (_num(m, ['coupon_amount', 'coupon', 'CouponAmount']) ?? 0).toDouble();

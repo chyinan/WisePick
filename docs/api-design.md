@@ -1,8 +1,8 @@
 # 快淘帮 WisePick - API 设计文档
 
-**版本**: 1.0  
-**创建日期**: 2024  
-**最后更新**: 2024  
+**版本**: 2.0  
+**创建日期**: 2026  
+**最后更新**: 2026-01-22  
 **文档状态**: 正式版  
 **架构师**: Winston (Architect Agent)
 
@@ -61,6 +61,12 @@
 | 京东联盟 | 4 | 商品搜索、推广链接生成 |
 | 拼多多 | 3 | 备案查询、推广链接生成、搜索调试 |
 | 商品搜索 | 1 | 统一商品搜索接口 |
+| 用户认证 | 8 | 注册、登录、Token 刷新等 |
+| 数据同步 | 6 | 购物车、会话同步 |
+| 数据分析 | 3 | 消费结构、偏好、时间分析（新增） |
+| 价格历史 | 3 | 价格历史查询和记录（新增） |
+| 购物决策 | 2 | 商品对比、评分计算（新增） |
+| 管理员后台 | 4 | 用户统计、系统监控、搜索热词（新增） |
 | 管理端点 | 5 | 配置、登录、调试 |
 
 ### 2.2 端点列表
@@ -1000,7 +1006,444 @@ GET /__debug/last_return?history=1
 
 ---
 
-## 11. 错误处理
+## 10. 数据分析 API（新增）
+
+### 10.1 消费结构分析
+
+**端点**: `GET /api/v1/analytics/consumption-structure`
+
+**功能**: 获取用户消费结构分析数据，包括品类分布、价格区间、平台偏好等。
+
+**请求参数** (URL 查询字符串):
+
+| 参数 | 类型 | 必需 | 说明 |
+|------|------|------|------|
+| userId | string | 否 | 用户 ID（如已登录，从 Token 获取） |
+| timeRange | string | 否 | 时间范围（如 "30d", "90d", "1y"） |
+
+**请求头**:
+```
+Authorization: Bearer <access_token>  # 可选，如已登录
+```
+
+**响应格式**:
+```json
+{
+  "categoryDistribution": {
+    "电子产品": 35.5,
+    "服装": 25.3,
+    "家居": 20.2,
+    "其他": 19.0
+  },
+  "priceRangeDistribution": {
+    "0-100": 15,
+    "100-500": 30,
+    "500-1000": 25,
+    "1000-5000": 20,
+    "5000+": 10
+  },
+  "platformPreference": {
+    "jd": 45.5,
+    "taobao": 35.2,
+    "pdd": 19.3
+  },
+  "totalAmount": 12500.50,
+  "totalItems": 45,
+  "averagePrice": 277.79
+}
+```
+
+### 10.2 用户偏好分析
+
+**端点**: `GET /api/v1/analytics/preferences`
+
+**功能**: 获取用户购物偏好分析，包括偏好品类、价格区间、平台偏好等。
+
+**请求参数**: 与消费结构分析相同
+
+**响应格式**:
+```json
+{
+  "preferredCategories": ["电子产品", "数码配件", "电脑外设"],
+  "priceRange": {
+    "min": 100.0,
+    "max": 1000.0
+  },
+  "preferredPlatforms": ["jd", "taobao"],
+  "shoppingFrequency": 8.5,
+  "lastUpdated": "2026-01-22T10:00:00Z"
+}
+```
+
+### 10.3 购物欲望时间分析
+
+**端点**: `GET /api/v1/analytics/shopping-time`
+
+**功能**: 获取用户购物欲望时间分布数据，分析用户在什么时间段购物欲望最强。
+
+**请求参数**:
+
+| 参数 | 类型 | 必需 | 说明 |
+|------|------|------|------|
+| userId | string | 否 | 用户 ID |
+| timeRange | string | 否 | 时间范围 |
+
+**响应格式**:
+```json
+{
+  "hourlyDistribution": {
+    "0": 2, "1": 1, "2": 0, "3": 0,
+    "4": 0, "5": 1, "6": 2, "7": 5,
+    "8": 8, "9": 12, "10": 15, "11": 18,
+    "12": 20, "13": 22, "14": 25, "15": 28,
+    "16": 30, "17": 32, "18": 35, "19": 40,
+    "20": 45, "21": 38, "22": 25, "23": 15
+  },
+  "weekdayVsWeekend": {
+    "weekday": 65,
+    "weekend": 35
+  },
+  "peakHours": [20, 21, 19, 18],
+  "totalSessions": 450
+}
+```
+
+---
+
+## 11. 价格历史 API（新增）
+
+### 11.1 获取价格历史
+
+**端点**: `GET /api/v1/price-history/{productId}`
+
+**功能**: 获取指定商品的价格历史数据。
+
+**路径参数**:
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| productId | string | 商品 ID |
+
+**请求参数** (URL 查询字符串):
+
+| 参数 | 类型 | 必需 | 说明 |
+|------|------|------|------|
+| days | integer | 否 | 查询天数（默认 90 天） |
+| platform | string | 否 | 平台标识（如需要） |
+
+**响应格式**:
+```json
+{
+  "productId": "1234567890",
+  "platform": "jd",
+  "history": [
+    {
+      "timestamp": "2026-01-01T00:00:00Z",
+      "price": 799.00,
+      "originalPrice": 999.00,
+      "priceChange": 0.0,
+      "priceChangePercent": 0.0
+    },
+    {
+      "timestamp": "2026-01-02T00:00:00Z",
+      "price": 749.00,
+      "originalPrice": 999.00,
+      "priceChange": -50.0,
+      "priceChangePercent": -6.26
+    }
+  ],
+  "statistics": {
+    "highestPrice": 999.00,
+    "lowestPrice": 699.00,
+    "averagePrice": 799.50,
+    "currentPrice": 749.00,
+    "priceTrend": "downward"
+  },
+  "recommendation": {
+    "bestBuyTime": "建议等待",
+    "reason": "价格处于下降趋势，建议继续观望"
+  }
+}
+```
+
+### 11.2 批量获取价格历史
+
+**端点**: `POST /api/v1/price-history/batch`
+
+**功能**: 批量获取多个商品的价格历史数据。
+
+**请求格式**:
+```json
+{
+  "productIds": ["1234567890", "0987654321"],
+  "days": 90
+}
+```
+
+**响应格式**:
+```json
+{
+  "results": [
+    {
+      "productId": "1234567890",
+      "history": [...],
+      "statistics": {...}
+    },
+    {
+      "productId": "0987654321",
+      "history": [...],
+      "statistics": {...}
+    }
+  ]
+}
+```
+
+---
+
+## 12. 购物决策 API（新增）
+
+### 12.1 商品对比
+
+**端点**: `POST /api/v1/decision/compare`
+
+**功能**: 对比多个商品的详细信息，生成对比表格数据。
+
+**请求格式**:
+```json
+{
+  "productIds": ["1234567890", "0987654321", "1122334455"]
+}
+```
+
+**响应格式**:
+```json
+{
+  "products": [
+    {
+      "id": "1234567890",
+      "platform": "jd",
+      "title": "商品标题1",
+      "price": 799.00,
+      "rating": 0.95,
+      "sales": 10000,
+      "shopTitle": "店铺1",
+      "parameters": {
+        "品牌": "品牌A",
+        "型号": "型号X",
+        "颜色": "黑色"
+      }
+    },
+    {
+      "id": "0987654321",
+      "platform": "taobao",
+      "title": "商品标题2",
+      "price": 699.00,
+      "rating": 0.92,
+      "sales": 8000,
+      "shopTitle": "店铺2",
+      "parameters": {
+        "品牌": "品牌B",
+        "型号": "型号Y",
+        "颜色": "白色"
+      }
+    }
+  ],
+  "comparison": {
+    "priceRange": {"min": 699.00, "max": 799.00},
+    "ratingRange": {"min": 0.92, "max": 0.95},
+    "salesRange": {"min": 8000, "max": 10000}
+  }
+}
+```
+
+### 12.2 购买建议评分
+
+**端点**: `POST /api/v1/decision/score`
+
+**功能**: 为商品生成购买建议评分，包括综合评分和各维度得分。
+
+**请求格式**:
+```json
+{
+  "productId": "1234567890",
+  "platform": "jd"
+}
+```
+
+**响应格式**:
+```json
+{
+  "productId": "1234567890",
+  "score": 85.5,
+  "priceScore": 22.0,
+  "ratingScore": 23.5,
+  "salesScore": 18.0,
+  "trendScore": 12.0,
+  "platformScore": 10.0,
+  "reasoning": "该商品价格合理，用户评价优秀，销量表现良好，价格趋势稳定，京东平台信誉度高，综合推荐购买。",
+  "alternatives": [
+    {
+      "productId": "0987654321",
+      "title": "替代商品1",
+      "score": 82.0,
+      "reason": "价格更低，但评价略低"
+    }
+  ]
+}
+```
+
+---
+
+## 13. 管理员后台 API（新增）
+
+### 13.1 用户数据统计
+
+**端点**: `GET /api/v1/admin/users/stats`
+
+**功能**: 获取用户统计数据，包括总用户数、活跃用户、留存率等。
+
+**权限**: 需要管理员认证（Bearer Token）
+
+**请求参数** (URL 查询字符串):
+
+| 参数 | 类型 | 必需 | 说明 |
+|------|------|------|------|
+| timeRange | string | 否 | 时间范围（如 "7d", "30d", "1y"） |
+
+**请求头**:
+```
+Authorization: Bearer <admin_access_token>
+```
+
+**响应格式**:
+```json
+{
+  "totalUsers": 10000,
+  "activeUsers": {
+    "daily": 1500,
+    "weekly": 5000,
+    "monthly": 8000
+  },
+  "retentionRate": {
+    "day1": 0.65,
+    "day7": 0.45,
+    "day30": 0.30
+  },
+  "newUsers": {
+    "today": 50,
+    "thisWeek": 350,
+    "thisMonth": 1500
+  },
+  "period": {
+    "start": "2026-01-01T00:00:00Z",
+    "end": "2026-01-22T00:00:00Z"
+  }
+}
+```
+
+### 13.2 系统使用情况分析
+
+**端点**: `GET /api/v1/admin/system/stats`
+
+**功能**: 获取系统使用情况统计，包括 API 调用统计、搜索成功率、错误率等。
+
+**权限**: 需要管理员认证
+
+**响应格式**:
+```json
+{
+  "apiCalls": {
+    "total": 100000,
+    "success": 95000,
+    "failed": 5000,
+    "avgResponseTime": 1.5,
+    "byEndpoint": {
+      "/v1/chat/completions": 50000,
+      "/api/products/search": 30000,
+      "/sign/taobao": 10000,
+      "/sign/jd": 8000,
+      "/sign/pdd": 2000
+    }
+  },
+  "searchStats": {
+    "totalSearches": 50000,
+    "successRate": 0.95,
+    "avgResponseTime": 2.3,
+    "byPlatform": {
+      "jd": {"count": 25000, "successRate": 0.98},
+      "taobao": {"count": 20000, "successRate": 0.95},
+      "pdd": {"count": 5000, "successRate": 0.90}
+    }
+  },
+  "errorRate": 0.05,
+  "period": {
+    "start": "2026-01-01T00:00:00Z",
+    "end": "2026-01-22T00:00:00Z"
+  }
+}
+```
+
+### 13.3 商品搜索热词统计
+
+**端点**: `GET /api/v1/admin/search/keywords`
+
+**功能**: 获取商品搜索热词统计，包括热门搜索词、搜索趋势等。
+
+**权限**: 需要管理员认证
+
+**请求参数**:
+
+| 参数 | 类型 | 必需 | 说明 |
+|------|------|------|------|
+| limit | integer | 否 | 返回数量（默认 20） |
+| timeRange | string | 否 | 时间范围 |
+
+**响应格式**:
+```json
+{
+  "keywords": [
+    {
+      "keyword": "USB DAC",
+      "count": 1250,
+      "trend": "up",
+      "lastSearched": "2026-01-22T10:00:00Z"
+    },
+    {
+      "keyword": "机械键盘",
+      "count": 980,
+      "trend": "stable",
+      "lastSearched": "2026-01-22T09:30:00Z"
+    }
+  ],
+  "totalSearches": 50000,
+  "period": {
+    "start": "2026-01-01T00:00:00Z",
+    "end": "2026-01-22T00:00:00Z"
+  }
+}
+```
+
+### 13.4 数据导出
+
+**端点**: `GET /api/v1/admin/export`
+
+**功能**: 导出统计数据为 Excel 或 CSV 格式。
+
+**权限**: 需要管理员认证
+
+**请求参数**:
+
+| 参数 | 类型 | 必需 | 说明 |
+|------|------|------|------|
+| type | string | 是 | 导出类型（users/stats/keywords） |
+| format | string | 否 | 导出格式（excel/csv，默认 excel） |
+| timeRange | string | 否 | 时间范围 |
+
+**响应**: 文件下载（Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet 或 text/csv）
+
+---
+
+## 14. 错误处理
 
 ### 11.1 错误分类
 
@@ -1100,7 +1543,7 @@ GET /__debug/last_return?history=1
 
 ---
 
-## 12. 数据模型
+## 15. 数据模型
 
 ### 12.1 ProductModel（商品模型）
 
@@ -1206,7 +1649,97 @@ GET /__debug/last_return?history=1
 | ts | string | 时间戳（ISO 8601 格式） |
 | sign | string | 签名结果（HMAC-SHA256 或 MD5） |
 
-### 12.5 推广链接响应模型
+### 12.5 价格历史响应模型（新增）
+
+**定义**:
+```json
+{
+  "productId": "string",
+  "platform": "string",
+  "history": [
+    {
+      "timestamp": "string",
+      "price": "number",
+      "originalPrice": "number",
+      "priceChange": "number",
+      "priceChangePercent": "number"
+    }
+  ],
+  "statistics": {
+    "highestPrice": "number",
+    "lowestPrice": "number",
+    "averagePrice": "number",
+    "currentPrice": "number",
+    "priceTrend": "string"
+  }
+}
+```
+
+### 12.6 购物决策响应模型（新增）
+
+**对比响应**:
+```json
+{
+  "products": ["array<ProductModel>"],
+  "comparison": {
+    "priceRange": {"min": "number", "max": "number"},
+    "ratingRange": {"min": "number", "max": "number"},
+    "salesRange": {"min": "number", "max": "number"}
+  }
+}
+```
+
+**评分响应**:
+```json
+{
+  "productId": "string",
+  "score": "number",
+  "priceScore": "number",
+  "ratingScore": "number",
+  "salesScore": "number",
+  "trendScore": "number",
+  "platformScore": "number",
+  "reasoning": "string",
+  "alternatives": ["array<AlternativeProduct>"]
+}
+```
+
+### 12.7 统计数据响应模型（新增）
+
+**用户统计**:
+```json
+{
+  "totalUsers": "integer",
+  "activeUsers": {
+    "daily": "integer",
+    "weekly": "integer",
+    "monthly": "integer"
+  },
+  "retentionRate": {
+    "day1": "number",
+    "day7": "number",
+    "day30": "number"
+  }
+}
+```
+
+**系统统计**:
+```json
+{
+  "apiCalls": {
+    "total": "integer",
+    "success": "integer",
+    "failed": "integer",
+    "avgResponseTime": "number"
+  },
+  "searchStats": {
+    "totalSearches": "integer",
+    "successRate": "number"
+  }
+}
+```
+
+### 12.8 推广链接响应模型
 
 **淘宝推广链接**:
 ```json
@@ -1236,7 +1769,7 @@ GET /__debug/last_return?history=1
 
 ---
 
-## 13. 集成示例
+## 16. 集成示例
 
 ### 13.1 前端调用示例
 
@@ -1413,7 +1946,7 @@ curl -X POST http://localhost:9527/admin/login \
 
 ---
 
-## 14. 版本管理
+## 17. 版本管理
 
 ### 14.1 API 版本策略
 
@@ -1449,7 +1982,7 @@ curl -X POST http://localhost:9527/admin/login \
 
 ---
 
-## 15. 安全考虑
+## 18. 安全考虑
 
 ### 15.1 API 密钥保护
 
@@ -1495,7 +2028,7 @@ curl -X POST http://localhost:9527/admin/login \
 
 ---
 
-## 16. 性能优化
+## 19. 性能优化
 
 ### 16.1 请求优化
 
@@ -1535,7 +2068,7 @@ curl -X POST http://localhost:9527/admin/login \
 
 ---
 
-## 17. 测试指南
+## 20. 测试指南
 
 ### 17.1 API 测试工具
 
@@ -1587,7 +2120,7 @@ void main() {
 
 ---
 
-## 18. 附录
+## 21. 附录
 
 ### 18.1 环境变量参考
 
@@ -1620,6 +2153,19 @@ void main() {
 - `PORT`: 服务器端口（默认: 9527）
 - `BACKEND_BASE`: 后端基础地址（默认: `http://localhost:9527`）
 
+#### 数据库配置（用户账号功能必需）
+
+- `DB_HOST`: 数据库主机（默认: localhost）
+- `DB_PORT`: 数据库端口（默认: 5432）
+- `DB_NAME`: 数据库名（默认: wisepick）
+- `DB_USER`: 数据库用户（默认: postgres）
+- `DB_PASSWORD`: 数据库密码
+
+#### JWT 认证配置（用户账号功能必需）
+
+- `JWT_SECRET`: Access Token 签名密钥
+- `JWT_REFRESH_SECRET`: Refresh Token 签名密钥
+
 ### 18.2 API 端点速查表
 
 | 端点 | 方法 | 功能 | 认证 |
@@ -1641,8 +2187,21 @@ void main() {
 | `/admin/login` | POST | 管理员登录 | - |
 | `/__settings` | GET | 获取配置信息 | - |
 | `/__debug/last_return` | GET | 调试信息查看 | - |
-| `/_debug/last_return` | GET | 调试信息查看（别名） | - |
-| `/debug/last_return` | GET | 调试信息查看（别名） | - |
+| `/api/v1/auth/register` | POST | 用户注册 | 否 |
+| `/api/v1/auth/login` | POST | 用户登录 | 否 |
+| `/api/v1/auth/refresh` | POST | 刷新 Token | 否 |
+| `/api/v1/sync/cart/pull` | POST | 拉取购物车数据 | 是 |
+| `/api/v1/sync/cart/push` | POST | 推送购物车数据 | 是 |
+| `/api/v1/analytics/consumption-structure` | GET | 消费结构分析 | 可选 |
+| `/api/v1/analytics/preferences` | GET | 用户偏好分析 | 可选 |
+| `/api/v1/analytics/shopping-time` | GET | 购物时间分析 | 可选 |
+| `/api/v1/price-history/{productId}` | GET | 获取价格历史 | 可选 |
+| `/api/v1/price-history/batch` | POST | 批量获取价格历史 | 可选 |
+| `/api/v1/decision/compare` | POST | 商品对比 | 否 |
+| `/api/v1/decision/score` | POST | 购买建议评分 | 否 |
+| `/api/v1/admin/users/stats` | GET | 用户数据统计 | 管理员 |
+| `/api/v1/admin/system/stats` | GET | 系统使用情况 | 管理员 |
+| `/api/v1/admin/search/keywords` | GET | 搜索热词统计 | 管理员 |
 
 ### 18.3 参考文档
 
@@ -1650,6 +2209,7 @@ void main() {
 - [架构文档](./architecture.md) - 完整技术架构文档
 - [前端架构文档](./frontend-architecture.md) - 前端架构设计文档
 - [后端架构文档](./backend-architecture.md) - 后端架构设计文档
+- [数据库架构文档](./database-architecture.md) - 数据库架构设计文档
 - [README](../README.md) - 项目说明文档
 - [OpenAI API 文档](https://platform.openai.com/docs) - OpenAI API 官方文档
 - [淘宝联盟 API](https://open.taobao.com/) - 淘宝联盟开放平台
@@ -1660,6 +2220,7 @@ void main() {
 
 | 版本 | 日期 | 变更内容 | 作者 |
 |------|------|----------|------|
+| 2.0 | 2026-01-22 | 新增数据分析、价格历史、购物决策、管理员后台 API 接口说明 | Winston (Architect) |
 | 1.0 | 2024 | 初始 API 设计文档 | CHYINAN (Architect) |
 
 ---

@@ -10,14 +10,18 @@ import 'models/models.dart';
 /// 京东爬虫服务路由
 ///
 /// 提供以下 API 端点：
-/// - GET  /api/jd/scraper/product/:skuId - 获取单个商品信息
+/// - GET  /api/jd/scraper/product/:skuId - 获取单个商品信息（京东联盟）
+/// - GET  /api/jd/scraper/product/:skuId/enhanced - 获取商品完整信息
 /// - POST /api/jd/scraper/products/batch - 批量获取商品信息
+/// - POST /api/jd/scraper/products/batch/enhanced - 批量获取商品完整信息
 /// - GET  /api/jd/scraper/status - 获取服务状态
 /// - GET  /api/jd/cookie/status - 获取 Cookie 状态
 /// - POST /api/jd/cookie/update - 更新 Cookie
 /// - GET  /api/jd/errors - 获取错误日志
 /// - GET  /api/jd/alerts - 获取管理员告警
 /// - POST /api/jd/alerts/:id/acknowledge - 确认告警已处理
+/// 
+/// 注意：京东首页爬取因风控严格已移除，所有接口均使用京东联盟数据源
 class JdScraperRoutes {
   /// 爬虫服务实例
   final JdScraperService _service;
@@ -34,9 +38,13 @@ class JdScraperRoutes {
   Router get router {
     final router = Router();
 
-    // 商品信息获取
+    // 商品信息获取 - 京东联盟（推广链接）
     router.get('/api/jd/scraper/product/<skuId>', _getProduct);
     router.post('/api/jd/scraper/products/batch', _getBatchProducts);
+    
+    // 商品完整信息 - 京东联盟（京东首页爬取已移除）
+    router.get('/api/jd/scraper/product/<skuId>/enhanced', _getProductEnhanced);
+    router.post('/api/jd/scraper/products/batch/enhanced', _getBatchProductsEnhanced);
 
     // 服务状态
     router.get('/api/jd/scraper/status', _getStatus);
@@ -127,6 +135,83 @@ class JdScraperRoutes {
         'data': results.map((info) => info.toJson()).toList(),
         'total': skuIds.length,
         'success_count': results.length,
+      });
+    } on ScraperException catch (e) {
+      return _errorResponse(e.type.name, e.message, statusCode: _getStatusCode(e.type));
+    } catch (e) {
+      return _errorResponse('unknown', e.toString());
+    }
+  }
+
+  /// 获取商品完整信息
+  /// 
+  /// 从京东联盟获取商品信息（京东首页爬取已移除）
+  /// 
+  /// 查询参数：
+  /// - forceRefresh: 是否强制刷新（忽略缓存）
+  Future<Response> _getProductEnhanced(Request request, String skuId) async {
+    try {
+      await _ensureInitialized();
+
+      final forceRefresh =
+          request.url.queryParameters['forceRefresh'] == 'true';
+
+      final info = await _service.getProductInfoEnhanced(
+        skuId,
+        forceRefresh: forceRefresh,
+      );
+
+      return _jsonResponse({
+        'success': true,
+        'data': info.toJson(),
+        'source': 'jd_alliance',
+      });
+    } on ScraperException catch (e) {
+      final isServiceError = e.type != ScraperErrorType.productNotFound;
+      return _errorResponse(
+        e.type.name,
+        e.message,
+        statusCode: _getStatusCode(e.type),
+        isServiceError: isServiceError,
+      );
+    } catch (e) {
+      return _errorResponse('unknown', e.toString());
+    }
+  }
+
+  /// 批量获取商品完整信息
+  /// 
+  /// 请求体参数：
+  /// - skuIds: 商品ID列表
+  /// - maxConcurrency: 最大并发数（默认 2）
+  Future<Response> _getBatchProductsEnhanced(Request request) async {
+    try {
+      await _ensureInitialized();
+
+      final body = await request.readAsString();
+      final data = jsonDecode(body) as Map<String, dynamic>;
+      final skuIds = (data['skuIds'] as List<dynamic>?)
+          ?.map((e) => e.toString())
+          .toList();
+
+      if (skuIds == null || skuIds.isEmpty) {
+        return _errorResponse('badRequest', 'Missing skuIds parameter',
+            statusCode: 400);
+      }
+
+      final maxConcurrency = data['maxConcurrency'] as int? ?? 2;
+
+      final results = await _service.getBatchProductInfoEnhanced(
+        skuIds,
+        maxConcurrency: maxConcurrency,
+      );
+
+      return _jsonResponse({
+        'success': true,
+        'data': results.map((info) => info.toJson()).toList(),
+        'total': skuIds.length,
+        'success_count': results.length,
+        'source': 'jd_alliance',
       });
     } on ScraperException catch (e) {
       return _errorResponse(e.type.name, e.message, statusCode: _getStatusCode(e.type));

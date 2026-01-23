@@ -15,6 +15,10 @@ import '../lib/jd_scraper/jd_scraper.dart';
 import '../lib/database/database.dart';
 import '../lib/auth/auth_handler.dart';
 import '../lib/sync/sync_handler.dart';
+import '../lib/analytics/analytics_service.dart';
+import '../lib/price_history/price_history_service.dart';
+import '../lib/decision/decision_service.dart';
+import '../lib/admin/admin_service.dart';
 
 // NOTE: veapi support removed per user request
 
@@ -187,6 +191,23 @@ Future<void> runServer(List<String> args) async {
       final syncHandler = SyncHandler();
       router.mount('/api/v1/sync', syncHandler.handler);
       print('[Server] Sync routes registered at /api/v1/sync/*');
+
+      // V2.0 Modules
+      final analyticsService = AnalyticsService(Database.instance);
+      router.mount('/api/v1/analytics', analyticsService.router.call);
+      print('[Server] Analytics routes registered at /api/v1/analytics/*');
+
+      final priceHistoryService = PriceHistoryService(Database.instance);
+      router.mount('/api/v1/price-history', priceHistoryService.router.call);
+      print('[Server] PriceHistory routes registered at /api/v1/price-history/*');
+
+      final decisionService = DecisionService();
+      router.mount('/api/v1/decision', decisionService.router.call);
+      print('[Server] Decision routes registered at /api/v1/decision/*');
+
+      final adminService = AdminService(Database.instance);
+      router.mount('/api/v1/admin', adminService.router.call);
+      print('[Server] Admin routes registered at /api/v1/admin/*');
     } catch (e) {
       print('[Server] Database connection failed: $e');
       print('[Server] Auth features will be disabled');

@@ -15,7 +15,7 @@ class ChatService {
   ChatService({ApiClient? client}) : apiClient = client ?? ApiClient();
 
   /// 调用本地代理或 OpenAI 兼容接口，返回文本回复（不处理流式响应）
-  Future<String> getAiReply(String prompt, {bool includeTitleInstruction = false}) async {
+  Future<String> getAiReply(String prompt, {bool includeTitleInstruction = false, bool isProductDetail = false}) async {
     // Allow using a local mock AI response for offline/debugging. When enabled via
     // Hive settings key `use_mock_ai`, return a canned JSON-like reply to avoid
     // calling external APIs (helps during development to save cost).
@@ -26,6 +26,24 @@ class ChatService {
       if (useMock) {
         // small delay to simulate network latency
         await Future.delayed(const Duration(milliseconds: 200));
+        if (isProductDetail) {
+          return '''### 产品概述
+这款商品主打高性价比，适合日常使用。它在设计上注重实用性，外观简约大方。
+
+### 主要特点和优势
+- **性能稳定**：经过多次测试，表现出色。
+- **使用便捷**：用户界面友好，上手容易。
+- **价格亲民**：同类产品中极具竞争力。
+
+### 可能的不足
+- 某些高级功能可能欠缺。
+
+### 适合用户
+- 预算有限但追求品质的用户。
+- 初次使用的入门级用户。
+
+*(这是模拟的 AI 回复，仅供测试使用)*''';
+        }
         return _mockResponseString();
       }
     } catch (_) {}
@@ -76,7 +94,9 @@ class ChatService {
       if (b != null) embedPrompts = b;
     } catch (_) {}
 
-    final dynamic messages = AiPromptService.buildMessages(userProfile: ' ', context: ' ', userQuestion: prompt, includeTitleInstruction: includeTitleInstruction);
+    final dynamic messages = isProductDetail
+        ? AiPromptService.buildProductDetailMessages(userQuestion: prompt)
+        : AiPromptService.buildMessages(userProfile: ' ', context: ' ', userQuestion: prompt, includeTitleInstruction: includeTitleInstruction);
 
     // Read max_tokens setting (string): 'unlimited' means omit the field so upstream can use model's max
     int? maxTokens;

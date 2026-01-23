@@ -99,5 +99,14 @@ User: 输入：user_profile=$userProfile, context=$context, constraints=$constra
   static List<Map<String, String>> buildPromptMessages({required String userProfile, required String context, required String userQuestion, String constraints = '', int maxResults = 4}) {
     return buildMessages(userProfile: userProfile, context: context, userQuestion: userQuestion, constraints: constraints, maxResults: maxResults);
   }
+
+  /// 构建商品详情页介绍的 messages
+  static List<Map<String, String>> buildProductDetailMessages({required String userQuestion}) {
+    return [
+      {'role': 'system', 'content': 'You are a helpful product analysis assistant. Please answer the user\'s request about product details in clear, objective Chinese using Markdown format.'},
+      {'role': 'user', 'content': userQuestion},
+    ];
+  }
 }
+
 

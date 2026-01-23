@@ -51,7 +51,7 @@ class _FakeCartService extends CartService {
   final Map<String, Map<String, dynamic>> _store = {};
 
   @override
-  Future<void> addOrUpdateItem(ProductModel p, {int qty = 1}) async {
+  Future<void> addOrUpdateItem(ProductModel p, {int qty = 1, String? rawJson}) async {
     final existing = _store[p.id];
     if (existing != null) {
       existing['qty'] = (existing['qty'] as int) + qty;

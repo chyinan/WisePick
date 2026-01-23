@@ -138,7 +138,7 @@ class BrowserPoolConfig {
     this.maxBrowsers = 3,
     this.browserTimeout = const Duration(minutes: 30),
     this.idleTimeout = const Duration(minutes: 2),
-    this.headless = false,
+    this.headless = true,
     this.executablePath,
     this.extraArgs = const [],
     this.defaultViewport,
@@ -153,7 +153,7 @@ class BrowserPoolConfig {
       maxBrowsers: 2,
       browserTimeout: const Duration(minutes: 15),
       idleTimeout: const Duration(minutes: 1),
-      headless: false,
+      headless: true,
       slowMo: const Duration(milliseconds: 50),
       closeAfterUse: true,  // 开发环境下用完即关
     );
@@ -312,6 +312,8 @@ class BrowserPool {
     final instance = await acquire();
     try {
       final page = await instance.browser.newPage();
+      // 为新页面注入反检测脚本
+      await _injectStealthScripts(page);
       return PageWithInstance(page, instance, this);
     } catch (e) {
       release(instance);
@@ -386,41 +388,101 @@ class BrowserPool {
     // 设置 User-Agent
     await page.setUserAgent(userAgent);
 
-    // 注入反检测 JavaScript
+    // 注入反检测 JavaScript（增强版）
     await page.evaluateOnNewDocument('''
-      // 隐藏 webdriver 属性
+      // 1. 隐藏 webdriver 属性（最重要）
       Object.defineProperty(navigator, 'webdriver', {
-        get: () => undefined
+        get: () => false,
+        configurable: true
       });
       
-      // 模拟 Chrome 对象
+      // 2. 删除 webdriver 相关属性
+      if (navigator.__proto__) {
+        delete navigator.__proto__.webdriver;
+      }
+      
+      // 3. 模拟完整的 Chrome 对象
       window.chrome = {
-        runtime: {},
-        loadTimes: function() {},
-        csi: function() {},
-        app: {}
+        runtime: {
+          onConnect: { addListener: function() {} },
+          onMessage: { addListener: function() {} }
+        },
+        loadTimes: function() {
+          return {
+            requestTime: Date.now() / 1000,
+            startLoadTime: Date.now() / 1000,
+            commitLoadTime: Date.now() / 1000,
+            finishDocumentLoadTime: Date.now() / 1000,
+            finishLoadTime: Date.now() / 1000,
+            firstPaintTime: Date.now() / 1000,
+            firstPaintAfterLoadTime: Date.now() / 1000,
+            navigationType: 'navigate'
+          };
+        },
+        csi: function() {
+          return { pageT: Date.now() };
+        },
+        app: {
+          isInstalled: false,
+          InstallState: { DISABLED: 'disabled', INSTALLED: 'installed', NOT_INSTALLED: 'not_installed' },
+          RunningState: { CANNOT_RUN: 'cannot_run', READY_TO_RUN: 'ready_to_run', RUNNING: 'running' }
+        }
       };
       
-      // 修改插件数量
+      // 4. 模拟真实的插件列表
       Object.defineProperty(navigator, 'plugins', {
-        get: () => [1, 2, 3, 4, 5]
+        get: () => {
+          const plugins = [
+            { name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer', description: 'Portable Document Format' },
+            { name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai', description: '' },
+            { name: 'Native Client', filename: 'internal-nacl-plugin', description: '' }
+          ];
+          plugins.length = 3;
+          return plugins;
+        },
+        configurable: true
       });
       
-      // 设置语言
+      // 5. 设置语言
       Object.defineProperty(navigator, 'languages', {
-        get: () => ['zh-CN', 'zh', 'en']
+        get: () => ['zh-CN', 'zh', 'en-US', 'en'],
+        configurable: true
       });
       
-      // 隐藏自动化相关属性
-      delete navigator.__proto__.webdriver;
+      // 6. 设置 platform
+      Object.defineProperty(navigator, 'platform', {
+        get: () => 'Win32',
+        configurable: true
+      });
       
-      // 修改 permissions 查询
-      const originalQuery = window.navigator.permissions.query;
-      window.navigator.permissions.query = (parameters) => (
-        parameters.name === 'notifications' ?
-          Promise.resolve({ state: Notification.permission }) :
-          originalQuery(parameters)
-      );
+      // 7. 修改 permissions 查询
+      if (window.navigator.permissions) {
+        const originalQuery = window.navigator.permissions.query;
+        window.navigator.permissions.query = (parameters) => (
+          parameters.name === 'notifications' ?
+            Promise.resolve({ state: Notification.permission }) :
+            originalQuery(parameters)
+        );
+      }
+      
+      // 8. 隐藏 Puppeteer/Playwright 特有的属性
+      const puppeteerProps = ['__puppeteer_evaluation_script__', '__playwright'];
+      puppeteerProps.forEach(prop => {
+        if (window[prop]) delete window[prop];
+      });
+      
+      // 9. 模拟真实的 WebGL 渲染器信息
+      const getParameterProto = WebGLRenderingContext.prototype.getParameter;
+      WebGLRenderingContext.prototype.getParameter = function(param) {
+        if (param === 37445) return 'Intel Inc.';
+        if (param === 37446) return 'Intel Iris OpenGL Engine';
+        return getParameterProto.call(this, param);
+      };
+      
+      // 10. 修改 connection 属性（网络信息）
+      if (navigator.connection) {
+        Object.defineProperty(navigator.connection, 'rtt', { get: () => 50 });
+      }
     ''');
   }
 

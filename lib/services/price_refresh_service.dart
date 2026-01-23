@@ -1,29 +1,35 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:developer';
-import 'dart:io';
 
 import 'package:hive/hive.dart';
-import 'package:http/http.dart' as http;
+import 'package:wisepick_dart_version/features/price_history/price_history_service.dart';
 
 import '../features/cart/cart_service.dart';
 import '../features/products/taobao_item_detail_service.dart';
 import 'notification_service.dart';
 import '../core/storage/hive_config.dart';
+import 'jd_scraper_client.dart';
 
 class PriceRefreshService {
   PriceRefreshService({
     CartService? cartService,
     TaobaoItemDetailService? taobaoService,
     NotificationService? notificationService,
+    PriceHistoryService? priceHistoryService,
+    JdScraperClient? jdScraperClient,
   })  : _cartService = cartService ?? CartService(),
         _taobaoService = taobaoService ?? TaobaoItemDetailService(),
         _notificationService =
-            notificationService ?? NotificationService.instance;
+            notificationService ?? NotificationService.instance,
+        _priceHistoryService = priceHistoryService ?? PriceHistoryService(),
+        _jdScraperClient = jdScraperClient ?? JdScraperClient();
 
+  // ignore: unused_field
   final CartService _cartService;
   final TaobaoItemDetailService _taobaoService;
   final NotificationService _notificationService;
+  final PriceHistoryService _priceHistoryService;
+  final JdScraperClient _jdScraperClient;
 
   static bool _isRunning = false;
 
@@ -79,6 +85,14 @@ class PriceRefreshService {
 
       await _persistTaobaoCache(productId, detail);
 
+      // 记录价格历史
+      await _priceHistoryService.recordPriceHistory(
+        productId: productId,
+        price: latestPrice,
+        finalPrice: latestPrice,
+        originalPrice: detail.reservePrice ?? detail.zkFinalPrice, // Use reservePrice or zkFinalPrice as original
+      );
+
       if (priceDropped && dropAmount >= 0.01) {
         // 检查通知开关设置
         final box = await Hive.openBox(HiveConfig.settingsBox);
@@ -103,49 +117,25 @@ class PriceRefreshService {
     }
   }
 
-  /// 获取后端服务地址
-  Future<String> _getBackendBase() async {
-    String backend = 'http://localhost:9527';
-    try {
-      if (!Hive.isBoxOpen('settings')) await Hive.openBox('settings');
-      final box = Hive.box('settings');
-      final String? b = box.get('backend_base') as String?;
-      if (b != null && b.trim().isNotEmpty) {
-        backend = b.trim();
-      } else {
-        backend = Platform.environment['BACKEND_BASE'] ?? backend;
-      }
-    } catch (_) {}
-    return backend;
-  }
-
-  /// 处理京东商品价格刷新
+  /// 处理京东商品价格刷新（使用新的双源爬取 API）
   Future<void> _handleJdItem(
     Box box,
     String productId,
     Map<String, dynamic> item,
   ) async {
     try {
-      final backend = await _getBackendBase();
-      final uri = Uri.parse('$backend/api/get-jd-promotion?sku=$productId');
+      // 使用新的双源爬取 API
+      final result = await _jdScraperClient.getProductEnhanced(productId);
       
-      final response = await http.get(uri).timeout(const Duration(minutes: 2));
-      
-      if (response.statusCode != 200) {
-        log('获取京东商品 $productId 价格失败: HTTP ${response.statusCode}');
+      if (!result.isSuccess || result.data == null) {
+        log('获取京东商品 $productId 价格失败: ${result.errorMessage ?? 'Unknown error'}');
         return;
       }
 
-      final body = jsonDecode(response.body);
-      if (body['status'] != 'success' || body['data'] == null) {
-        log('获取京东商品 $productId 价格失败: ${body['message'] ?? 'Unknown error'}');
-        return;
-      }
-
-      final data = body['data'] as Map<String, dynamic>;
-      final latestPrice = (data['price'] as num?)?.toDouble();
+      final info = result.data!;
+      final latestPrice = info.price;
       
-      if (latestPrice == null || latestPrice <= 0) {
+      if (latestPrice <= 0 || info.isOffShelf) {
         log('京东商品 $productId 价格无效或已下架');
         return;
       }
@@ -161,10 +151,27 @@ class PriceRefreshService {
       item['price'] = latestPrice;
       item['final_price'] = latestPrice;
       item['last_price_refresh'] = DateTime.now().millisecondsSinceEpoch;
+      
+      // 如果返回了店铺名和图片，也更新到购物车
+      if (info.shopName != null && info.shopName!.isNotEmpty) {
+        item['shop_title'] = info.shopName;
+      }
+      if (info.imageUrl != null && info.imageUrl!.isNotEmpty) {
+        item['image'] = info.imageUrl;
+      }
+      
       await box.put(productId, item);
 
       // 更新 jdPriceCache Hive box（供 jdPriceCacheProvider 使用）
       await _persistJdPriceCache(productId, latestPrice);
+
+      // 记录价格历史
+      await _priceHistoryService.recordPriceHistory(
+        productId: productId,
+        price: latestPrice,
+        finalPrice: latestPrice,
+        originalPrice: info.originalPrice,
+      );
 
       if (priceDropped && dropAmount >= 0.01) {
         // 检查通知开关设置
@@ -176,7 +183,7 @@ class PriceRefreshService {
         
         if (notificationEnabled) {
           await _notificationService.showPriceDropNotification(
-            title: (item['title'] ?? '京东商品').toString(),
+            title: (item['title'] ?? info.title).toString(),
             dropAmount: dropAmount,
             latestPrice: latestPrice,
           );
