@@ -204,6 +204,170 @@ class JdProductInfo {
     );
   }
 
+  /// 合并两个 JdProductInfo 实例的数据
+  /// 
+  /// [other] 另一个实例，其中的非空值会补充到当前实例
+  /// 优先级：当前实例的值 > other 的值（除非当前值为空/默认值）
+  JdProductInfo mergeWith(JdProductInfo other) {
+    return JdProductInfo(
+      skuId: skuId.isNotEmpty ? skuId : other.skuId,
+      title: title.isNotEmpty ? title : other.title,
+      price: price > 0 ? price : other.price,
+      originalPrice: originalPrice ?? other.originalPrice,
+      commission: commission ?? other.commission,
+      commissionRate: commissionRate ?? other.commissionRate,
+      imageUrl: imageUrl ?? other.imageUrl,
+      shopName: shopName ?? other.shopName,
+      promotionLink: promotionLink ?? other.promotionLink,
+      shortLink: shortLink ?? other.shortLink,
+      cached: cached,
+      isOffShelf: isOffShelf && other.isOffShelf, // 只有两边都下架才认为下架
+      fetchTime: fetchTime,
+      rawData: _mergeRawData(rawData, other.rawData),
+    );
+  }
+
+  /// 合并 rawData
+  static Map<String, dynamic>? _mergeRawData(
+    Map<String, dynamic>? a,
+    Map<String, dynamic>? b,
+  ) {
+    if (a == null && b == null) return null;
+    if (a == null) return b;
+    if (b == null) return a;
+    return {...b, ...a}; // a 的值优先
+  }
+
+  /// 从京东首页商品详情页解析商品信息
+  /// 
+  /// [html] 商品详情页的 HTML 内容
+  /// [skuId] 商品 SKU ID
+  factory JdProductInfo.fromJdMainPageHtml(String html, String skuId) {
+    print('[ProductInfo] 从京东首页解析商品信息, skuId: $skuId');
+    
+    String title = '';
+    double price = 0.0;
+    double? originalPrice;
+    String? shopName;
+    String? imageUrl;
+    
+    // 解析商品标题 - 多种选择器策略
+    // 尝试从 class="sku-name" 提取
+    final titlePatterns = [
+      RegExp(r'<div[^>]*class="[^"]*sku-name[^"]*"[^>]*>(.*?)</div>', multiLine: true, dotAll: true),
+      RegExp(r'<div[^>]*class="[^"]*itemInfo-wrap[^"]*"[^>]*>.*?<div[^>]*class="[^"]*name[^"]*"[^>]*>(.*?)</div>', multiLine: true, dotAll: true),
+      RegExp(r'<h1[^>]*>(.*?)</h1>', multiLine: true, dotAll: true),
+    ];
+    
+    for (final pattern in titlePatterns) {
+      final match = pattern.firstMatch(html);
+      if (match != null) {
+        title = _cleanHtmlText(match.group(1) ?? '');
+        if (title.isNotEmpty) {
+          print('[ProductInfo] 解析到标题: $title');
+          break;
+        }
+      }
+    }
+    
+    // 解析价格 - 多种选择器策略
+    final pricePatterns = [
+      // 京东价格元素
+      RegExp(r'<span[^>]*class="[^"]*price[^"]*"[^>]*>\s*[¥￥]?\s*([0-9]+(?:\.[0-9]+)?)\s*</span>', multiLine: true, dotAll: true),
+      RegExp(r'<span[^>]*class="[^"]*p-price[^"]*"[^>]*>.*?([0-9]+(?:\.[0-9]+)?).*?</span>', multiLine: true, dotAll: true),
+      RegExp(r'"price"[:\s]*"?([0-9]+(?:\.[0-9]+)?)"?', multiLine: true),
+      RegExp(r'[¥￥]\s*([0-9]+(?:\.[0-9]+)?)', multiLine: true),
+    ];
+    
+    for (final pattern in pricePatterns) {
+      final match = pattern.firstMatch(html);
+      if (match != null) {
+        final priceStr = match.group(1);
+        if (priceStr != null) {
+          final parsedPrice = double.tryParse(priceStr);
+          if (parsedPrice != null && parsedPrice > 0) {
+            price = parsedPrice;
+            print('[ProductInfo] 解析到价格: $price');
+            break;
+          }
+        }
+      }
+    }
+    
+    // 解析原价（划线价）
+    final originalPricePatterns = [
+      RegExp(r'<del[^>]*>.*?[¥￥]?\s*([0-9]+(?:\.[0-9]+)?).*?</del>', multiLine: true, dotAll: true),
+      RegExp(r'<span[^>]*class="[^"]*origin-price[^"]*"[^>]*>.*?([0-9]+(?:\.[0-9]+)?).*?</span>', multiLine: true, dotAll: true),
+    ];
+    
+    for (final pattern in originalPricePatterns) {
+      final match = pattern.firstMatch(html);
+      if (match != null) {
+        originalPrice = double.tryParse(match.group(1) ?? '');
+        if (originalPrice != null) {
+          print('[ProductInfo] 解析到原价: $originalPrice');
+          break;
+        }
+      }
+    }
+    
+    // 解析店铺名称
+    final shopPatterns = [
+      RegExp(r'<a[^>]*class="[^"]*name[^"]*"[^>]*data-clk="[^"]*shopname[^"]*"[^>]*>(.*?)</a>', multiLine: true, dotAll: true),
+      RegExp(r'<div[^>]*class="[^"]*shop-name[^"]*"[^>]*>(.*?)</div>', multiLine: true, dotAll: true),
+      RegExp(r'<a[^>]*href="[^"]*mall\.jd\.com[^"]*"[^>]*>(.*?)</a>', multiLine: true, dotAll: true),
+      RegExp(r'"shopName"[:\s]*"([^"]+)"', multiLine: true),
+    ];
+    
+    for (final pattern in shopPatterns) {
+      final match = pattern.firstMatch(html);
+      if (match != null) {
+        shopName = _cleanHtmlText(match.group(1) ?? '');
+        if (shopName != null && shopName.isNotEmpty) {
+          print('[ProductInfo] 解析到店铺名: $shopName');
+          break;
+        }
+      }
+    }
+    
+    // 解析商品图片
+    final imagePatterns = [
+      RegExp(r'<img[^>]*id="spec-img"[^>]*(?:src|data-origin)="(https?://[^"]+)"', multiLine: true, dotAll: true),
+      RegExp(r'<img[^>]*class="[^"]*main-img[^"]*"[^>]*(?:src|data-origin)="(https?://[^"]+)"', multiLine: true, dotAll: true),
+      RegExp(r'"imageUrl"[:\s]*"(https?://[^"]+)"', multiLine: true),
+    ];
+    
+    for (final pattern in imagePatterns) {
+      final match = pattern.firstMatch(html);
+      if (match != null) {
+        imageUrl = match.group(1);
+        if (imageUrl != null && imageUrl.isNotEmpty) {
+          print('[ProductInfo] 解析到图片: $imageUrl');
+          break;
+        }
+      }
+    }
+    
+    return JdProductInfo(
+      skuId: skuId,
+      title: title,
+      price: price,
+      originalPrice: originalPrice,
+      shopName: shopName,
+      imageUrl: imageUrl,
+      rawData: {'source': 'jd_main_page'},
+    );
+  }
+
+  /// 清理 HTML 文本，去除标签和多余空白
+  static String _cleanHtmlText(String text) {
+    // 移除 HTML 标签
+    var cleaned = text.replaceAll(RegExp(r'<[^>]*>'), '');
+    // 移除多余空白
+    cleaned = cleaned.replaceAll(RegExp(r'\s+'), ' ').trim();
+    return cleaned;
+  }
+
   @override
   String toString() {
     return 'JdProductInfo(skuId: $skuId, title: $title, price: ¥$price)';

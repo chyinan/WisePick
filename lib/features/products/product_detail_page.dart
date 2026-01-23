@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +9,7 @@ import 'package:wisepick_dart_version/features/cart/cart_providers.dart';
 import 'package:wisepick_dart_version/features/cart/cart_service.dart';
 import 'package:flutter/services.dart';
 import 'package:wisepick_dart_version/services/share_service.dart';
+import 'package:wisepick_dart_version/services/jd_scraper_client.dart';
 import 'product_model.dart';
 import 'product_service.dart';
 import 'package:wisepick_dart_version/features/products/jd_price_provider.dart';
@@ -17,6 +17,8 @@ import 'package:wisepick_dart_version/features/products/pdd_goods_detail_service
 import 'package:wisepick_dart_version/features/products/taobao_item_detail_service.dart';
 import 'package:wisepick_dart_version/features/chat/chat_service.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:wisepick_dart_version/features/price_history/price_history_page.dart';
+import 'package:wisepick_dart_version/features/decision/decision_providers.dart';
 
 /// 商品详情页，展示商品完整信息（响应式布局：窄屏竖排，宽屏左右并列）
 class ProductDetailPage extends ConsumerStatefulWidget {
@@ -102,7 +104,10 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
     super.dispose();
   }
 
-  // New function to fetch promotion data from our backend
+  // 京东爬虫客户端
+  final JdScraperClient _jdScraperClient = JdScraperClient();
+
+  // 使用新的双源爬取 API 获取京东商品推广数据
   Future<void> _fetchPromotionData() async {
     if (widget.product.platform != 'jd' || widget.product.id.isEmpty) return;
 
@@ -112,47 +117,50 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
     });
 
     try {
-      // Replace with your actual server address
-      final uri = Uri.parse(
-        'http://127.0.0.1:9527/api/get-jd-promotion?sku=${widget.product.id}',
-      );
-      final response = await http.get(uri).timeout(const Duration(minutes: 2));
+      // 使用新的双源爬取 API（推荐）
+      final result = await _jdScraperClient.getProductEnhanced(widget.product.id);
 
-      final body = jsonDecode(response.body);
-      
-      if (response.statusCode == 200) {
-        if (body['status'] == 'success' && body['data'] != null) {
-          final data = body['data'];
-          setState(() {
-            _promotionData = data;
-            // Mark as failed-for-link if no promotionUrl returned (merchant didn't set promotion)
-            final String? pu = (data['promotionUrl'] as String?);
-            if (pu == null || pu.trim().isEmpty) {
-              _fetchFailed = true;
-            }
-          });
-          // Notify the cache provider of the new price (if any)
-          if (data['price'] != null) {
-            ref
-                .read(jdPriceCacheProvider.notifier)
-                .updatePrice(
-                  widget.product.id,
-                  (data['price'] as num).toDouble(),
-                );
+      if (!mounted) return;
+
+      if (result.isSuccess && result.data != null) {
+        final info = result.data!;
+        setState(() {
+          // 转换为旧的 _promotionData 格式以保持兼容性
+          _promotionData = {
+            'price': info.price,
+            'originalPrice': info.originalPrice,
+            'promotionUrl': info.effectivePromotionLink,
+            'promotionLink': info.promotionLink,
+            'shortLink': info.shortLink,
+            'shopName': info.shopName,
+            'imageUrl': info.imageUrl,
+            'title': info.title,
+            'commission': info.commission,
+            'commissionRate': info.commissionRate,
+            'isOffShelf': info.isOffShelf,
+            'cached': info.cached,
+          };
+          // 如果没有推广链接，标记为失败
+          if (info.effectivePromotionLink == null || info.effectivePromotionLink!.trim().isEmpty) {
+            _fetchFailed = true;
           }
-        } else {
-          throw Exception('Backend failed to get promotion');
+        });
+        // 更新价格缓存
+        if (info.price > 0) {
+          ref
+              .read(jdPriceCacheProvider.notifier)
+              .updatePrice(widget.product.id, info.price);
         }
       } else {
-        // 服务器返回错误状态码，尝试解析用户友好的错误消息
-        String errorMessage = '获取优惠失败，将使用原始链接';
-        if (body is Map) {
-          final userMessage = body['userMessage'] as String?;
-          if (userMessage != null && userMessage.isNotEmpty) {
-            errorMessage = userMessage;
-          }
+        setState(() {
+          _fetchFailed = true;
+        });
+        // 显示错误消息
+        if (result.errorMessage != null && result.errorMessage!.isNotEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(result.errorMessage!)),
+          );
         }
-        throw Exception(errorMessage);
       }
     } catch (e) {
       if (!mounted) return;
@@ -304,7 +312,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
 
 请用清晰易懂的中文回答，内容要客观公正。''';
 
-      final reply = await chatService.getAiReply(prompt);
+      final reply = await chatService.getAiReply(prompt, isProductDetail: true);
       
       if (!mounted) return;
       setState(() {
@@ -2140,6 +2148,74 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                           icon: const Icon(Icons.open_in_new),
                           label: const Text('前往购买'),
                         ),
+                  // 查看价格历史按钮
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PriceHistoryPage(
+                            productId: product.id,
+                            productTitle: product.title,
+                            productImage: product.imageUrl,
+                            currentPrice: product.price,
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.show_chart),
+                    label: Text(
+                      '价格历史',
+                      style: Theme.of(context).textTheme.labelLarge,
+                    ),
+                  ),
+                  // 加入对比按钮
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      final productMap = product.toMap();
+                      
+                      // 确保传入当前显示的最新价格
+                      double currentPrice = product.price;
+                      if (product.platform == 'jd') {
+                        final cachedPrices = ref.read(jdPriceCacheProvider);
+                        final cachedPrice = cachedPrices[product.id];
+                        final num? p = _promotionData?['price'] as num? ?? cachedPrice;
+                        if (p != null) currentPrice = p.toDouble();
+                      } else if (product.platform == 'taobao') {
+                        if (_taobaoLatestPrice != null) currentPrice = _taobaoLatestPrice!;
+                      } else if (product.platform == 'pdd') {
+                        if (_pddLatestPrice != null) currentPrice = _pddLatestPrice!;
+                      }
+                      
+                      if (currentPrice > 0) {
+                        productMap['price'] = currentPrice;
+                        // 如果 final_price 无效，也更新它
+                        final fp = productMap['final_price'] as num?;
+                        if (fp == null || fp <= 0) {
+                          productMap['final_price'] = currentPrice;
+                        }
+                      }
+
+                      addToComparisonList(ref, productMap);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('已添加 "${product.title}" 到对比列表'),
+                          action: SnackBarAction(
+                            label: '查看对比',
+                            onPressed: () {
+                              if (!mounted) return;
+                              Navigator.pushNamed(context, '/comparison');
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.compare_arrows),
+                    label: Text(
+                      '加入对比',
+                      style: Theme.of(context).textTheme.labelLarge,
+                    ),
+                  ),
                 ],
               ),
             ],

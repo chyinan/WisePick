@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
 import 'features/auth/auth_providers.dart';
+import 'features/decision/product_comparison_page.dart';
 import 'screens/home_page.dart';
 
 /// WisePickApp 根组件
@@ -36,6 +37,16 @@ class _WisePickAppState extends ConsumerState<WisePickApp> {
       darkTheme: AppTheme.darkTheme,
       themeMode: themeMode,
       home: const HomePage(),
+      onGenerateRoute: (settings) {
+        switch (settings.name) {
+          case '/comparison':
+            return MaterialPageRoute(
+              builder: (_) => const ProductComparisonPage(),
+            );
+          default:
+            return null;
+        }
+      },
     );
   }
 }

@@ -1,8 +1,8 @@
 # 快淘帮 WisePick - 前端架构设计文档
 
-**版本**: 1.0  
+**版本**: 2.0  
 **创建日期**: 2024  
-**最后更新**: 2026-01-15  
+**最后更新**: 2026-01-22  
 **文档状态**: 正式版  
 **架构师**: Winston (Architect Agent)
 
@@ -61,6 +61,9 @@
 | 窗口管理 | window_manager | 桌面端窗口控制 |
 | URL 启动 | url_launcher | 外部链接打开 |
 | 加密 | crypto | 密码哈希 |
+| 图表库 | fl_chart | 数据可视化 |
+| PDF生成 | pdf / printing | 报告生成 |
+| Excel导出 | excel | 数据导出 |
 
 ### 2.3 技术选型理由
 
@@ -358,6 +361,254 @@ features/cart/
 └── cart_page.dart            # 购物车页面
 ```
 
+### 4.5 数据分析模块 (Analytics Feature)（新增）
+
+#### 4.5.1 模块结构
+
+```
+features/analytics/
+├── analytics_service.dart     # 数据分析业务逻辑
+├── analytics_providers.dart   # Riverpod 状态管理
+├── analytics_models.dart      # 数据模型
+├── analytics_page.dart        # 数据分析页面
+└── widgets/                   # 图表组件
+    ├── consumption_structure_chart.dart  # 消费结构图表
+    ├── preferences_chart.dart            # 偏好分析图表
+    └── shopping_time_heatmap.dart        # 购物时间热力图
+```
+
+#### 4.5.2 AnalyticsService 设计
+
+**核心职责**:
+- 消费结构分析（品类分布、价格区间、平台偏好）
+- 智能偏好分析（基于历史购物行为）
+- 购物欲望时间分析（24小时分布、工作日/周末对比）
+- 购物报告生成（PDF导出）
+
+**关键方法**:
+- `getConsumptionStructure()`: 计算消费结构分析
+- `getUserPreferences()`: 分析用户偏好
+- `getShoppingTimeAnalysis()`: 分析购物时间分布
+- `generateReport()`: 生成购物报告（PDF）
+
+**数据来源**:
+- 购物车历史数据（Hive）
+- 会话历史数据（Hive，提取创建时间）
+- 云端数据（如已登录，从后端获取）
+
+#### 4.5.3 AnalyticsProviders 设计
+
+**状态管理**:
+- `consumptionStructureProvider`: 消费结构分析数据
+- `userPreferencesProvider`: 用户偏好数据
+- `shoppingTimeProvider`: 购物时间分析数据
+- `isLoadingProvider`: 加载状态
+
+#### 4.5.4 AnalyticsPage 设计
+
+**UI 组件**:
+- 数据面板（总消费、商品数量等）
+- 消费结构图表（饼图、柱状图）
+- 偏好分析展示
+- 购物时间热力图
+- 报告生成按钮
+
+**交互流程**:
+1. 选择时间范围
+2. 加载分析数据
+3. 展示图表和统计
+4. 生成报告（PDF导出）
+
+### 4.6 价格历史模块 (Price History Feature)（新增）
+
+#### 4.6.1 模块结构
+
+```
+features/price_history/
+├── price_history_service.dart    # 价格历史业务逻辑
+├── price_history_providers.dart   # Riverpod 状态管理
+├── price_history_model.dart       # 数据模型
+├── price_history_page.dart        # 价格历史页面
+└── widgets/
+    └── price_chart_widget.dart     # 价格曲线图组件
+```
+
+#### 4.6.2 PriceHistoryService 设计
+
+**核心职责**:
+- 价格历史数据管理（记录、查询）
+- 价格趋势分析
+- 最佳购买时机推荐
+
+**关键方法**:
+- `recordPriceHistory()`: 记录价格历史（与价格监控服务集成）
+- `getPriceHistory()`: 获取价格历史数据
+- `analyzePriceTrend()`: 分析价格趋势
+- `getBestBuyTime()`: 推荐最佳购买时机
+
+**数据存储**:
+- Hive Box: `price_history`
+- 云端存储（如已登录）：PostgreSQL
+
+#### 4.6.3 PriceHistoryPage 设计
+
+**UI 组件**:
+- 商品选择器
+- 价格曲线图（支持多商品对比）
+- 价格统计信息（最高价、最低价、平均价）
+- 购买时机建议
+- 时间范围选择
+
+**交互流程**:
+1. 选择商品（从购物车或搜索）
+2. 选择时间范围
+3. 加载价格历史数据
+4. 展示价格曲线图
+5. 显示购买建议
+
+### 4.7 购物决策模块 (Decision Feature)（新增）
+
+#### 4.7.1 模块结构
+
+```
+features/decision/
+├── decision_service.dart      # 购物决策业务逻辑
+├── decision_providers.dart    # Riverpod 状态管理
+├── decision_models.dart       # 数据模型
+├── compare_page.dart          # 商品对比页面
+└── widgets/
+    ├── comparison_table.dart  # 对比表格组件
+    └── score_card.dart        # 评分卡片组件
+```
+
+#### 4.7.2 DecisionService 设计
+
+**核心职责**:
+- 多商品对比分析
+- 购买建议评分计算
+- 替代商品推荐
+- 决策理由生成
+
+**关键方法**:
+- `compareProducts()`: 对比多个商品
+- `calculateScore()`: 计算购买建议评分
+- `findAlternatives()`: 查找替代商品
+- `generateReasoning()`: 生成决策理由（调用 AI）
+
+**评分算法**:
+- 价格评分（0-25分）：价格合理性、性价比
+- 评价评分（0-25分）：用户评价、好评率
+- 销量评分（0-20分）：销量数据、市场认可度
+- 历史趋势评分（0-15分）：价格趋势、稳定性
+- 平台评分（0-15分）：平台信誉、服务质量
+
+#### 4.7.3 ComparePage 设计
+
+**UI 组件**:
+- 商品选择器（支持2-5个商品）
+- 对比表格（价格、评分、销量、参数等）
+- 评分卡片（综合评分、各维度得分）
+- 决策理由展示
+- 替代商品推荐列表
+
+**交互流程**:
+1. 选择要对比的商品
+2. 加载商品详细信息
+3. 计算评分和对比数据
+4. 展示对比表格和评分
+5. 显示决策理由和替代商品
+
+### 4.8 管理员后台模块说明（新增）
+
+**重要说明**: 管理员后台是**独立的 Flutter Web 项目**，不在主应用中。
+
+#### 4.8.1 独立项目结构
+
+管理员后台作为独立项目 `wisepick_admin`，项目结构如下：
+
+```
+wisepick_admin/                    # 独立项目根目录
+├── lib/
+│   ├── main.dart                  # 应用入口
+│   ├── app.dart                   # 应用根组件
+│   ├── features/
+│   │   └── dashboard/             # 仪表板模块
+│   │       ├── dashboard_page.dart
+│   │       ├── dashboard_service.dart
+│   │       ├── dashboard_providers.dart
+│   │       └── widgets/
+│   ├── core/
+│   │   ├── api_client.dart        # API客户端（调用后端）
+│   │   ├── auth/
+│   │   │   ├── login_page.dart    # 管理员登录页面
+│   │   │   └── auth_service.dart
+│   │   └── theme/
+│   │       └── app_theme.dart
+│   └── models/
+├── web/
+│   ├── index.html
+│   └── manifest.json
+└── pubspec.yaml
+```
+
+**与主应用的关系**:
+- 完全独立的 Flutter 项目
+- 通过 HTTP API 调用后端服务
+- 可独立部署到不同域名
+- 共享后端 API 接口
+
+#### 4.8.2 DashboardService 设计（独立项目）
+
+**核心职责**:
+- 调用后端管理API获取数据
+- 处理API响应和错误
+- 数据格式转换
+
+**关键方法**:
+- `getUserStats()`: 调用 `/api/v1/admin/users/stats`
+- `getSystemStats()`: 调用 `/api/v1/admin/system/stats`
+- `getSearchKeywords()`: 调用 `/api/v1/admin/search/keywords`
+- `exportData()`: 调用 `/api/v1/admin/export` 或前端生成Excel/CSV
+
+**API客户端**:
+- 使用 Dio 进行HTTP请求
+- 自动添加JWT Token到请求头
+- 401错误自动跳转到登录页
+- 统一的错误处理
+
+**权限控制**:
+- 登录页面验证管理员身份
+- JWT Token存储在 secure_storage
+- 路由守卫检查登录状态
+
+#### 4.8.3 DashboardPage 设计（独立项目）
+
+**页面结构**:
+- 登录页面（未登录时显示）
+- 仪表板主页面（登录后显示）
+
+**仪表板UI组件**:
+- 数据面板（用户数、活跃用户、留存率等）
+- 系统统计图表（API调用、搜索成功率等）
+- 搜索热词排行榜
+- 数据导出按钮
+- 时间范围选择器
+
+**交互流程**:
+1. 访问独立Web应用
+2. 检查登录状态（读取JWT Token）
+3. 未登录：显示登录页面
+4. 已登录：显示仪表板
+5. 选择时间范围
+6. 调用后端API加载统计数据
+7. 展示数据面板和图表
+8. 导出数据（如需要）
+
+**部署方式**:
+- 独立构建：`flutter build web --release`
+- 独立部署：可部署到 `admin.wisepick.com` 或子路径
+- 独立更新：不影响主应用
+
 #### 4.4.2 CartService 设计
 
 **核心职责**:
@@ -401,9 +652,9 @@ features/cart/
 4. 调整数量
 5. 结算（复制推广链接）
 
-### 4.5 设置模块 (Settings Feature)
+### 4.9 设置模块 (Settings Feature)
 
-#### 4.5.1 模块结构
+#### 4.9.1 模块结构
 
 ```
 screens/
@@ -435,7 +686,7 @@ screens/
 - 外观偏好设置
 - 应用信息展示
 
-### 4.6 核心服务模块 (Core Services)
+### 4.10 核心服务模块 (Core Services)
 
 #### 4.6.1 ApiClient 设计
 
@@ -1421,6 +1672,7 @@ lib/
 
 | 版本 | 日期 | 变更内容 | 作者 |
 |------|------|----------|------|
+| 2.0 | 2026-01-22 | 新增数据分析、价格历史、购物决策、管理员后台模块架构说明 | Winston (Architect) |
 | 1.0 | 2024 | 初始前端架构文档 | CHYINAN (Architect) |
 
 ---

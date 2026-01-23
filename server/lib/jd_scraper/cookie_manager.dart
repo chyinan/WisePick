@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:path/path.dart' as path;
+
 import 'models/cookie_data.dart';
 import 'models/scraper_error.dart';
 
@@ -9,10 +11,10 @@ import 'models/scraper_error.dart';
 /// 负责 Cookie 的存储、读取、解析和有效性管理
 class CookieManager {
   /// Cookie 存储路径
-  final String cookiePath;
+  late final String cookiePath;
 
   /// Cookie 备份路径
-  final String backupPath;
+  late final String backupPath;
 
   /// 预估的 Cookie 有效期（天）
   final int estimatedExpiryDays;
@@ -30,8 +32,87 @@ class CookieManager {
     String? cookiePath,
     String? backupPath,
     this.estimatedExpiryDays = 14,
-  })  : cookiePath = cookiePath ?? 'data/jd_cookies.json',
-        backupPath = backupPath ?? 'data/jd_cookies_backup.json';
+  }) {
+    // 自动检测正确的 Cookie 路径
+    this.cookiePath = cookiePath ?? _detectCookiePath();
+    this.backupPath = backupPath ?? _detectBackupPath();
+  }
+
+  /// 自动检测 Cookie 文件的正确路径
+  ///
+  /// 按优先级尝试以下位置：
+  /// 1. 相对路径 data/jd_cookies.json（从 server 目录启动）
+  /// 2. 相对路径 server/data/jd_cookies.json（从项目根目录启动）
+  /// 3. 基于脚本位置的路径
+  static String _detectCookiePath() {
+    const fileName = 'jd_cookies.json';
+    
+    // 可能的路径列表
+    final possiblePaths = [
+      'data/$fileName',                    // 从 server 目录启动
+      'server/data/$fileName',             // 从项目根目录启动
+      path.join(_getScriptDirectory(), 'data', fileName),  // 基于脚本位置
+    ];
+    
+    // 尝试找到存在的文件
+    for (final p in possiblePaths) {
+      if (File(p).existsSync()) {
+        _staticLog('检测到 Cookie 文件路径: $p');
+        return p;
+      }
+    }
+    
+    // 如果都不存在，优先使用 server/data（适合从项目根目录启动的场景）
+    final cwd = Directory.current.path;
+    if (Directory(path.join(cwd, 'server')).existsSync()) {
+      _staticLog('使用默认路径: server/data/$fileName（从项目根目录启动）');
+      return 'server/data/$fileName';
+    }
+    
+    _staticLog('使用默认路径: data/$fileName');
+    return 'data/$fileName';
+  }
+
+  /// 自动检测备份文件的正确路径
+  static String _detectBackupPath() {
+    const fileName = 'jd_cookies_backup.json';
+    
+    final possiblePaths = [
+      'data/$fileName',
+      'server/data/$fileName',
+      path.join(_getScriptDirectory(), 'data', fileName),
+    ];
+    
+    for (final p in possiblePaths) {
+      final dir = path.dirname(p);
+      if (Directory(dir).existsSync()) {
+        return p;
+      }
+    }
+    
+    // 使用与 Cookie 文件相同的目录
+    final cwd = Directory.current.path;
+    if (Directory(path.join(cwd, 'server')).existsSync()) {
+      return 'server/data/$fileName';
+    }
+    
+    return 'data/$fileName';
+  }
+
+  /// 获取脚本所在目录
+  static String _getScriptDirectory() {
+    try {
+      final scriptPath = Platform.script.toFilePath();
+      return path.dirname(scriptPath);
+    } catch (_) {
+      return Directory.current.path;
+    }
+  }
+
+  /// 静态日志方法（用于构造函数中）
+  static void _staticLog(String message) {
+    print('[CookieManager] $message');
+  }
 
   /// 加载 Cookie
   ///
