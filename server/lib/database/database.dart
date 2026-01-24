@@ -162,6 +162,7 @@ class Database {
     // 检查并运行迁移
     final migrations = [
       '001_create_user_tables',
+      '003_add_security_questions',
     ];
 
     for (final migration in migrations) {

@@ -405,8 +405,11 @@ class AdminService {
   }
 
   /// 删除用户
+  /// 支持软删除（默认）和硬删除（通过 ?hard=true 参数）
   Future<Response> _handleDeleteUser(Request request, String id) async {
     try {
+      final hardDelete = request.url.queryParameters['hard'] == 'true';
+      
       // 检查用户是否存在
       final user = await db.queryOne(
         'SELECT id, email FROM users WHERE id = @id',
@@ -419,24 +422,34 @@ class AdminService {
         );
       }
 
-      // 软删除：将状态设置为 deleted
-      await db.execute(
-        '''UPDATE users SET status = @status, updated_at = @now WHERE id = @id''',
-        parameters: {'id': id, 'status': 'deleted', 'now': DateTime.now()},
-      );
+      if (hardDelete) {
+        // 硬删除：彻底删除用户及所有相关数据
+        await _hardDeleteUser(id);
+        print('[AdminService] User hard deleted: ${user['email']}');
+        return Response.ok(jsonEncode({
+          'success': true,
+          'message': '用户已彻底删除',
+        }), headers: _corsHeaders);
+      } else {
+        // 软删除：将状态设置为 deleted
+        await db.execute(
+          '''UPDATE users SET status = @status, updated_at = @now WHERE id = @id''',
+          parameters: {'id': id, 'status': 'deleted', 'now': DateTime.now()},
+        );
 
-      // 同时删除用户的会话
-      await db.execute(
-        'UPDATE user_sessions SET is_active = false WHERE user_id = @userId',
-        parameters: {'userId': id},
-      );
+        // 同时删除用户的会话
+        await db.execute(
+          'UPDATE user_sessions SET is_active = false WHERE user_id = @userId',
+          parameters: {'userId': id},
+        );
 
-      print('[AdminService] User deleted: ${user['email']}');
+        print('[AdminService] User soft deleted: ${user['email']}');
 
-      return Response.ok(jsonEncode({
-        'success': true,
-        'message': '用户已删除',
-      }), headers: _corsHeaders);
+        return Response.ok(jsonEncode({
+          'success': true,
+          'message': '用户已删除（软删除，邮箱可重新注册）',
+        }), headers: _corsHeaders);
+      }
     } catch (e) {
       print('[AdminService] Error deleting user: $e');
       return Response.internalServerError(
@@ -444,6 +457,59 @@ class AdminService {
         headers: _corsHeaders,
       );
     }
+  }
+
+  /// 硬删除用户（彻底删除所有相关数据）
+  Future<void> _hardDeleteUser(String userId) async {
+    // 删除顺序很重要，需要先删除外键依赖的表
+    // 1. 删除密码重置令牌
+    await db.execute(
+      'DELETE FROM password_reset_tokens WHERE user_id = @userId',
+      parameters: {'userId': userId},
+    );
+    
+    // 2. 删除安全问题
+    await db.execute(
+      'DELETE FROM user_security_questions WHERE user_id = @userId',
+      parameters: {'userId': userId},
+    );
+    
+    // 3. 删除消息（通过会话）
+    await db.execute('''
+      DELETE FROM messages WHERE conversation_id IN (
+        SELECT id FROM conversations WHERE user_id = @userId
+      )
+    ''', parameters: {'userId': userId});
+    
+    // 4. 删除会话记录
+    await db.execute(
+      'DELETE FROM conversations WHERE user_id = @userId',
+      parameters: {'userId': userId},
+    );
+    
+    // 5. 删除购物车
+    await db.execute(
+      'DELETE FROM cart_items WHERE user_id = @userId',
+      parameters: {'userId': userId},
+    );
+    
+    // 6. 删除同步版本记录
+    await db.execute(
+      'DELETE FROM sync_versions WHERE user_id = @userId',
+      parameters: {'userId': userId},
+    );
+    
+    // 7. 删除用户会话
+    await db.execute(
+      'DELETE FROM user_sessions WHERE user_id = @userId',
+      parameters: {'userId': userId},
+    );
+    
+    // 8. 最后删除用户
+    await db.execute(
+      'DELETE FROM users WHERE id = @userId',
+      parameters: {'userId': userId},
+    );
   }
 
   /// 更新用户信息

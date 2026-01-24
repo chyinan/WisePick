@@ -43,6 +43,25 @@ class AuthHandler {
     router.put('/profile', _handleUpdateProfile);
     router.patch('/profile', _handleUpdateProfile);
 
+    // ============================================================
+    // 安全问题和密码重置相关路由
+    // ============================================================
+    
+    // 设置安全问题（需要认证）
+    router.post('/security-question', _handleSetSecurityQuestion);
+
+    // 获取当前用户的安全问题（需要认证）
+    router.get('/security-question', _handleGetSecurityQuestion);
+
+    // 根据邮箱获取安全问题（忘记密码流程）
+    router.post('/forgot-password/question', _handleGetQuestionByEmail);
+
+    // 验证安全问题答案（忘记密码流程）
+    router.post('/forgot-password/verify', _handleVerifySecurityQuestion);
+
+    // 重置密码（使用重置令牌）
+    router.post('/forgot-password/reset', _handleResetPassword);
+
     return router;
   }
 
@@ -416,6 +435,222 @@ class AuthHandler {
       );
     } catch (e) {
       print('[AuthHandler] Update profile error: $e');
+      return Response.internalServerError(
+        body: jsonEncode({'success': false, 'message': '服务器错误'}),
+        headers: _corsHeaders,
+      );
+    }
+  }
+
+  // ============================================================
+  // 安全问题和密码重置相关处理函数
+  // ============================================================
+
+  /// 处理设置安全问题请求
+  Future<Response> _handleSetSecurityQuestion(Request request) async {
+    try {
+      final payload = _extractAuthPayload(request);
+      if (payload == null) {
+        return Response(401, body: jsonEncode({
+          'success': false,
+          'message': '未授权',
+        }), headers: _corsHeaders);
+      }
+
+      final body = await request.readAsString();
+      final data = jsonDecode(body) as Map<String, dynamic>;
+
+      final question = data['question']?.toString();
+      final answer = data['answer']?.toString();
+      final order = data['order'] as int? ?? 1;
+
+      if (question == null || question.isEmpty) {
+        return Response(400, body: jsonEncode({
+          'success': false,
+          'message': '安全问题不能为空',
+        }), headers: _corsHeaders);
+      }
+
+      if (answer == null || answer.isEmpty) {
+        return Response(400, body: jsonEncode({
+          'success': false,
+          'message': '安全问题答案不能为空',
+        }), headers: _corsHeaders);
+      }
+
+      final result = await _authService.setSecurityQuestion(
+        userId: payload.userId,
+        question: question,
+        answer: answer,
+        questionOrder: order,
+      );
+
+      final statusCode = result.success ? 200 : 400;
+      return Response(statusCode, 
+        body: jsonEncode(result.toJson()), 
+        headers: _corsHeaders,
+      );
+    } catch (e) {
+      print('[AuthHandler] Set security question error: $e');
+      return Response.internalServerError(
+        body: jsonEncode({'success': false, 'message': '服务器错误'}),
+        headers: _corsHeaders,
+      );
+    }
+  }
+
+  /// 处理获取当前用户安全问题请求
+  Future<Response> _handleGetSecurityQuestion(Request request) async {
+    try {
+      final payload = _extractAuthPayload(request);
+      if (payload == null) {
+        return Response(401, body: jsonEncode({
+          'success': false,
+          'message': '未授权',
+        }), headers: _corsHeaders);
+      }
+
+      final questions = await _authService.getSecurityQuestions(payload.userId);
+      final hasQuestion = questions.isNotEmpty;
+
+      return Response.ok(jsonEncode({
+        'success': true,
+        'has_security_question': hasQuestion,
+        'questions': questions,
+      }), headers: _corsHeaders);
+    } catch (e) {
+      print('[AuthHandler] Get security question error: $e');
+      return Response.internalServerError(
+        body: jsonEncode({'success': false, 'message': '服务器错误'}),
+        headers: _corsHeaders,
+      );
+    }
+  }
+
+  /// 处理根据邮箱获取安全问题请求（忘记密码第一步）
+  Future<Response> _handleGetQuestionByEmail(Request request) async {
+    try {
+      final body = await request.readAsString();
+      final data = jsonDecode(body) as Map<String, dynamic>;
+
+      final email = data['email']?.toString();
+
+      if (email == null || email.isEmpty) {
+        return Response(400, body: jsonEncode({
+          'success': false,
+          'message': '邮箱不能为空',
+        }), headers: _corsHeaders);
+      }
+
+      final result = await _authService.getSecurityQuestionByEmail(email);
+
+      if (result == null) {
+        // 为了安全，不透露用户是否存在或是否设置了安全问题
+        return Response(400, body: jsonEncode({
+          'success': false,
+          'message': '该邮箱未注册或未设置安全问题',
+        }), headers: _corsHeaders);
+      }
+
+      return Response.ok(jsonEncode({
+        'success': true,
+        'questions': result['questions'],
+      }), headers: _corsHeaders);
+    } catch (e) {
+      print('[AuthHandler] Get question by email error: $e');
+      return Response.internalServerError(
+        body: jsonEncode({'success': false, 'message': '服务器错误'}),
+        headers: _corsHeaders,
+      );
+    }
+  }
+
+  /// 处理验证安全问题答案请求（忘记密码第二步）
+  Future<Response> _handleVerifySecurityQuestion(Request request) async {
+    try {
+      final body = await request.readAsString();
+      final data = jsonDecode(body) as Map<String, dynamic>;
+
+      final email = data['email']?.toString();
+      final answer = data['answer']?.toString();
+      final order = data['order'] as int? ?? 1;
+
+      if (email == null || email.isEmpty) {
+        return Response(400, body: jsonEncode({
+          'success': false,
+          'message': '邮箱不能为空',
+        }), headers: _corsHeaders);
+      }
+
+      if (answer == null || answer.isEmpty) {
+        return Response(400, body: jsonEncode({
+          'success': false,
+          'message': '答案不能为空',
+        }), headers: _corsHeaders);
+      }
+
+      final result = await _authService.verifySecurityQuestionAndCreateResetToken(
+        email: email,
+        answer: answer,
+        questionOrder: order,
+      );
+
+      if (!result.success) {
+        return Response(400, body: jsonEncode({
+          'success': false,
+          'message': result.message ?? '验证失败',
+        }), headers: _corsHeaders);
+      }
+
+      return Response.ok(jsonEncode({
+        'success': true,
+        'message': '验证成功',
+        'reset_token': result.accessToken, // 临时使用 accessToken 字段
+      }), headers: _corsHeaders);
+    } catch (e) {
+      print('[AuthHandler] Verify security question error: $e');
+      return Response.internalServerError(
+        body: jsonEncode({'success': false, 'message': '服务器错误'}),
+        headers: _corsHeaders,
+      );
+    }
+  }
+
+  /// 处理重置密码请求（忘记密码第三步）
+  Future<Response> _handleResetPassword(Request request) async {
+    try {
+      final body = await request.readAsString();
+      final data = jsonDecode(body) as Map<String, dynamic>;
+
+      final resetToken = data['reset_token']?.toString();
+      final newPassword = data['new_password']?.toString();
+
+      if (resetToken == null || resetToken.isEmpty) {
+        return Response(400, body: jsonEncode({
+          'success': false,
+          'message': '重置令牌不能为空',
+        }), headers: _corsHeaders);
+      }
+
+      if (newPassword == null || newPassword.isEmpty) {
+        return Response(400, body: jsonEncode({
+          'success': false,
+          'message': '新密码不能为空',
+        }), headers: _corsHeaders);
+      }
+
+      final result = await _authService.resetPasswordWithToken(
+        resetToken: resetToken,
+        newPassword: newPassword,
+      );
+
+      final statusCode = result.success ? 200 : 400;
+      return Response(statusCode, 
+        body: jsonEncode(result.toJson()), 
+        headers: _corsHeaders,
+      );
+    } catch (e) {
+      print('[AuthHandler] Reset password error: $e');
       return Response.internalServerError(
         body: jsonEncode({'success': false, 'message': '服务器错误'}),
         headers: _corsHeaders,

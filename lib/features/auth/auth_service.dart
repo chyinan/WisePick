@@ -383,6 +383,192 @@ class AuthService {
 
     return AuthResult.error('网络错误: ${e.message}');
   }
+
+  // ============================================================
+  // 安全问题和密码重置相关方法
+  // ============================================================
+
+  /// 设置安全问题
+  Future<AuthResult> setSecurityQuestion({
+    required String question,
+    required String answer,
+    int order = 1,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '$_authBaseUrl/security-question',
+        data: jsonEncode({
+          'question': question,
+          'answer': answer,
+          'order': order,
+        }),
+        options: Options(headers: _getHeaders(includeAuth: true)),
+      );
+
+      return AuthResult.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      return _handleDioError(e);
+    } catch (e) {
+      return AuthResult.error('设置安全问题失败: ${e.toString()}');
+    }
+  }
+
+  /// 获取当前用户的安全问题
+  Future<SecurityQuestionResult> getSecurityQuestion() async {
+    try {
+      final response = await _dio.get(
+        '$_authBaseUrl/security-question',
+        options: Options(headers: _getHeaders(includeAuth: true)),
+      );
+
+      final data = response.data as Map<String, dynamic>;
+      return SecurityQuestionResult.fromJson(data);
+    } on DioException catch (e) {
+      return SecurityQuestionResult(
+        success: false,
+        message: _handleDioError(e).message,
+      );
+    } catch (e) {
+      return SecurityQuestionResult(
+        success: false,
+        message: '获取安全问题失败: ${e.toString()}',
+      );
+    }
+  }
+
+  /// 根据邮箱获取安全问题（忘记密码第一步）
+  Future<SecurityQuestionResult> getSecurityQuestionByEmail(String email) async {
+    try {
+      final response = await _dio.post(
+        '$_authBaseUrl/forgot-password/question',
+        data: jsonEncode({'email': email}),
+        options: Options(headers: _getHeaders()),
+      );
+
+      final data = response.data as Map<String, dynamic>;
+      return SecurityQuestionResult.fromJson(data);
+    } on DioException catch (e) {
+      final error = _handleDioError(e);
+      return SecurityQuestionResult(
+        success: false,
+        message: error.message,
+      );
+    } catch (e) {
+      return SecurityQuestionResult(
+        success: false,
+        message: '获取安全问题失败: ${e.toString()}',
+      );
+    }
+  }
+
+  /// 验证安全问题答案（忘记密码第二步）
+  Future<PasswordResetResult> verifySecurityQuestion({
+    required String email,
+    required String answer,
+    int order = 1,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '$_authBaseUrl/forgot-password/verify',
+        data: jsonEncode({
+          'email': email,
+          'answer': answer,
+          'order': order,
+        }),
+        options: Options(headers: _getHeaders()),
+      );
+
+      final data = response.data as Map<String, dynamic>;
+      return PasswordResetResult.fromJson(data);
+    } on DioException catch (e) {
+      final error = _handleDioError(e);
+      return PasswordResetResult(
+        success: false,
+        message: error.message,
+      );
+    } catch (e) {
+      return PasswordResetResult(
+        success: false,
+        message: '验证失败: ${e.toString()}',
+      );
+    }
+  }
+
+  /// 使用重置令牌重置密码（忘记密码第三步）
+  Future<AuthResult> resetPassword({
+    required String resetToken,
+    required String newPassword,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '$_authBaseUrl/forgot-password/reset',
+        data: jsonEncode({
+          'reset_token': resetToken,
+          'new_password': newPassword,
+        }),
+        options: Options(headers: _getHeaders()),
+      );
+
+      return AuthResult.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      return _handleDioError(e);
+    } catch (e) {
+      return AuthResult.error('密码重置失败: ${e.toString()}');
+    }
+  }
+}
+
+/// 安全问题查询结果
+class SecurityQuestionResult {
+  final bool success;
+  final String? message;
+  final bool hasSecurityQuestion;
+  final List<Map<String, dynamic>> questions;
+
+  SecurityQuestionResult({
+    required this.success,
+    this.message,
+    this.hasSecurityQuestion = false,
+    this.questions = const [],
+  });
+
+  factory SecurityQuestionResult.fromJson(Map<String, dynamic> json) {
+    final questionsList = json['questions'] as List?;
+    return SecurityQuestionResult(
+      success: json['success'] as bool? ?? false,
+      message: json['message'] as String?,
+      hasSecurityQuestion: json['has_security_question'] as bool? ?? 
+          (questionsList != null && questionsList.isNotEmpty),
+      questions: questionsList
+              ?.map((q) => {
+                    'question': q['question'] as String? ?? '',
+                    'order': q['order'] as int? ?? 1,
+                  })
+              .toList() ??
+          [],
+    );
+  }
+}
+
+/// 密码重置结果
+class PasswordResetResult {
+  final bool success;
+  final String? message;
+  final String? resetToken;
+
+  PasswordResetResult({
+    required this.success,
+    this.message,
+    this.resetToken,
+  });
+
+  factory PasswordResetResult.fromJson(Map<String, dynamic> json) {
+    return PasswordResetResult(
+      success: json['success'] as bool? ?? false,
+      message: json['message'] as String?,
+      resetToken: json['reset_token'] as String?,
+    );
+  }
 }
 
 /// 认证拦截器 - 自动刷新 Token
