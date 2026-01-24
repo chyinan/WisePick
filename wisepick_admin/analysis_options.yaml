@@ -9,6 +9,15 @@
 # packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml
 
+analyzer:
+  errors:
+    # 忽略 withOpacity 和 background 等弃用 API 的警告
+    deprecated_member_use: ignore
+    # 忽略多余下划线的警告
+    unnecessary_underscores: ignore
+    # 忽略 TODO 注释的警告
+    todo: ignore
+
 linter:
   # The lint rules applied to this project can be customized in the
   # section below to disable rules from the `package:flutter_lints/flutter.yaml`
