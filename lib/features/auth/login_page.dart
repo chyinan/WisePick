@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'auth_providers.dart';
 import 'register_page.dart';
+import 'forgot_password_page.dart';
 
 /// 登录页面
 class LoginPage extends ConsumerStatefulWidget {
@@ -75,7 +76,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final authState = ref.watch(authStateProvider);
-    final isDesktop = MediaQuery.of(context).size.width >= 800;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth >= 900;
+    final isTablet = screenWidth >= 600 && screenWidth < 900;
 
     return Scaffold(
       appBar: AppBar(
@@ -86,209 +89,302 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         child: Center(
           child: SingleChildScrollView(
             padding: EdgeInsets.symmetric(
-              horizontal: isDesktop ? 48 : 24,
+              horizontal: isDesktop ? 64 : (isTablet ? 48 : 24),
               vertical: 24,
             ),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 400),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Logo / 标题
-                    Icon(
-                      Icons.shopping_bag_outlined,
-                      size: 64,
-                      color: theme.colorScheme.primary,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      '欢迎回来',
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '登录您的快淘帮账号',
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 40),
-
-                    // 错误提示
-                    if (authState.errorMessage != null) ...[
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.errorContainer,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.error_outline,
-                              color: theme.colorScheme.error,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                authState.errorMessage!,
-                                style: TextStyle(
-                                  color: theme.colorScheme.onErrorContainer,
-                                ),
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.close, size: 18),
-                              onPressed: () =>
-                                  ref.read(authStateProvider.notifier).clearError(),
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-
-                    // 邮箱输入框
-                    TextFormField(
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      textInputAction: TextInputAction.next,
-                      validator: _validateEmail,
-                      enabled: !authState.isLoading,
-                      decoration: InputDecoration(
-                        labelText: '邮箱',
-                        hintText: 'example@email.com',
-                        prefixIcon: const Icon(Icons.email_outlined),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // 密码输入框
-                    TextFormField(
-                      controller: _passwordController,
-                      obscureText: _obscurePassword,
-                      textInputAction: TextInputAction.done,
-                      validator: _validatePassword,
-                      enabled: !authState.isLoading,
-                      onFieldSubmitted: (_) => _handleLogin(),
-                      decoration: InputDecoration(
-                        labelText: '密码',
-                        hintText: '请输入密码',
-                        prefixIcon: const Icon(Icons.lock_outlined),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_outlined
-                                : Icons.visibility_off_outlined,
-                          ),
-                          onPressed: () {
-                            setState(() => _obscurePassword = !_obscurePassword);
-                          },
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-
-                    // 记住我 & 忘记密码
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            SizedBox(
-                              height: 24,
-                              width: 24,
-                              child: Checkbox(
-                                value: _rememberMe,
-                                onChanged: (v) {
-                                  setState(() => _rememberMe = v ?? true);
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              '记住我',
-                              style: theme.textTheme.bodyMedium,
-                            ),
-                          ],
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            // TODO: 实现忘记密码功能
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('忘记密码功能暂未开放')),
-                            );
-                          },
-                          child: const Text('忘记密码?'),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-
-                    // 登录按钮
-                    FilledButton(
-                      onPressed: authState.isLoading ? null : _handleLogin,
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: authState.isLoading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Text(
-                              '登录',
-                              style: TextStyle(fontSize: 16),
-                            ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // 注册链接
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          '还没有账号?',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: _goToRegister,
-                          child: const Text('立即注册'),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+              constraints: BoxConstraints(
+                maxWidth: isDesktop ? 520 : (isTablet ? 480 : 400),
               ),
+              child: isDesktop
+                  ? _buildDesktopLayout(theme, authState)
+                  : _buildMobileLayout(theme, authState),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  /// 桌面端布局 - 卡片式设计
+  Widget _buildDesktopLayout(ThemeData theme, AuthState authState) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: BorderSide(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(48),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // 标题区域
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Icon(
+                      Icons.shopping_bag_outlined,
+                      size: 40,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              Text(
+                '欢迎回来',
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '登录您的快淘帮账号',
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 40),
+
+              // 错误提示
+              if (authState.errorMessage != null) ...[
+                _buildErrorMessage(theme, authState.errorMessage!),
+                const SizedBox(height: 16),
+              ],
+
+              // 输入字段
+              _buildFormFields(theme, authState),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 移动端布局
+  Widget _buildMobileLayout(ThemeData theme, AuthState authState) {
+    return Form(
+      key: _formKey,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Logo / 标题
+          Icon(
+            Icons.shopping_bag_outlined,
+            size: 64,
+            color: theme.colorScheme.primary,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            '欢迎回来',
+            style: theme.textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '登录您的快淘帮账号',
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 40),
+
+          // 错误提示
+          if (authState.errorMessage != null) ...[
+            _buildErrorMessage(theme, authState.errorMessage!),
+            const SizedBox(height: 16),
+          ],
+
+          // 输入字段
+          _buildFormFields(theme, authState),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorMessage(ThemeData theme, String message) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.errorContainer,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.error_outline,
+            color: theme.colorScheme.error,
+            size: 20,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                color: theme.colorScheme.onErrorContainer,
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close, size: 18),
+            onPressed: () =>
+                ref.read(authStateProvider.notifier).clearError(),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFormFields(ThemeData theme, AuthState authState) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // 邮箱输入框
+        TextFormField(
+          controller: _emailController,
+          keyboardType: TextInputType.emailAddress,
+          textInputAction: TextInputAction.next,
+          validator: _validateEmail,
+          enabled: !authState.isLoading,
+          decoration: InputDecoration(
+            labelText: '邮箱',
+            hintText: 'example@email.com',
+            prefixIcon: const Icon(Icons.email_outlined),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // 密码输入框
+        TextFormField(
+          controller: _passwordController,
+          obscureText: _obscurePassword,
+          textInputAction: TextInputAction.done,
+          validator: _validatePassword,
+          enabled: !authState.isLoading,
+          onFieldSubmitted: (_) => _handleLogin(),
+          decoration: InputDecoration(
+            labelText: '密码',
+            hintText: '请输入密码',
+            prefixIcon: const Icon(Icons.lock_outlined),
+            suffixIcon: IconButton(
+              icon: Icon(
+                _obscurePassword
+                    ? Icons.visibility_outlined
+                    : Icons.visibility_off_outlined,
+              ),
+              onPressed: () {
+                setState(() => _obscurePassword = !_obscurePassword);
+              },
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+
+        // 记住我 & 忘记密码
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                SizedBox(
+                  height: 24,
+                  width: 24,
+                  child: Checkbox(
+                    value: _rememberMe,
+                    onChanged: (v) {
+                      setState(() => _rememberMe = v ?? true);
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '记住我',
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ],
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const ForgotPasswordPage(),
+                  ),
+                );
+              },
+              child: const Text('忘记密码?'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+
+        // 登录按钮
+        FilledButton(
+          onPressed: authState.isLoading ? null : _handleLogin,
+          style: FilledButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          child: authState.isLoading
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Text(
+                  '登录',
+                  style: TextStyle(fontSize: 16),
+                ),
+        ),
+        const SizedBox(height: 24),
+
+        // 注册链接
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              '还没有账号?',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            TextButton(
+              onPressed: _goToRegister,
+              child: const Text('立即注册'),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

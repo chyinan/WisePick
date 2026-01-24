@@ -159,13 +159,19 @@ class AuthService {
       return AuthResult.error(passwordError);
     }
 
-    // 检查邮箱是否已存在
+    // 检查邮箱是否已存在（排除已删除的用户）
     final existingUser = await _db.queryOne(
-      'SELECT id FROM users WHERE email = @email',
+      'SELECT id, status FROM users WHERE email = @email',
       parameters: {'email': email.toLowerCase()},
     );
     if (existingUser != null) {
-      return AuthResult.error('该邮箱已被注册');
+      final status = existingUser['status'] as String?;
+      if (status == 'deleted') {
+        // 如果用户已被删除，先硬删除旧记录再允许注册
+        await _hardDeleteUser(existingUser['id'] as String);
+      } else {
+        return AuthResult.error('该邮箱已被注册');
+      }
     }
 
     // 创建用户
@@ -341,10 +347,10 @@ class AuthService {
     String? userAgent,
   }) async {
     try {
-      // 检查是否已有该设备的会话，如果有则更新
+      // 检查是否已有该设备的会话（包括不活跃的），如果有则更新
       final existingSession = await _db.queryOne('''
         SELECT id FROM user_sessions
-        WHERE user_id = @userId AND device_id = @deviceId AND is_active = true
+        WHERE user_id = @userId AND device_id = @deviceId
       ''', parameters: {
         'userId': userId,
         'deviceId': deviceId,
@@ -363,13 +369,14 @@ class AuthService {
       final now = DateTime.now();
 
       if (existingSession != null) {
-        // 更新现有会话
+        // 更新现有会话（重新激活并更新 token）
         await _db.execute('''
           UPDATE user_sessions
           SET refresh_token = @refreshToken,
               last_active_at = @now,
               ip_address = @ipAddress::inet,
-              user_agent = @userAgent
+              user_agent = @userAgent,
+              is_active = true
           WHERE id = @id
         ''', parameters: {
           'id': sessionId,
@@ -698,6 +705,341 @@ class AuthService {
     } catch (e) {
       print('[AuthService] Update profile error: $e');
       return AuthResult.error('更新失败');
+    }
+  }
+
+  // ============================================================
+  // 安全问题相关方法
+  // ============================================================
+
+  /// 设置安全问题（注册时或之后设置）
+  Future<AuthResult> setSecurityQuestion({
+    required String userId,
+    required String question,
+    required String answer,
+    int questionOrder = 1,
+  }) async {
+    if (question.isEmpty) {
+      return AuthResult.error('安全问题不能为空');
+    }
+    if (answer.isEmpty) {
+      return AuthResult.error('安全问题答案不能为空');
+    }
+    if (answer.length < 2) {
+      return AuthResult.error('答案至少需要2个字符');
+    }
+
+    try {
+      // 将答案转为小写后再哈希，以便验证时不区分大小写
+      final answerHash = _hashPassword(answer.toLowerCase().trim());
+
+      // 使用 upsert 来创建或更新安全问题
+      await _db.execute('''
+        INSERT INTO user_security_questions (user_id, question, answer_hash, question_order)
+        VALUES (@userId, @question, @answerHash, @order)
+        ON CONFLICT (user_id, question_order)
+        DO UPDATE SET question = @question, answer_hash = @answerHash, updated_at = NOW()
+      ''', parameters: {
+        'userId': userId,
+        'question': question.trim(),
+        'answerHash': answerHash,
+        'order': questionOrder,
+      });
+
+      return AuthResult.success(message: '安全问题设置成功');
+    } catch (e) {
+      print('[AuthService] Set security question error: $e');
+      return AuthResult.error('设置安全问题失败');
+    }
+  }
+
+  /// 获取用户的安全问题（不包含答案）
+  Future<List<Map<String, dynamic>>> getSecurityQuestions(String userId) async {
+    try {
+      final rows = await _db.queryAll('''
+        SELECT question, question_order
+        FROM user_security_questions
+        WHERE user_id = @userId
+        ORDER BY question_order
+      ''', parameters: {'userId': userId});
+
+      return rows.map((row) => {
+        'question': row['question'] as String,
+        'order': row['question_order'] as int,
+      }).toList();
+    } catch (e) {
+      print('[AuthService] Get security questions error: $e');
+      return [];
+    }
+  }
+
+  /// 根据邮箱获取安全问题（用于忘记密码流程）
+  Future<Map<String, dynamic>?> getSecurityQuestionByEmail(String email) async {
+    try {
+      final user = await _db.queryOne(
+        'SELECT id FROM users WHERE email = @email AND status = @status',
+        parameters: {'email': email.toLowerCase(), 'status': 'active'},
+      );
+
+      if (user == null) {
+        return null;
+      }
+
+      final userId = user['id'] as String;
+      final questions = await getSecurityQuestions(userId);
+
+      if (questions.isEmpty) {
+        return null;
+      }
+
+      return {
+        'user_id': userId,
+        'questions': questions,
+      };
+    } catch (e) {
+      print('[AuthService] Get security question by email error: $e');
+      return null;
+    }
+  }
+
+  /// 验证安全问题答案
+  Future<bool> verifySecurityAnswer({
+    required String userId,
+    required String answer,
+    int questionOrder = 1,
+  }) async {
+    try {
+      final row = await _db.queryOne('''
+        SELECT answer_hash
+        FROM user_security_questions
+        WHERE user_id = @userId AND question_order = @order
+      ''', parameters: {
+        'userId': userId,
+        'order': questionOrder,
+      });
+
+      if (row == null) {
+        return false;
+      }
+
+      final answerHash = row['answer_hash'] as String;
+      // 验证时也转为小写
+      return _verifyPassword(answer.toLowerCase().trim(), answerHash);
+    } catch (e) {
+      print('[AuthService] Verify security answer error: $e');
+      return false;
+    }
+  }
+
+  /// 验证安全问题并创建密码重置令牌
+  Future<AuthResult> verifySecurityQuestionAndCreateResetToken({
+    required String email,
+    required String answer,
+    int questionOrder = 1,
+  }) async {
+    try {
+      // 查找用户
+      final user = await _db.queryOne(
+        'SELECT id FROM users WHERE email = @email AND status = @status',
+        parameters: {'email': email.toLowerCase(), 'status': 'active'},
+      );
+
+      if (user == null) {
+        // 为了安全，不透露用户是否存在
+        return AuthResult.error('邮箱或安全问题答案错误');
+      }
+
+      final userId = user['id'] as String;
+
+      // 验证安全问题答案
+      final isValid = await verifySecurityAnswer(
+        userId: userId,
+        answer: answer,
+        questionOrder: questionOrder,
+      );
+
+      if (!isValid) {
+        return AuthResult.error('安全问题答案错误');
+      }
+
+      // 生成重置令牌
+      final resetToken = _uuid.v4();
+      final expiresAt = DateTime.now().add(const Duration(minutes: 15));
+
+      // 删除该用户的旧重置令牌
+      await _db.execute('''
+        DELETE FROM password_reset_tokens WHERE user_id = @userId
+      ''', parameters: {'userId': userId});
+
+      // 创建新的重置令牌
+      await _db.execute('''
+        INSERT INTO password_reset_tokens (user_id, token, verified, expires_at)
+        VALUES (@userId, @token, true, @expiresAt)
+      ''', parameters: {
+        'userId': userId,
+        'token': resetToken,
+        'expiresAt': expiresAt,
+      });
+
+      return AuthResult.success(
+        message: '验证成功',
+        accessToken: resetToken, // 临时使用 accessToken 字段返回重置令牌
+      );
+    } catch (e) {
+      print('[AuthService] Verify and create reset token error: $e');
+      return AuthResult.error('验证失败');
+    }
+  }
+
+  /// 使用重置令牌重置密码
+  Future<AuthResult> resetPasswordWithToken({
+    required String resetToken,
+    required String newPassword,
+  }) async {
+    // 验证新密码强度
+    final passwordError = _validatePassword(newPassword);
+    if (passwordError != null) {
+      return AuthResult.error(passwordError);
+    }
+
+    try {
+      // 查找并验证重置令牌
+      final tokenRow = await _db.queryOne('''
+        SELECT user_id, verified, expires_at, used_at
+        FROM password_reset_tokens
+        WHERE token = @token
+      ''', parameters: {'token': resetToken});
+
+      if (tokenRow == null) {
+        return AuthResult.error('无效的重置令牌');
+      }
+
+      final verified = tokenRow['verified'] as bool? ?? false;
+      final expiresAt = tokenRow['expires_at'] as DateTime;
+      final usedAt = tokenRow['used_at'] as DateTime?;
+
+      if (!verified) {
+        return AuthResult.error('重置令牌未验证');
+      }
+
+      if (usedAt != null) {
+        return AuthResult.error('重置令牌已使用');
+      }
+
+      if (DateTime.now().isAfter(expiresAt)) {
+        return AuthResult.error('重置令牌已过期');
+      }
+
+      final userId = tokenRow['user_id'] as String;
+
+      // 更新密码
+      final newHash = _hashPassword(newPassword);
+      await _db.execute('''
+        UPDATE users
+        SET password_hash = @hash, updated_at = @now
+        WHERE id = @id
+      ''', parameters: {
+        'id': userId,
+        'hash': newHash,
+        'now': DateTime.now(),
+      });
+
+      // 标记令牌为已使用
+      await _db.execute('''
+        UPDATE password_reset_tokens
+        SET used_at = @now
+        WHERE token = @token
+      ''', parameters: {
+        'token': resetToken,
+        'now': DateTime.now(),
+      });
+
+      // 登出所有设备（安全考虑）
+      await logoutAll(userId: userId);
+
+      return AuthResult.success(message: '密码重置成功，请重新登录');
+    } catch (e) {
+      print('[AuthService] Reset password with token error: $e');
+      return AuthResult.error('密码重置失败');
+    }
+  }
+
+  /// 检查用户是否设置了安全问题
+  Future<bool> hasSecurityQuestion(String userId) async {
+    try {
+      final row = await _db.queryOne('''
+        SELECT COUNT(*) as count
+        FROM user_security_questions
+        WHERE user_id = @userId
+      ''', parameters: {'userId': userId});
+
+      return (row?['count'] as int? ?? 0) > 0;
+    } catch (e) {
+      print('[AuthService] Check security question error: $e');
+      return false;
+    }
+  }
+
+  /// 硬删除用户（彻底删除所有相关数据）
+  /// 用于清理已软删除的用户，以便邮箱可以重新注册
+  Future<void> _hardDeleteUser(String userId) async {
+    try {
+      print('[AuthService] Hard deleting user: $userId');
+      
+      // 删除顺序很重要，需要先删除外键依赖的表
+      // 1. 删除密码重置令牌
+      await _db.execute(
+        'DELETE FROM password_reset_tokens WHERE user_id = @userId',
+        parameters: {'userId': userId},
+      );
+      
+      // 2. 删除安全问题
+      await _db.execute(
+        'DELETE FROM user_security_questions WHERE user_id = @userId',
+        parameters: {'userId': userId},
+      );
+      
+      // 3. 删除消息（通过会话）
+      await _db.execute('''
+        DELETE FROM messages WHERE conversation_id IN (
+          SELECT id FROM conversations WHERE user_id = @userId
+        )
+      ''', parameters: {'userId': userId});
+      
+      // 4. 删除会话记录
+      await _db.execute(
+        'DELETE FROM conversations WHERE user_id = @userId',
+        parameters: {'userId': userId},
+      );
+      
+      // 5. 删除购物车
+      await _db.execute(
+        'DELETE FROM cart_items WHERE user_id = @userId',
+        parameters: {'userId': userId},
+      );
+      
+      // 6. 删除同步版本记录
+      await _db.execute(
+        'DELETE FROM sync_versions WHERE user_id = @userId',
+        parameters: {'userId': userId},
+      );
+      
+      // 7. 删除用户会话
+      await _db.execute(
+        'DELETE FROM user_sessions WHERE user_id = @userId',
+        parameters: {'userId': userId},
+      );
+      
+      // 8. 最后删除用户
+      await _db.execute(
+        'DELETE FROM users WHERE id = @userId',
+        parameters: {'userId': userId},
+      );
+      
+      print('[AuthService] User hard deleted successfully: $userId');
+    } catch (e) {
+      print('[AuthService] Hard delete user error: $e');
+      // 不抛出异常，让注册流程继续
     }
   }
 }
