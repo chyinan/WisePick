@@ -85,17 +85,14 @@ enum DimensionType {
 
 /// 购买决策评分
 class PurchaseDecisionScore {
-  /// 价格评分 (0-25)
+  /// 价格评分 (0-30)
   final double priceScore;
   
-  /// 评价评分 (0-25)
+  /// 评价评分 (0-30)
   final double ratingScore;
   
-  /// 销量评分 (0-20)
+  /// 销量评分 (0-25)
   final double salesScore;
-  
-  /// 趋势评分 (0-15)
-  final double trendScore;
   
   /// 平台评分 (0-15)
   final double platformScore;
@@ -110,7 +107,6 @@ class PurchaseDecisionScore {
     required this.priceScore,
     required this.ratingScore,
     required this.salesScore,
-    required this.trendScore,
     required this.platformScore,
     required this.reasoning,
     this.details = const [],
@@ -118,7 +114,7 @@ class PurchaseDecisionScore {
 
   /// 综合评分 (0-100)
   double get totalScore => 
-      priceScore + ratingScore + salesScore + trendScore + platformScore;
+      priceScore + ratingScore + salesScore + platformScore;
 
   /// 评分等级
   ScoreLevel get level {
@@ -133,7 +129,6 @@ class PurchaseDecisionScore {
     priceScore: 0,
     ratingScore: 0,
     salesScore: 0,
-    trendScore: 0,
     platformScore: 0,
     reasoning: '',
   );

@@ -1,9 +1,15 @@
 import 'package:hive/hive.dart';
 import '../products/product_model.dart';
+import '../price_history/price_history_service.dart';
 
 /// 购物车服务：基于 Hive 存储购物车条目（包含数量）
 class CartService {
   static const String boxName = 'cart_box';
+  
+  final PriceHistoryService _priceHistoryService;
+  
+  CartService({PriceHistoryService? priceHistoryService})
+      : _priceHistoryService = priceHistoryService ?? PriceHistoryService();
 
   /// 获取所有购物车商品（包含数量）
   /// 存储格式：key = product.id, value = {product fields..., 'qty': int}
@@ -14,9 +20,13 @@ class CartService {
 
   /// 将商品加入购物车或更新数量。现在会在条目中保存完整的商品 JSON
   /// 存储内容包括 ProductModel.toMap() 的字段、'qty' 以及可选的 'raw_json'（当 ProductModel 包含额外未映射字段时可保存原始 JSON）
+  /// 
+  /// 当商品首次加入购物车时，会同时记录初始价格历史
   Future<void> addOrUpdateItem(ProductModel p, {int qty = 1, String? rawJson}) async {
     final box = await Hive.openBox(boxName);
     final existing = box.get(p.id);
+    final bool isNewItem = existing == null;
+    
     if (existing != null) {
       final m = Map<String, dynamic>.from(existing);
       final int cur = (m['qty'] as int?) ?? 1;
@@ -40,7 +50,13 @@ class CartService {
       m['price'] = effectivePrice;
       m['final_price'] = effectivePrice;
       m['last_price_refresh'] = DateTime.now().millisecondsSinceEpoch;
+      m['added_at'] = DateTime.now().millisecondsSinceEpoch; // 记录加入购物车时间
       await box.put(p.id, m);
+    }
+    
+    // 当商品首次加入购物车时，记录初始价格历史
+    if (isNewItem) {
+      await _priceHistoryService.recordFromProduct(p);
     }
   }
 

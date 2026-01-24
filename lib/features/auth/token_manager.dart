@@ -12,6 +12,11 @@ class TokenManager {
   static const String _deviceIdKey = 'device_id';
   static const String _userDataKey = 'user_data';
   static const String _tokenExpiryKey = 'token_expiry';
+  static const String _refreshTokenExpiryKey = 'refresh_token_expiry';
+  static const String _lastLoginTimeKey = 'last_login_time';
+  
+  /// 默认保持登录时间：30 天（与后端 refresh token 有效期一致）
+  static const Duration defaultSessionDuration = Duration(days: 30);
 
   // 使用 FlutterSecureStorage 存储敏感数据
   final FlutterSecureStorage _secureStorage;
@@ -21,6 +26,8 @@ class TokenManager {
   String? _cachedRefreshToken;
   String? _cachedDeviceId;
   DateTime? _cachedTokenExpiry;
+  DateTime? _cachedRefreshTokenExpiry;
+  DateTime? _cachedLastLoginTime;
 
   TokenManager._() : _secureStorage = const FlutterSecureStorage(
     aOptions: AndroidOptions(
@@ -45,11 +52,26 @@ class TokenManager {
     if (expiryStr != null) {
       _cachedTokenExpiry = DateTime.tryParse(expiryStr);
     }
+    
+    final refreshExpiryStr = await _secureStorage.read(key: _refreshTokenExpiryKey);
+    if (refreshExpiryStr != null) {
+      _cachedRefreshTokenExpiry = DateTime.tryParse(refreshExpiryStr);
+    }
+    
+    final lastLoginStr = await _secureStorage.read(key: _lastLoginTimeKey);
+    if (lastLoginStr != null) {
+      _cachedLastLoginTime = DateTime.tryParse(lastLoginStr);
+    }
 
     // 确保有设备 ID
     if (_cachedDeviceId == null) {
       _cachedDeviceId = const Uuid().v4();
       await _secureStorage.write(key: _deviceIdKey, value: _cachedDeviceId);
+    }
+    
+    // 检查会话是否过期（基于 refresh token 过期时间）
+    if (isSessionExpired) {
+      await clearAll();
     }
   }
 
@@ -88,8 +110,11 @@ class TokenManager {
   /// 获取 Refresh Token
   String? get refreshToken => _cachedRefreshToken;
 
-  /// 是否已登录
-  bool get isLoggedIn => _cachedAccessToken != null && _cachedAccessToken!.isNotEmpty;
+  /// 是否已登录（有 refresh token 且会话未过期）
+  bool get isLoggedIn => 
+      _cachedRefreshToken != null && 
+      _cachedRefreshToken!.isNotEmpty &&
+      !isSessionExpired;
 
   /// Access Token 是否过期
   bool get isAccessTokenExpired {
@@ -97,33 +122,76 @@ class TokenManager {
     // 提前 1 分钟认为过期，以便有时间刷新
     return DateTime.now().isAfter(_cachedTokenExpiry!.subtract(const Duration(minutes: 1)));
   }
+  
+  /// 会话是否过期（基于 refresh token 过期时间）
+  bool get isSessionExpired {
+    if (_cachedRefreshTokenExpiry == null) {
+      // 如果没有记录过期时间，但有 refresh token，则认为未过期
+      // 这是为了兼容旧版本的数据
+      return _cachedRefreshToken == null || _cachedRefreshToken!.isEmpty;
+    }
+    return DateTime.now().isAfter(_cachedRefreshTokenExpiry!);
+  }
+  
+  /// 获取会话剩余时间
+  Duration? get sessionRemainingTime {
+    if (_cachedRefreshTokenExpiry == null) return null;
+    final remaining = _cachedRefreshTokenExpiry!.difference(DateTime.now());
+    return remaining.isNegative ? Duration.zero : remaining;
+  }
+  
+  /// 获取最后登录时间
+  DateTime? get lastLoginTime => _cachedLastLoginTime;
 
   /// 保存 Tokens
   Future<void> saveTokens({
     required String accessToken,
     required String refreshToken,
     Duration accessTokenExpiry = const Duration(minutes: 15),
+    Duration? refreshTokenExpiry,
   }) async {
+    final now = DateTime.now();
     _cachedAccessToken = accessToken;
     _cachedRefreshToken = refreshToken;
-    _cachedTokenExpiry = DateTime.now().add(accessTokenExpiry);
+    _cachedTokenExpiry = now.add(accessTokenExpiry);
+    _cachedRefreshTokenExpiry = now.add(refreshTokenExpiry ?? defaultSessionDuration);
+    _cachedLastLoginTime = now;
 
     await Future.wait([
       _secureStorage.write(key: _accessTokenKey, value: accessToken),
       _secureStorage.write(key: _refreshTokenKey, value: refreshToken),
       _secureStorage.write(key: _tokenExpiryKey, value: _cachedTokenExpiry!.toIso8601String()),
+      _secureStorage.write(key: _refreshTokenExpiryKey, value: _cachedRefreshTokenExpiry!.toIso8601String()),
+      _secureStorage.write(key: _lastLoginTimeKey, value: _cachedLastLoginTime!.toIso8601String()),
     ]);
   }
 
   /// 更新 Access Token（刷新后）
-  Future<void> updateAccessToken(String accessToken, {Duration expiry = const Duration(minutes: 15)}) async {
+  /// 
+  /// [extendSession] 如果为 true，会延长会话有效期（每次刷新 token 时重置 30 天）
+  Future<void> updateAccessToken(
+    String accessToken, {
+    Duration expiry = const Duration(minutes: 15),
+    bool extendSession = true,
+  }) async {
     _cachedAccessToken = accessToken;
     _cachedTokenExpiry = DateTime.now().add(expiry);
-
-    await Future.wait([
+    
+    final futures = <Future<void>>[
       _secureStorage.write(key: _accessTokenKey, value: accessToken),
       _secureStorage.write(key: _tokenExpiryKey, value: _cachedTokenExpiry!.toIso8601String()),
-    ]);
+    ];
+    
+    // 每次刷新 token 时延长会话有效期
+    if (extendSession) {
+      _cachedRefreshTokenExpiry = DateTime.now().add(defaultSessionDuration);
+      futures.add(_secureStorage.write(
+        key: _refreshTokenExpiryKey, 
+        value: _cachedRefreshTokenExpiry!.toIso8601String(),
+      ));
+    }
+
+    await Future.wait(futures);
   }
 
   /// 保存用户数据到本地缓存（非敏感数据用 Hive）
@@ -155,11 +223,15 @@ class TokenManager {
     _cachedAccessToken = null;
     _cachedRefreshToken = null;
     _cachedTokenExpiry = null;
+    _cachedRefreshTokenExpiry = null;
+    _cachedLastLoginTime = null;
 
     await Future.wait([
       _secureStorage.delete(key: _accessTokenKey),
       _secureStorage.delete(key: _refreshTokenKey),
       _secureStorage.delete(key: _tokenExpiryKey),
+      _secureStorage.delete(key: _refreshTokenExpiryKey),
+      _secureStorage.delete(key: _lastLoginTimeKey),
     ]);
 
     // 清除用户缓存

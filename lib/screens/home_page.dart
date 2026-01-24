@@ -15,10 +15,12 @@ import '../features/chat/conversation_model.dart';
 import '../features/auth/auth_providers.dart';
 import '../features/auth/login_page.dart';
 import '../features/auth/profile_page.dart';
+import '../features/auth/token_manager.dart';
 import '../services/sync/sync_manager.dart';
 import '../widgets/macos_window_buttons.dart';
 import '../widgets/sync_status_indicator.dart';
 import 'admin_settings_page.dart';
+import 'ai_provider_settings_page.dart';
 import 'chat_page.dart';
 import '../core/storage/hive_config.dart';
 
@@ -456,6 +458,26 @@ class _SettingsPage extends ConsumerWidget {
                 child: _PriceNotificationSwitch(),
               ),
               const SizedBox(height: 24),
+              const _SectionHeader(title: 'AI 服务设置'),
+              Card(
+                child: ListTile(
+                  leading: Icon(
+                    Icons.smart_toy,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  title: const Text('AI 服务商配置'),
+                  subtitle: const Text('配置 API Key、自定义域名、选择模型'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const AiProviderSettingsPage(),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 24),
               const _SectionHeader(title: '开发者信息'),
               Card(
                 child: Column(
@@ -553,6 +575,21 @@ class _SettingsPage extends ConsumerWidget {
   /// 已登录状态的账号卡片
   Widget _buildLoggedInCard(BuildContext context, user) {
     final theme = Theme.of(context);
+    final tokenManager = TokenManager.instance;
+    final sessionRemaining = tokenManager.sessionRemainingTime;
+    
+    // 格式化会话剩余时间
+    String sessionInfo = user.email;
+    if (sessionRemaining != null) {
+      if (sessionRemaining.inDays > 0) {
+        sessionInfo = '${user.email} · 登录有效期 ${sessionRemaining.inDays} 天';
+      } else if (sessionRemaining.inHours > 0) {
+        sessionInfo = '${user.email} · 登录有效期 ${sessionRemaining.inHours} 小时';
+      } else {
+        sessionInfo = '${user.email} · 登录即将过期';
+      }
+    }
+    
     return ListTile(
       leading: CircleAvatar(
         backgroundColor: theme.colorScheme.primaryContainer,
@@ -569,7 +606,7 @@ class _SettingsPage extends ConsumerWidget {
             : null,
       ),
       title: Text(user.displayName),
-      subtitle: Text(user.email),
+      subtitle: Text(sessionInfo),
       trailing: const Icon(Icons.chevron_right),
       onTap: () {
         Navigator.of(context).push(

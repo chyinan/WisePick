@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'price_history_model.dart';
 import 'price_history_providers.dart';
+import 'price_history_service.dart';
 import 'widgets/price_history_chart.dart';
 
 /// 价格历史页面
@@ -51,6 +52,54 @@ class PriceHistoryPage extends ConsumerWidget {
                       child: Text(range.displayName),
                     ))
                 .toList(),
+          ),
+          // 更多操作菜单
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            tooltip: '更多操作',
+            onSelected: (value) async {
+              if (value == 'clear') {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('清除价格历史'),
+                    content: const Text('确定要清除此商品的价格历史数据吗？清除后将从头开始记录。'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('取消'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        child: const Text('确定'),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirm == true) {
+                  await PriceHistoryService().clearPriceHistory(productId);
+                  ref.invalidate(priceTrendAnalysisProvider(productInfo));
+                  ref.invalidate(buyingTimeSuggestionProvider(productId));
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('价格历史已清除')),
+                    );
+                  }
+                }
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'clear',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete_outline, size: 20),
+                    SizedBox(width: 8),
+                    Text('清除价格历史'),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -202,6 +251,11 @@ class PriceHistoryPage extends ConsumerWidget {
   }
 
   Widget _buildTrendAnalysisSection(BuildContext context, PriceTrendAnalysis data) {
+    // 如果没有价格历史数据，显示提示信息
+    if (data.priceHistory.isEmpty) {
+      return _buildNoDataCard(context);
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -252,6 +306,80 @@ class PriceHistoryPage extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+
+  /// 当没有价格历史数据时显示的提示卡片
+  Widget _buildNoDataCard(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: Card(
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: colorScheme.primaryContainer.withValues(alpha: 0.3),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.timeline,
+                    size: 48,
+                    color: colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  '暂无价格历史数据',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '该商品刚加入购物车，价格历史记录将从现在开始自动收集。\n\n系统会在每次价格更新时记录数据，帮助您追踪价格波动趋势，找到最佳购买时机。',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        size: 16,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '当前价格: ¥${currentPrice?.toStringAsFixed(2) ?? '--'}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
