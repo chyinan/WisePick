@@ -20,7 +20,7 @@ class DecisionService {
     double? averageHistoryPrice,
     double? lowestHistoryPrice,
   }) {
-    // 价格评分 (0-25)
+    // 价格评分 (0-30)
     final priceScore = _calculatePriceScore(
       price: price,
       originalPrice: originalPrice,
@@ -28,18 +28,11 @@ class DecisionService {
       lowestHistoryPrice: lowestHistoryPrice,
     );
 
-    // 评价评分 (0-25)
+    // 评价评分 (0-30)
     final ratingScore = _calculateRatingScore(rating, sales);
 
-    // 销量评分 (0-20)
+    // 销量评分 (0-25)
     final salesScore = _calculateSalesScore(sales);
-
-    // 趋势评分 (0-15)
-    final trendScore = _calculateTrendScore(
-      price: price,
-      averageHistoryPrice: averageHistoryPrice,
-      lowestHistoryPrice: lowestHistoryPrice,
-    );
 
     // 平台评分 (0-15)
     final platformScore = _calculatePlatformScore(platform);
@@ -49,7 +42,6 @@ class DecisionService {
       priceScore: priceScore,
       ratingScore: ratingScore,
       salesScore: salesScore,
-      trendScore: trendScore,
       platformScore: platformScore,
       price: price,
       rating: rating,
@@ -62,26 +54,20 @@ class DecisionService {
       ScoreDetail(
         dimension: '价格',
         score: priceScore,
-        maxScore: 25,
+        maxScore: 30,
         description: _getPriceDescription(priceScore),
       ),
       ScoreDetail(
         dimension: '评价',
         score: ratingScore,
-        maxScore: 25,
+        maxScore: 30,
         description: _getRatingDescription(ratingScore),
       ),
       ScoreDetail(
         dimension: '销量',
         score: salesScore,
-        maxScore: 20,
+        maxScore: 25,
         description: _getSalesDescription(salesScore),
-      ),
-      ScoreDetail(
-        dimension: '趋势',
-        score: trendScore,
-        maxScore: 15,
-        description: _getTrendDescription(trendScore),
       ),
       ScoreDetail(
         dimension: '平台',
@@ -95,7 +81,6 @@ class DecisionService {
       priceScore: priceScore,
       ratingScore: ratingScore,
       salesScore: salesScore,
-      trendScore: trendScore,
       platformScore: platformScore,
       reasoning: reasoning,
       details: details,
@@ -207,35 +192,35 @@ class DecisionService {
     double? averageHistoryPrice,
     double? lowestHistoryPrice,
   }) {
-    double score = 15.0; // 基础分
+    double score = 18.0; // 基础分
 
     // 折扣加分
     if (originalPrice != null && originalPrice > price) {
       final discount = (originalPrice - price) / originalPrice;
-      score += discount * 5; // 最多加5分
+      score += discount * 6; // 最多加6分
     }
 
     // 历史价格对比加分
     if (averageHistoryPrice != null && price < averageHistoryPrice) {
       final belowAverage = (averageHistoryPrice - price) / averageHistoryPrice;
-      score += belowAverage * 3; // 最多加3分
+      score += belowAverage * 4; // 最多加4分
     }
 
     if (lowestHistoryPrice != null && price <= lowestHistoryPrice * 1.05) {
       score += 2; // 接近历史最低加2分
     }
 
-    return min(score, 25);
+    return min(score, 30);
   }
 
   double _calculateRatingScore(double rating, int sales) {
     // 如果没有评分数据 (rating <= 0)，但销量很高，说明是好东西
     // 很多电商平台API可能不返回rating字段，导致rating为0
     if (rating <= 0.01) {
-       if (sales > 10000) return 23; // 销量过万无差评，默认为好
-       if (sales > 1000) return 20;
-       if (sales > 100) return 15; // 销量一般，给及格 (60% = 15/25)
-       return 10; // 销量也很低，可能真不行
+       if (sales > 10000) return 28; // 销量过万无差评，默认为好
+       if (sales > 1000) return 24;
+       if (sales > 100) return 18; // 销量一般，给及格 (60% = 18/30)
+       return 12; // 销量也很低，可能真不行
     }
 
     // 兼容多种评分格式:
@@ -257,20 +242,20 @@ class DecisionService {
       normalizedRating = rating;
     }
 
-    // rating 是 0-1 的评分
-    if (normalizedRating >= 0.95) return 25;
-    if (normalizedRating >= 0.9) return 22;
-    if (normalizedRating >= 0.85) return 19;
-    if (normalizedRating >= 0.8) return 16;
-    if (normalizedRating >= 0.7) return 12;
-    if (normalizedRating >= 0.6) return 8;
+    // rating 是 0-1 的评分，满分30
+    if (normalizedRating >= 0.95) return 30;
+    if (normalizedRating >= 0.9) return 26;
+    if (normalizedRating >= 0.85) return 23;
+    if (normalizedRating >= 0.8) return 19;
+    if (normalizedRating >= 0.7) return 14;
+    if (normalizedRating >= 0.6) return 10;
     // 0.2-0.6 给个基础分，避免太难看
-    if (normalizedRating >= 0.2) return 5;
+    if (normalizedRating >= 0.2) return 6;
     
     // 如果真的很低，但有销量，也给个保底分
-    if (sales > 100) return 5;
+    if (sales > 100) return 6;
     
-    return 2;
+    return 3;
   }
 
   double _calculateSalesScore(int sales) {
@@ -283,37 +268,15 @@ class DecisionService {
     
     if (sales <= 0) return 0;
     
-    // 基础分 5 分，加上对数增长
-    // 系数 1.5 使得 10万销量大约能得 5 + 11.5 * 1.3 ≈ 20分
-    // 100销量 ≈ 5 + 4.6 * 1.3 ≈ 11分
+    // 基础分 4 分，加上对数增长
+    // 系数 1.8 使得 10万销量大约能得 4 + 11.5 * 1.8 ≈ 25分
+    // 100销量 ≈ 4 + 4.6 * 1.8 ≈ 12分
     // 即使销量只有几十，也不至于0分
     
     double logSales = log(sales);
-    double score = 3.0 + logSales * 1.4;
+    double score = 4.0 + logSales * 1.8;
     
-    return min(score, 20.0);
-  }
-
-  double _calculateTrendScore({
-    required double price,
-    double? averageHistoryPrice,
-    double? lowestHistoryPrice,
-  }) {
-    double score = 8.0; // 基础分
-
-    if (averageHistoryPrice != null) {
-      if (price < averageHistoryPrice * 0.9) {
-        score += 5; // 低于平均价90%
-      } else if (price < averageHistoryPrice) {
-        score += 2; // 低于平均价
-      }
-    }
-
-    if (lowestHistoryPrice != null && price <= lowestHistoryPrice * 1.05) {
-      score += 2; // 接近历史最低
-    }
-
-    return min(score, 15);
+    return min(score, 25.0);
   }
 
   double _calculatePlatformScore(String platform) {
@@ -338,17 +301,16 @@ class DecisionService {
     required double priceScore,
     required double ratingScore,
     required double salesScore,
-    required double trendScore,
     required double platformScore,
     required double price,
     required double rating,
     required int sales,
     required String platform,
   }) {
-    final totalScore = priceScore + ratingScore + salesScore + trendScore + platformScore;
+    final totalScore = priceScore + ratingScore + salesScore + platformScore;
     final parts = <String>[];
 
-    // 综合评价
+    // 综合评价 (满分100)
     if (totalScore >= 85) {
       parts.add('这款商品综合表现优秀');
     } else if (totalScore >= 70) {
@@ -360,23 +322,23 @@ class DecisionService {
     }
 
     // 价格评价
-    if (priceScore >= 20) {
+    if (priceScore >= 24) {
       parts.add('价格非常有竞争力');
-    } else if (priceScore >= 15) {
+    } else if (priceScore >= 18) {
       parts.add('价格较为合理');
     }
 
     // 评价评分
-    if (ratingScore >= 22) {
+    if (ratingScore >= 26) {
       parts.add('用户评价很高');
-    } else if (ratingScore >= 16) {
+    } else if (ratingScore >= 19) {
       parts.add('用户口碑不错');
     }
 
     // 销量评价
-    if (salesScore >= 18) {
+    if (salesScore >= 22) {
       parts.add('销量出色，市场认可度高');
-    } else if (salesScore >= 12) {
+    } else if (salesScore >= 15) {
       parts.add('销量表现良好');
     }
 
@@ -384,30 +346,24 @@ class DecisionService {
   }
 
   String _getPriceDescription(double score) {
-    if (score >= 20) return '价格非常有优势，性价比极高';
-    if (score >= 15) return '价格较为合理';
-    if (score >= 10) return '价格中等';
+    if (score >= 24) return '价格非常有优势，性价比极高';
+    if (score >= 18) return '价格较为合理';
+    if (score >= 12) return '价格中等';
     return '价格偏高';
   }
 
   String _getRatingDescription(double score) {
-    if (score >= 22) return '用户评价极高，好评如潮';
-    if (score >= 16) return '用户评价良好';
-    if (score >= 10) return '用户评价一般';
+    if (score >= 26) return '用户评价极高，好评如潮';
+    if (score >= 19) return '用户评价良好';
+    if (score >= 12) return '用户评价一般';
     return '用户评价较差';
   }
 
   String _getSalesDescription(double score) {
-    if (score >= 18) return '销量火爆，市场认可';
-    if (score >= 12) return '销量不错';
-    if (score >= 6) return '销量一般';
+    if (score >= 22) return '销量火爆，市场认可';
+    if (score >= 15) return '销量不错';
+    if (score >= 8) return '销量一般';
     return '销量较低';
-  }
-
-  String _getTrendDescription(double score) {
-    if (score >= 12) return '当前价格处于历史低位';
-    if (score >= 8) return '价格走势平稳';
-    return '价格波动较大';
   }
 
   String _getPlatformDescription(String platform) {

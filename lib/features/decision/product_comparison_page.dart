@@ -302,19 +302,6 @@ class ProductComparisonPage extends ConsumerWidget {
                             _findLowestPriceIndex(data.products),
                             cellWidth: productColWidth),
                         _buildDataRow(
-                          'AI评分',
-                          data.products.map((p) {
-                            final score = p.decisionScore.ratingScore;
-                            final percentage = (score / 25 * 100).clamp(0, 100);
-                            return '${percentage.toStringAsFixed(0)}%';
-                          }).toList(),
-                          _findHighestRatingScoreIndex(data.products),
-                          labelIcon: Icons.auto_awesome,
-                          onLabelPressed: () =>
-                              _showAiScoreExplanation(context),
-                          cellWidth: productColWidth,
-                        ),
-                        _buildDataRow(
                             '销量',
                             data.products
                                 .map((p) => _formatSales(p.sales))
@@ -330,7 +317,7 @@ class ProductComparisonPage extends ConsumerWidget {
                             _findHighestScoreIndex(data.products),
                             cellWidth: productColWidth),
                         _buildDataRow(
-                            '平台', data.products.map((p) => p.platform).toList(),
+                            '平台', data.products.map((p) => _getPlatformName(p.platform)).toList(),
                             null,
                             cellWidth: productColWidth),
                       ],
@@ -390,32 +377,6 @@ class ProductComparisonPage extends ConsumerWidget {
     );
   }
 
-  void _showAiScoreExplanation(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Row(
-          children: const [
-            Icon(Icons.auto_awesome, color: Colors.blue),
-            SizedBox(width: 8),
-            Text('AI 评分说明'),
-          ],
-        ),
-        content: const Text(
-          'AI 评分是基于商品的用户评价、好评率等数据综合计算得出的分数。\n\n'
-          '我们会综合分析评价数量、好评占比以及用户的详细评论内容（如果可用），'
-          '为您提供一个更客观的评分参考，避免因单一好评率失真。',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('了解了'),
-          ),
-        ],
-      ),
-    );
-  }
-
   int? _findLowestPriceIndex(List<ComparisonProduct> products) {
     if (products.isEmpty) return null;
     int index = 0;
@@ -423,32 +384,6 @@ class ProductComparisonPage extends ConsumerWidget {
     for (int i = 1; i < products.length; i++) {
       if (products[i].price < lowest) {
         lowest = products[i].price;
-        index = i;
-      }
-    }
-    return index;
-  }
-
-  int? _findHighestRatingIndex(List<ComparisonProduct> products) {
-    if (products.isEmpty) return null;
-    int index = 0;
-    double highest = products[0].rating;
-    for (int i = 1; i < products.length; i++) {
-      if (products[i].rating > highest) {
-        highest = products[i].rating;
-        index = i;
-      }
-    }
-    return index;
-  }
-
-  int? _findHighestRatingScoreIndex(List<ComparisonProduct> products) {
-    if (products.isEmpty) return null;
-    int index = 0;
-    double highest = products[0].decisionScore.ratingScore;
-    for (int i = 1; i < products.length; i++) {
-      if (products[i].decisionScore.ratingScore > highest) {
-        highest = products[i].decisionScore.ratingScore;
         index = i;
       }
     }
@@ -642,5 +577,19 @@ class ProductComparisonPage extends ConsumerWidget {
     if (percentage >= 0.6) return Colors.blue;
     if (percentage >= 0.4) return Colors.orange;
     return Colors.red;
+  }
+
+  /// 将平台代码转换为中文名称
+  String _getPlatformName(String platform) {
+    switch (platform) {
+      case 'jd':
+        return '京东';
+      case 'taobao':
+        return '淘宝';
+      case 'pdd':
+        return '拼多多';
+      default:
+        return platform;
+    }
   }
 }

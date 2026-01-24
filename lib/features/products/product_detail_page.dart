@@ -1729,103 +1729,19 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                   ).textTheme.bodyLarge?.copyWith(height: 1.4),
                 ),
               const SizedBox(height: 20),
-              Wrap(
-                spacing: 12,
-                runSpacing: 8,
-                children: <Widget>[
-                  OutlinedButton.icon(
-                    onPressed: () async {
-                      // 切换收藏并持久化到 Hive，同时同步到购物车（收藏时添加、取消收藏时移除）
-                      try {
-                        final box = await Hive.openBox('favorites');
-                        final cartSvc = ref.read(cartServiceProvider);
-
-                        final bool currentlyFavorited = _isFavorited;
-
-                        if (currentlyFavorited) {
-                          await box.delete(widget.product.id);
-                        } else {
-                          await box.put(
-                            widget.product.id,
-                            widget.product.toMap(),
-                          );
-                        }
-
-                        // 同步购物车：如果刚收藏则加入购物车（若购物车中不存在），取消收藏则从购物车移除
-                        try {
-                          if (!currentlyFavorited) {
-                            final items = await cartSvc.getAllItems();
-                            final existsInCart = items.any(
-                              (m) => (m['id'] as String) == widget.product.id,
-                            );
-                            if (!existsInCart) {
-                              await cartSvc.addOrUpdateItem(
-                                widget.product,
-                                qty: 1,
-                                rawJson: jsonEncode(widget.product.toMap()),
-                              );
-                            }
-                          } else {
-                            await cartSvc.removeItem(widget.product.id);
-                          }
-                          // 刷新购物车 Provider
-                          final _ = ref.refresh(cartItemsProvider);
-                        } catch (_) {
-                          // 同步购物车失败不影响收藏结果
-                        }
-
-                        if (!mounted) return;
-                        setState(() {
-                          _isFavorited = !currentlyFavorited;
-                        });
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(_isFavorited ? '已加入收藏' : '已取消收藏'),
+              // 前往购买按钮 - 单独一行，更大更醒目
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: _isLoadingLink
+                    ? const Center(child: CircularProgressIndicator())
+                    : FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          textStyle: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
                           ),
-                        );
-                      } catch (_) {
-                        if (!mounted) return;
-                        ScaffoldMessenger.of(
-                          context,
-                        ).showSnackBar(const SnackBar(content: Text('收藏操作失败')));
-                      }
-                    },
-                    icon: AnimatedScale(
-                      duration: const Duration(milliseconds: 160),
-                      scale: _isFavorited ? 1.08 : 1.0,
-                      child: Icon(
-                        _isFavorited ? Icons.favorite : Icons.favorite_border,
-                        color: _isFavorited
-                            ? Theme.of(context).colorScheme.primary
-                            : Theme.of(context).colorScheme.primary,
-                      ),
-                    ),
-                    label: Text(
-                      _isFavorited ? '已收藏' : '加入收藏',
-                      style: Theme.of(context).textTheme.labelLarge,
-                    ),
-                  ),
-                  // 分享按钮
-                  OutlinedButton.icon(
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (ctx) => ShareOptionsDialog(product: widget.product),
-                      );
-                    },
-                    icon: const Icon(Icons.share),
-                    label: Text(
-                      '分享',
-                      style: Theme.of(context).textTheme.labelLarge,
-                    ),
-                  ),
-                  _isLoadingLink
-                      ? const SizedBox(
-                          width: 160,
-                          height: 48,
-                          child: Center(child: CircularProgressIndicator()),
-                        )
-                      : FilledButton.icon(
+                        ),
                           onPressed: () async {
                             setState(() => _isLoadingLink = true);
 
@@ -2145,9 +2061,102 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
 
                             setState(() => _isLoadingLink = false);
                           },
-                          icon: const Icon(Icons.open_in_new),
+                          icon: const Icon(Icons.open_in_new, size: 22),
                           label: const Text('前往购买'),
                         ),
+              ),
+              const SizedBox(height: 16),
+              // 其他操作按钮
+              Wrap(
+                spacing: 12,
+                runSpacing: 8,
+                children: <Widget>[
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      // 切换收藏并持久化到 Hive，同时同步到购物车（收藏时添加、取消收藏时移除）
+                      try {
+                        final box = await Hive.openBox('favorites');
+                        final cartSvc = ref.read(cartServiceProvider);
+
+                        final bool currentlyFavorited = _isFavorited;
+
+                        if (currentlyFavorited) {
+                          await box.delete(widget.product.id);
+                        } else {
+                          await box.put(
+                            widget.product.id,
+                            widget.product.toMap(),
+                          );
+                        }
+
+                        // 同步购物车：如果刚收藏则加入购物车（若购物车中不存在），取消收藏则从购物车移除
+                        try {
+                          if (!currentlyFavorited) {
+                            final items = await cartSvc.getAllItems();
+                            final existsInCart = items.any(
+                              (m) => (m['id'] as String) == widget.product.id,
+                            );
+                            if (!existsInCart) {
+                              await cartSvc.addOrUpdateItem(
+                                widget.product,
+                                qty: 1,
+                                rawJson: jsonEncode(widget.product.toMap()),
+                              );
+                            }
+                          } else {
+                            await cartSvc.removeItem(widget.product.id);
+                          }
+                          // 刷新购物车 Provider
+                          final _ = ref.refresh(cartItemsProvider);
+                        } catch (_) {
+                          // 同步购物车失败不影响收藏结果
+                        }
+
+                        if (!mounted) return;
+                        setState(() {
+                          _isFavorited = !currentlyFavorited;
+                        });
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(_isFavorited ? '已加入收藏' : '已取消收藏'),
+                          ),
+                        );
+                      } catch (_) {
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(const SnackBar(content: Text('收藏操作失败')));
+                      }
+                    },
+                    icon: AnimatedScale(
+                      duration: const Duration(milliseconds: 160),
+                      scale: _isFavorited ? 1.08 : 1.0,
+                      child: Icon(
+                        _isFavorited ? Icons.favorite : Icons.favorite_border,
+                        color: _isFavorited
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                    label: Text(
+                      _isFavorited ? '已收藏' : '加入收藏',
+                      style: Theme.of(context).textTheme.labelLarge,
+                    ),
+                  ),
+                  // 分享按钮
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (ctx) => ShareOptionsDialog(product: widget.product),
+                      );
+                    },
+                    icon: const Icon(Icons.share),
+                    label: Text(
+                      '分享',
+                      style: Theme.of(context).textTheme.labelLarge,
+                    ),
+                  ),
                   // 查看价格历史按钮
                   OutlinedButton.icon(
                     onPressed: () {

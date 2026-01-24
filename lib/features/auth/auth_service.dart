@@ -157,6 +157,9 @@ class AuthService {
   }
 
   /// 刷新 Token
+  /// 
+  /// 只有在服务器明确返回 401（refresh token 无效）时才清除登录状态
+  /// 网络错误等其他情况不会清除本地的登录凭证
   Future<AuthResult> refreshToken() async {
     final currentRefreshToken = _tokenManager.refreshToken;
     if (currentRefreshToken == null) {
@@ -189,12 +192,16 @@ class AuthService {
 
       return result;
     } on DioException catch (e) {
-      // 刷新失败，清除 tokens
+      // 只有在服务器明确返回 401 时才清除登录状态
+      // 这表示 refresh token 已失效或被撤销
       if (e.response?.statusCode == 401) {
         await _tokenManager.clearAll();
+        return AuthResult.error('登录已过期，请重新登录');
       }
+      // 其他错误（如网络问题）不清除登录状态
       return _handleDioError(e);
     } catch (e) {
+      // 非网络错误也不清除登录状态
       return AuthResult.error('刷新令牌失败: ${e.toString()}');
     }
   }

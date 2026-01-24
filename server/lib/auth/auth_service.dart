@@ -549,8 +549,58 @@ class AuthService {
 
   /// 验证邮箱格式
   bool _isValidEmail(String email) {
-    final regex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-    return regex.hasMatch(email);
+    // 基本格式验证
+    final regex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,10}$');
+    if (!regex.hasMatch(email)) {
+      return false;
+    }
+
+    // 提取域名部分
+    final domain = email.split('@').last.toLowerCase();
+    
+    // 常见有效顶级域名白名单
+    const validTLDs = {
+      'com', 'cn', 'net', 'org', 'edu', 'gov', 'io', 'co', 'me', 'info',
+      'biz', 'cc', 'tv', 'app', 'dev', 'xyz', 'top', 'vip', 'club', 'shop',
+      'online', 'site', 'tech', 'store', 'blog', 'live', 'pro', 'cloud',
+      // 国家/地区域名
+      'uk', 'de', 'fr', 'jp', 'kr', 'ru', 'br', 'in', 'au', 'ca', 'hk', 'tw',
+      // 二级域名
+      'com.cn', 'net.cn', 'org.cn', 'edu.cn', 'gov.cn', 'ac.cn',
+      'co.uk', 'co.jp', 'co.kr', 'com.hk', 'com.tw',
+    };
+
+    // 常见拼写错误黑名单
+    const invalidDomains = {
+      'qq.oom', 'qq.coom', 'qq.comm', 'qq.con', 'qq.cm',
+      'gmail.oom', 'gmail.coom', 'gmail.comm', 'gmail.con', 'gmail.cm',
+      '163.oom', '163.coom', '163.comm', '163.con', '163.cm',
+      '126.oom', '126.coom', '126.comm', '126.con', '126.cm',
+      'outlook.oom', 'outlook.coom', 'outlook.comm', 'outlook.con',
+      'hotmail.oom', 'hotmail.coom', 'hotmail.comm', 'hotmail.con',
+      'yahoo.oom', 'yahoo.coom', 'yahoo.comm', 'yahoo.con',
+      'icloud.oom', 'icloud.coom', 'icloud.comm', 'icloud.con',
+    };
+
+    // 检查是否在黑名单中
+    if (invalidDomains.contains(domain)) {
+      return false;
+    }
+
+    // 提取顶级域名
+    final tld = domain.contains('.') ? domain.split('.').last : domain;
+    
+    // 检查二级域名（如 com.cn）
+    final parts = domain.split('.');
+    if (parts.length >= 2) {
+      final tld2 = '${parts[parts.length - 2]}.${parts.last}';
+      if (validTLDs.contains(tld2)) {
+        return true;
+      }
+    }
+
+    // 检查顶级域名是否有效
+    return validTLDs.contains(tld);
   }
 
   /// 验证密码强度

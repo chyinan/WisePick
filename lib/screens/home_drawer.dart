@@ -5,7 +5,7 @@ import '../features/chat/conversation_model.dart';
 import '../features/analytics/analytics_page.dart';
 import '../features/decision/product_comparison_page.dart';
 import '../features/admin/admin_dashboard_page.dart';
-import 'user_settings_page.dart';
+import 'ai_provider_settings_page.dart';
 
 /// 侧边菜单：展示会话列表并支持新建会话
 class HomeDrawer extends ConsumerStatefulWidget {
@@ -260,14 +260,20 @@ class _HomeDrawerState extends ConsumerState<HomeDrawer> {
               onTap: () => _checkAdminAccess(context),
             ),
             const Divider(),
-            // 将设置入口填满宽度，去掉右侧多余间隙，使用内容内边距控制左右间距
+            // AI服务商设置入口
             ListTile(
               contentPadding: const EdgeInsetsDirectional.only(start: 12, end: 0),
-              leading: Icon(Icons.settings, color: Theme.of(context).colorScheme.primary),
-              title: const Text('API设置'),
+              leading: Icon(Icons.smart_toy, color: Theme.of(context).colorScheme.primary),
+              title: const Text('AI 服务商设置'),
+              subtitle: Text(
+                '配置API Key和模型',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
               onTap: () {
                 Navigator.of(context).pop();
-                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const UserSettingsPage()));
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AiProviderSettingsPage()));
               },
             ),
             if (_isMultiSelect)

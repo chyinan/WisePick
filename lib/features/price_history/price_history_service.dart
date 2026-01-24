@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'price_history_model.dart';
+import '../products/product_model.dart';
 
 /// 价格历史服务
 /// 
@@ -19,6 +20,37 @@ class PriceHistoryService {
       return await Hive.openBox(_boxName);
     }
     return Hive.box(_boxName);
+  }
+
+  /// 清除指定商品的价格历史数据
+  Future<void> clearPriceHistory(String productId) async {
+    final box = await _getBox();
+    await box.delete(productId);
+  }
+
+  /// 清除所有价格历史数据（用于清除旧的 Mock 数据）
+  Future<void> clearAllPriceHistory() async {
+    final box = await _getBox();
+    await box.clear();
+  }
+
+  /// 从 ProductModel 记录价格历史
+  /// 
+  /// 当商品加入购物车时调用，记录初始价格
+  Future<void> recordFromProduct(ProductModel product) async {
+    final effectivePrice = product.finalPrice > 0 
+        ? product.finalPrice 
+        : (product.price > 0 ? product.price : product.originalPrice);
+    
+    if (effectivePrice <= 0) return; // 无效价格不记录
+    
+    await recordPriceHistory(
+      productId: product.id,
+      price: product.price > 0 ? product.price : effectivePrice,
+      originalPrice: product.originalPrice > 0 ? product.originalPrice : null,
+      couponAmount: product.coupon > 0 ? product.coupon : null,
+      finalPrice: effectivePrice,
+    );
   }
 
   /// 记录价格历史
@@ -66,6 +98,8 @@ class PriceHistoryService {
   }
 
   /// 获取商品价格历史
+  /// 
+  /// 返回真实记录的价格历史数据，如果没有数据则返回空列表
   Future<List<PriceHistoryRecord>> getPriceHistory({
     required String productId,
     PriceHistoryTimeRange timeRange = PriceHistoryTimeRange.month,
@@ -77,13 +111,9 @@ class PriceHistoryService {
 
     if (data != null && data is List) {
       records = data.map((e) => PriceHistoryRecord.fromMap(Map<String, dynamic>.from(e))).toList();
-    } else {
-      // 首次加载如果没有数据，生成 Mock 数据并保存，以便用户有数据可看
-      // 在实际生产中，可能希望显示"暂无数据"，但为了演示效果这里保留 Mock 生成
-      final mockData = _generateMockPriceHistory(productId, timeRange);
-      await box.put(productId, mockData.map((e) => e.toMap()).toList());
-      records = mockData;
     }
+    // 不再生成 Mock 数据，返回真实记录的价格历史
+    // 如果没有数据，返回空列表，UI 层会显示"暂无数据"提示
 
     return _filterByTimeRange(records, timeRange);
   }
@@ -263,39 +293,4 @@ class PriceHistoryService {
     return PriceTrend.stable;
   }
 
-  // ========== Mock 数据生成 ==========
-
-  List<PriceHistoryRecord> _generateMockPriceHistory(
-    String productId,
-    PriceHistoryTimeRange timeRange,
-  ) {
-    final random = Random(productId.hashCode);
-    final records = <PriceHistoryRecord>[];
-    
-    final days = timeRange.duration.inDays;
-    final basePrice = 100 + random.nextDouble() * 900; // 100-1000 的基准价格
-    
-    for (int i = 0; i < days; i++) {
-      // 每天生成1-3条记录
-      final recordsPerDay = random.nextInt(3) + 1;
-      
-      for (int j = 0; j < recordsPerDay; j++) {
-        // 价格波动 ±10%
-        final variation = (random.nextDouble() - 0.5) * 0.2 * basePrice;
-        final price = basePrice + variation;
-        final coupon = random.nextDouble() < 0.3 ? random.nextDouble() * 20 : 0.0;
-        
-        records.add(PriceHistoryRecord(
-          productId: productId,
-          recordedAt: DateTime.now().subtract(Duration(days: days - i, hours: j * 8)),
-          price: price,
-          originalPrice: price * 1.2,
-          couponAmount: coupon,
-          finalPrice: price - coupon,
-        ));
-      }
-    }
-    
-    return records..sort((a, b) => a.recordedAt.compareTo(b.recordedAt));
-  }
 }

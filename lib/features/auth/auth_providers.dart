@@ -83,22 +83,51 @@ class AuthStateNotifier extends StateNotifier<AuthState> {
         super(const AuthState());
 
   /// 初始化 - 检查是否已登录
+  /// 
+  /// 会话保持策略：
+  /// 1. 如果本地有有效的 refresh token（未过期），则认为已登录
+  /// 2. 尝试从服务器获取用户信息，失败时使用本地缓存
+  /// 3. 只有当 refresh token 过期时才清除登录状态
   Future<void> initialize() async {
     state = state.copyWith(status: AuthStatus.loading, isLoading: true);
 
     try {
+      // TokenManager.init() 会自动检查会话是否过期
       await _tokenManager.init();
 
       if (_tokenManager.isLoggedIn) {
-        // 尝试获取用户信息
-        final user = await _authService.getCurrentUser();
-        if (user != null) {
+        // 先尝试使用本地缓存的用户数据恢复登录状态
+        final cachedUserData = await _tokenManager.getCachedUserData();
+        User? user;
+        
+        if (cachedUserData != null) {
+          user = User.fromJson(cachedUserData);
+          // 立即设置已登录状态（使用缓存数据）
           state = AuthState(
             status: AuthStatus.authenticated,
             user: user,
             isLoading: false,
           );
           // 触发登录后同步
+          _triggerOnLoginCallback();
+        }
+        
+        // 后台尝试刷新用户信息（不阻塞 UI）
+        _refreshUserInBackground();
+        
+        // 如果有缓存用户，直接返回
+        if (user != null) {
+          return;
+        }
+        
+        // 没有缓存时，尝试从服务器获取
+        user = await _authService.getCurrentUser();
+        if (user != null) {
+          state = AuthState(
+            status: AuthStatus.authenticated,
+            user: user,
+            isLoading: false,
+          );
           _triggerOnLoginCallback();
           return;
         }
@@ -109,12 +138,40 @@ class AuthStateNotifier extends StateNotifier<AuthState> {
         isLoading: false,
       );
     } catch (e) {
+      // 即使出错，如果本地有缓存用户数据，仍然保持登录状态
+      if (_tokenManager.isLoggedIn) {
+        final cachedUserData = await _tokenManager.getCachedUserData();
+        if (cachedUserData != null) {
+          state = AuthState(
+            status: AuthStatus.authenticated,
+            user: User.fromJson(cachedUserData),
+            isLoading: false,
+          );
+          _triggerOnLoginCallback();
+          return;
+        }
+      }
+      
       state = AuthState(
         status: AuthStatus.unauthenticated,
         errorMessage: e.toString(),
         isLoading: false,
       );
     }
+  }
+  
+  /// 后台刷新用户信息（静默执行，不影响 UI）
+  void _refreshUserInBackground() {
+    Future.microtask(() async {
+      try {
+        final user = await _authService.getCurrentUser();
+        if (user != null && state.status == AuthStatus.authenticated) {
+          state = state.copyWith(user: user);
+        }
+      } catch (_) {
+        // 静默处理，不影响当前登录状态
+      }
+    });
   }
 
   /// 用户注册
