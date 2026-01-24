@@ -780,7 +780,7 @@ class AdminService {
         parameters: {'id': id, 'now': DateTime.now()},
       );
 
-      if (result == 0) {
+      if (result.affectedRows == 0) {
         return Response.notFound(
           jsonEncode({'error': '商品不存在'}),
           headers: _corsHeaders,
@@ -959,7 +959,7 @@ class AdminService {
         parameters: {'id': id, 'now': DateTime.now()},
       );
 
-      if (result == 0) {
+      if (result.affectedRows == 0) {
         return Response.notFound(
           jsonEncode({'error': '会话不存在'}),
           headers: _corsHeaders,
@@ -1119,7 +1119,7 @@ class AdminService {
         parameters: {'id': id},
       );
 
-      if (result == 0) {
+      if (result.affectedRows == 0) {
         return Response.notFound(
           jsonEncode({'error': '会话不存在'}),
           headers: _corsHeaders,
