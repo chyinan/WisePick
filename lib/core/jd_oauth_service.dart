@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as dev;
 
 import 'package:dio/dio.dart';
 
@@ -106,14 +107,13 @@ class JdOAuthService {
     try {
       final resp = await _httpClient.get('https://open-oauth.jd.com/oauth2/access_token', queryParameters: params);
       if (resp.statusCode != null && resp.statusCode! >= 400) {
-        // log for debugging
-        print('[ERROR] access_token endpoint returned status ${resp.statusCode}');
-        print('[ERROR] body: ${resp.data}');
+        dev.log('access_token endpoint returned status ${resp.statusCode}', name: 'JdOAuth');
+        dev.log('body: ${resp.data}', name: 'JdOAuth');
         return null;
       }
       final data = resp.data as Map<String, dynamic>;
       if (data.containsKey('code') && data['code'] != 0) {
-        print('[ERROR] access_token response error: ${data}');
+        dev.log('access_token response error: $data', name: 'JdOAuth');
         return null;
       }
       final accessToken = data['access_token'] as String;
@@ -121,14 +121,14 @@ class JdOAuthService {
       final expiresIn = (data['expires_in'] is int) ? data['expires_in'] as int : int.tryParse('${data['expires_in']}') ?? 3600;
       final expiresAt = DateTime.now().add(Duration(seconds: expiresIn));
       return JdToken(accessToken: accessToken, refreshToken: refreshToken, expiresAt: expiresAt);
-    } on DioException catch (dioErr) {
-      print('[DIO ERROR] ${dioErr.message}');
+    } on DioException catch (dioErr, st) {
+      dev.log('DIO ERROR in exchangeCodeForToken: ${dioErr.message}', name: 'JdOAuth', error: dioErr, stackTrace: st);
       if (dioErr.response != null) {
-        print('[DIO RESPONSE] status: ${dioErr.response?.statusCode}, data: ${dioErr.response?.data}');
+        dev.log('DIO RESPONSE status: ${dioErr.response?.statusCode}, data: ${dioErr.response?.data}', name: 'JdOAuth');
       }
       return null;
-    } catch (e) {
-      print('[ERROR] exchangeCodeForToken exception: $e');
+    } catch (e, st) {
+      dev.log('exchangeCodeForToken exception: $e', name: 'JdOAuth', error: e, stackTrace: st);
       return null;
     }
   }
@@ -187,13 +187,13 @@ class JdOAuthService {
     try {
       final resp = await _httpClient.get('https://open-oauth.jd.com/oauth2/refresh_token', queryParameters: params);
       if (resp.statusCode != null && resp.statusCode! >= 400) {
-        print('[ERROR] refresh_token endpoint status ${resp.statusCode}');
-        print('[ERROR] body: ${resp.data}');
+        dev.log('refresh_token endpoint status ${resp.statusCode}', name: 'JdOAuth');
+        dev.log('body: ${resp.data}', name: 'JdOAuth');
         return null;
       }
       final data = resp.data as Map<String, dynamic>;
       if (data.containsKey('code') && data['code'] != 0) {
-        print('[ERROR] refresh_token response error: ${data}');
+        dev.log('refresh_token response error: $data', name: 'JdOAuth');
         return null;
       }
       final accessToken = data['access_token'] as String;
@@ -201,14 +201,14 @@ class JdOAuthService {
       final expiresIn = (data['expires_in'] is int) ? data['expires_in'] as int : int.tryParse('${data['expires_in']}') ?? 3600;
       final expiresAt = DateTime.now().add(Duration(seconds: expiresIn));
       return JdToken(accessToken: accessToken, refreshToken: newRefreshToken, expiresAt: expiresAt);
-    } on DioException catch (dioErr) {
-      print('[DIO ERROR] ${dioErr.message}');
+    } on DioException catch (dioErr, st) {
+      dev.log('DIO ERROR in refreshAccessToken: ${dioErr.message}', name: 'JdOAuth', error: dioErr, stackTrace: st);
       if (dioErr.response != null) {
-        print('[DIO RESPONSE] status: ${dioErr.response?.statusCode}, data: ${dioErr.response?.data}');
+        dev.log('DIO RESPONSE status: ${dioErr.response?.statusCode}, data: ${dioErr.response?.data}', name: 'JdOAuth');
       }
       return null;
-    } catch (e) {
-      print('[ERROR] refreshAccessToken exception: $e');
+    } catch (e, st) {
+      dev.log('refreshAccessToken exception: $e', name: 'JdOAuth', error: e, stackTrace: st);
       return null;
     }
   }

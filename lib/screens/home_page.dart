@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer' as dev;
 import 'dart:io' show Platform;
 
 import 'package:crypto/crypto.dart';
@@ -7,7 +8,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import 'package:hive_flutter/hive_flutter.dart';
 import '../core/theme/theme_provider.dart';
 import '../features/cart/cart_page.dart';
 import '../features/chat/chat_providers.dart';
@@ -68,8 +68,8 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
         final syncManager = ref.read(syncManagerProvider.notifier);
         await syncManager.syncAll();
       }
-    } catch (_) {
-      // 忽略同步错误，不影响用户体验
+    } catch (e, st) {
+      dev.log('Sync error on init (non-blocking): $e', name: 'HomePage', error: e, stackTrace: st);
     }
   }
 
@@ -97,12 +97,12 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
       });
 
   Future<bool> _getPriceNotificationEnabled() async {
-    final box = await Hive.openBox(HiveConfig.settingsBox);
+    final box = await HiveConfig.getBox(HiveConfig.settingsBox);
     return box.get(HiveConfig.priceNotificationEnabledKey, defaultValue: true) as bool;
   }
 
   Future<void> _setPriceNotificationEnabled(bool enabled) async {
-    final box = await Hive.openBox(HiveConfig.settingsBox);
+    final box = await HiveConfig.getBox(HiveConfig.settingsBox);
     await box.put(HiveConfig.priceNotificationEnabledKey, enabled);
   }
 
@@ -330,7 +330,7 @@ class _PriceNotificationSwitchState extends ConsumerState<_PriceNotificationSwit
   }
 
   Future<void> _loadSetting() async {
-    final box = await Hive.openBox(HiveConfig.settingsBox);
+    final box = await HiveConfig.getBox(HiveConfig.settingsBox);
     setState(() {
       _enabled = box.get(HiveConfig.priceNotificationEnabledKey, defaultValue: true) as bool;
       _loading = false;
@@ -338,7 +338,7 @@ class _PriceNotificationSwitchState extends ConsumerState<_PriceNotificationSwit
   }
 
   Future<void> _updateSetting(bool value) async {
-    final box = await Hive.openBox(HiveConfig.settingsBox);
+    final box = await HiveConfig.getBox(HiveConfig.settingsBox);
     await box.put(HiveConfig.priceNotificationEnabledKey, value);
     setState(() {
       _enabled = value;
@@ -704,7 +704,8 @@ class _DesktopConversationPanelState extends ConsumerState<_DesktopConversationP
           _isLoading = false;
         });
       }
-    } catch (_) {
+    } catch (e, st) {
+      dev.log('Error loading recent conversations: $e', name: 'HomePage', error: e, stackTrace: st);
       if (mounted) setState(() => _isLoading = false);
     }
   }

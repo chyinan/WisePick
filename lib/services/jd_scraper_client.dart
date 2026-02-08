@@ -1,8 +1,9 @@
 import 'dart:convert';
-import 'dart:io';
+import 'dart:developer';
 
 import 'package:dio/dio.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+
+import '../core/backend_config.dart';
 
 /// 京东爬虫客户端
 ///
@@ -19,20 +20,30 @@ class JdScraperClient {
               receiveTimeout: const Duration(minutes: 3),
             ));
 
-  /// 获取后端服务地址
+  /// 获取后端服务地址（统一使用 BackendConfig）
   Future<String> _getBackendBase() async {
-    String backend = 'http://localhost:9527';
     try {
-      if (!Hive.isBoxOpen('settings')) await Hive.openBox('settings');
-      final box = Hive.box('settings');
-      final String? b = box.get('backend_base') as String?;
-      if (b != null && b.trim().isNotEmpty) {
-        backend = b.trim();
-      } else {
-        backend = Platform.environment['BACKEND_BASE'] ?? backend;
-      }
-    } catch (_) {}
-    return backend;
+      return await BackendConfig.resolve();
+    } catch (e, st) {
+      log('Failed to resolve backend_base, using default: $e',
+          name: 'JdScraperClient', error: e, stackTrace: st);
+      return BackendConfig.resolveSync();
+    }
+  }
+
+  /// JD SKU IDs are purely numeric. This rejects empty, whitespace-only,
+  /// or non-numeric strings that would produce malformed URL paths.
+  static final RegExp _skuIdPattern = RegExp(r'^\d+$');
+
+  /// Validate a single skuId, returning an error result if invalid.
+  JdProductResult? _validateSkuId(String skuId) {
+    if (skuId.isEmpty || !_skuIdPattern.hasMatch(skuId)) {
+      return JdProductResult.error(
+        '无效的商品 SKU ID',
+        errorType: 'badRequest',
+      );
+    }
+    return null; // valid
   }
 
   /// 获取单个商品的完整信息（双源爬取，推荐使用）
@@ -47,6 +58,9 @@ class JdScraperClient {
     bool includePromotion = true,
     bool includeDetail = true,
   }) async {
+    final validationError = _validateSkuId(skuId);
+    if (validationError != null) return validationError;
+
     final backend = await _getBackendBase();
     final url = '$backend/api/jd/scraper/product/$skuId/enhanced';
 
@@ -93,6 +107,15 @@ class JdScraperClient {
     bool includePromotion = true,
     bool includeDetail = true,
   }) async {
+    if (skuIds.isEmpty) {
+      return JdBatchResult.success([], total: 0, successCount: 0);
+    }
+    // Filter out invalid IDs before sending to server
+    final validIds = skuIds.where((id) => _skuIdPattern.hasMatch(id)).toList();
+    if (validIds.isEmpty) {
+      return JdBatchResult.error('所有 SKU ID 均无效');
+    }
+
     final backend = await _getBackendBase();
     final url = '$backend/api/jd/scraper/products/batch/enhanced';
 
@@ -100,7 +123,7 @@ class JdScraperClient {
       final response = await _dio.post(
         url,
         data: jsonEncode({
-          'skuIds': skuIds,
+          'skuIds': validIds,
           'maxConcurrency': maxConcurrency,
           'includePromotion': includePromotion,
           'includeDetail': includeDetail,
@@ -139,6 +162,9 @@ class JdScraperClient {
 
   /// 仅获取商品推广信息（从京东联盟）
   Future<JdProductResult> getProductPromotion(String skuId) async {
+    final validationError = _validateSkuId(skuId);
+    if (validationError != null) return validationError;
+
     final backend = await _getBackendBase();
     final url = '$backend/api/jd/scraper/product/$skuId';
 
@@ -169,6 +195,9 @@ class JdScraperClient {
 
   /// 仅获取商品详情（从京东首页）
   Future<JdProductResult> getProductDetail(String skuId) async {
+    final validationError = _validateSkuId(skuId);
+    if (validationError != null) return validationError;
+
     final backend = await _getBackendBase();
     final url = '$backend/api/jd/scraper/product/$skuId/detail';
 
@@ -348,10 +377,19 @@ class JdProductInfo {
 
   static double? _parseDouble(dynamic value) {
     if (value == null) return null;
-    if (value is double) return value;
-    if (value is int) return value.toDouble();
-    if (value is String) return double.tryParse(value);
-    return null;
+    double? result;
+    if (value is double) {
+      result = value;
+    } else if (value is int) {
+      result = value.toDouble();
+    } else if (value is String) {
+      result = double.tryParse(value);
+    }
+    // 过滤无效的浮点数值
+    if (result != null && (result.isNaN || result.isInfinite)) {
+      return null;
+    }
+    return result;
   }
 }
 

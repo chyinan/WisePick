@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:developer';
 import 'package:dio/dio.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'user_model.dart';
 import 'token_manager.dart';
+import '../../core/backend_config.dart';
 
 /// 认证结果
 class AuthResult {
@@ -42,19 +44,8 @@ class AuthService {
   final Dio _dio;
   final TokenManager _tokenManager;
   
-  // API 基础 URL
-  String get _baseUrl {
-    try {
-      if (Hive.isBoxOpen('settings')) {
-        final box = Hive.box('settings');
-        final proxyUrl = box.get('proxy_url') as String?;
-        if (proxyUrl != null && proxyUrl.isNotEmpty) {
-          return proxyUrl;
-        }
-      }
-    } catch (_) {}
-    return 'http://localhost:9527';
-  }
+  // API 基础 URL — 通过集中式 BackendConfig 解析
+  String get _baseUrl => BackendConfig.resolveSync();
 
   String get _authBaseUrl => '$_baseUrl/api/v1/auth';
 
@@ -213,8 +204,9 @@ class AuthService {
         '$_authBaseUrl/logout',
         options: Options(headers: _getHeaders(includeAuth: true)),
       );
-    } catch (_) {
-      // 即使 API 调用失败也清除本地 tokens
+    } catch (e, st) {
+      // 即使 API 调用失败也清除本地 tokens，但记录错误以便排查
+      log('Logout API call failed (local tokens still cleared): $e', name: 'AuthService', error: e, stackTrace: st);
     }
 
     await _tokenManager.clearAll();
@@ -228,8 +220,9 @@ class AuthService {
         '$_authBaseUrl/logout-all',
         options: Options(headers: _getHeaders(includeAuth: true)),
       );
-    } catch (_) {
-      // 即使 API 调用失败也清除本地 tokens
+    } catch (e, st) {
+      // 即使 API 调用失败也清除本地 tokens，但记录错误以便排查
+      log('Logout-all API call failed (local tokens still cleared): $e', name: 'AuthService', error: e, stackTrace: st);
     }
 
     await _tokenManager.clearAll();
@@ -262,7 +255,10 @@ class AuthService {
           return getCurrentUser(); // 重试
         }
       }
-    } catch (_) {}
+      log('getCurrentUser failed: $e', name: 'AuthService');
+    } catch (e, st) {
+      log('getCurrentUser unexpected error: $e', name: 'AuthService', error: e, stackTrace: st);
+    }
 
     // 返回缓存的用户数据
     final cached = await _tokenManager.getCachedUserData();
@@ -290,7 +286,9 @@ class AuthService {
               ))
             .toList();
       }
-    } catch (_) {}
+    } catch (e, st) {
+      log('getUserSessions failed: $e', name: 'AuthService', error: e, stackTrace: st);
+    }
     return [];
   }
 
@@ -352,7 +350,9 @@ class AuthService {
         if (data is Map<String, dynamic>) {
           return AuthResult.fromJson(data);
         }
-      } catch (_) {}
+      } catch (e2, st) {
+        log('Error parsing DioError response body: $e2', name: 'AuthService', error: e2, stackTrace: st);
+      }
       
       switch (e.response!.statusCode) {
         case 400:
@@ -572,31 +572,60 @@ class PasswordResetResult {
 }
 
 /// 认证拦截器 - 自动刷新 Token
+///
+/// 使用 [Completer] 确保多个并发 401 响应只触发一次 token 刷新。
+/// 后续的 401 请求会等待同一个刷新结果，然后统一重试。
 class _AuthInterceptor extends Interceptor {
   final AuthService _authService;
-  bool _isRefreshing = false;
+  Completer<AuthResult>? _refreshCompleter;
 
   _AuthInterceptor(this._authService);
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) async {
-    if (err.response?.statusCode == 401 && !_isRefreshing) {
-      _isRefreshing = true;
-      try {
-        final refreshResult = await _authService.refreshToken();
-        if (refreshResult.success) {
-          // Token 刷新成功，重试原请求
-          final opts = err.requestOptions;
-          opts.headers['Authorization'] = 
-              'Bearer ${TokenManager.instance.accessToken}';
-          
-          final response = await Dio().fetch(opts);
-          _isRefreshing = false;
-          return handler.resolve(response);
-        }
-      } catch (_) {}
-      _isRefreshing = false;
+    if (err.response?.statusCode != 401) {
+      return handler.next(err);
     }
+
+    // 避免刷新请求自身的 401 导致无限递归
+    final requestPath = err.requestOptions.path;
+    if (requestPath.contains('/auth/refresh') || requestPath.contains('/auth/login')) {
+      return handler.next(err);
+    }
+
+    try {
+      AuthResult refreshResult;
+
+      if (_refreshCompleter != null) {
+        // 已有刷新操作进行中，等待其结果
+        refreshResult = await _refreshCompleter!.future;
+      } else {
+        // 发起新的刷新操作
+        _refreshCompleter = Completer<AuthResult>();
+        try {
+          refreshResult = await _authService.refreshToken();
+          _refreshCompleter!.complete(refreshResult);
+        } catch (e) {
+          _refreshCompleter!.completeError(e);
+          rethrow;
+        } finally {
+          _refreshCompleter = null;
+        }
+      }
+
+      if (refreshResult.success) {
+        // Token 刷新成功，使用新 token 重试原请求
+        final opts = err.requestOptions;
+        opts.headers['Authorization'] =
+            'Bearer ${TokenManager.instance.accessToken}';
+
+        final response = await Dio().fetch(opts);
+        return handler.resolve(response);
+      }
+    } catch (e, st) {
+      log('Token refresh retry failed: $e', name: 'AuthInterceptor', error: e, stackTrace: st);
+    }
+
     handler.next(err);
   }
 }

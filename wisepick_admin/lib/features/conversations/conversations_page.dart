@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import '../../core/api_client.dart';
 import 'conversations_service.dart';
@@ -21,6 +22,24 @@ class _ConversationsPageState extends State<ConversationsPage> {
   Map<String, dynamic>? _selectedConversation;
   List<Map<String, dynamic>>? _messages;
   bool _isLoadingMessages = false;
+  
+  /// 防止并发加载会话列表的锁标志
+  bool _isLoadingConversationsInProgress = false;
+  
+  /// 防止并发加载消息的锁标志
+  bool _isLoadingMessagesInProgress = false;
+  
+  void _log(String message, {bool isError = false}) {
+    final prefix = isError ? '❌ Conversations' : '💬 Conversations';
+    developer.log('$prefix: $message', name: 'ConversationsPage');
+  }
+  
+  // 安全地从 Map 获取字符串值
+  String _safeGetString(Map<String, dynamic>? map, String key, [String defaultValue = '']) {
+    final value = map?[key];
+    if (value == null) return defaultValue;
+    return value.toString();
+  }
 
   @override
   void initState() {
@@ -29,32 +48,62 @@ class _ConversationsPageState extends State<ConversationsPage> {
   }
 
   Future<void> _loadConversations() async {
+    // 防止并发请求
+    if (_isLoadingConversationsInProgress) return;
+    _isLoadingConversationsInProgress = true;
+    
     setState(() {
       _isLoading = true;
       _error = null;
     });
 
     try {
+      _log('Loading conversations (page: $_currentPage)');
       final result = await _service.getConversations(page: _currentPage);
       if (mounted) {
         setState(() {
-          _conversations = result['conversations'];
-          _total = result['total'];
-          _totalPages = result['totalPages'];
+          _conversations = List<Map<String, dynamic>>.from(result['conversations'] ?? []);
+          _total = (result['total'] as num?)?.toInt() ?? 0;
+          // 确保 totalPages 至少为 1，避免显示 "1/0"
+          _totalPages = ((result['totalPages'] as num?)?.toInt() ?? 1).clamp(1, 10000);
           _isLoading = false;
         });
+        _log('Loaded ${_conversations.length} conversations');
       }
-    } catch (e) {
+    } on ApiException catch (e) {
+      _log('Failed to load conversations (API): ${e.message}', isError: true);
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _error = e.toString();
+          _error = e.message;
         });
       }
+    } catch (e) {
+      _log('Failed to load conversations (unexpected): $e', isError: true);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _error = '加载会话失败，请稍后重试';
+        });
+      }
+    } finally {
+      _isLoadingConversationsInProgress = false;
     }
   }
 
   Future<void> _loadMessages(Map<String, dynamic> conversation) async {
+    final conversationId = conversation['id']?.toString();
+    if (conversationId == null || conversationId.isEmpty) {
+      _log('Cannot load messages: missing conversation ID', isError: true);
+      return;
+    }
+    
+    // 防止并发请求，但允许切换到不同会话
+    if (_isLoadingMessagesInProgress && _selectedConversation?['id'] == conversation['id']) {
+      return;
+    }
+    _isLoadingMessagesInProgress = true;
+    
     setState(() {
       _selectedConversation = conversation;
       _isLoadingMessages = true;
@@ -62,31 +111,55 @@ class _ConversationsPageState extends State<ConversationsPage> {
     });
 
     try {
-      final result = await _service.getMessages(conversation['id']);
-      if (mounted) {
+      _log('Loading messages for conversation: $conversationId');
+      final result = await _service.getMessages(conversationId);
+      if (mounted && _selectedConversation?['id'] == conversation['id']) {
+        // 只有当前选中的会话仍是请求的会话时才更新
         setState(() {
           _messages = List<Map<String, dynamic>>.from(result['messages'] ?? []);
           _isLoadingMessages = false;
         });
+        _log('Loaded ${_messages?.length ?? 0} messages');
       }
-    } catch (e) {
-      if (mounted) {
+    } on ApiException catch (e) {
+      _log('Failed to load messages (API): ${e.message}', isError: true);
+      if (mounted && _selectedConversation?['id'] == conversation['id']) {
         setState(() {
           _isLoadingMessages = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('加载消息失败: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('加载消息失败: ${e.message}'), backgroundColor: Colors.red),
         );
       }
+    } catch (e) {
+      _log('Failed to load messages (unexpected): $e', isError: true);
+      if (mounted && _selectedConversation?['id'] == conversation['id']) {
+        setState(() {
+          _isLoadingMessages = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('加载消息失败，请稍后重试'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      _isLoadingMessagesInProgress = false;
     }
   }
 
   Future<void> _deleteConversation(Map<String, dynamic> conversation) async {
+    final conversationId = conversation['id']?.toString();
+    final conversationTitle = _safeGetString(conversation, 'title', '新对话');
+    
+    if (conversationId == null || conversationId.isEmpty) {
+      _log('Cannot delete conversation: missing ID', isError: true);
+      return;
+    }
+    
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('确认删除'),
-        content: Text('确定要删除会话"${conversation['title']}"吗？所有消息也将被删除。'),
+        content: Text('确定要删除会话"$conversationTitle"吗？所有消息也将被删除。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -103,8 +176,9 @@ class _ConversationsPageState extends State<ConversationsPage> {
 
     if (confirmed == true) {
       try {
-        await _service.deleteConversation(conversation['id']);
-        if (_selectedConversation?['id'] == conversation['id']) {
+        _log('Deleting conversation: $conversationId');
+        await _service.deleteConversation(conversationId);
+        if (_selectedConversation?['id']?.toString() == conversationId) {
           setState(() {
             _selectedConversation = null;
             _messages = null;
@@ -116,10 +190,18 @@ class _ConversationsPageState extends State<ConversationsPage> {
             const SnackBar(content: Text('会话已删除'), backgroundColor: Colors.green),
           );
         }
-      } catch (e) {
+      } on ApiException catch (e) {
+        _log('Failed to delete conversation (API): ${e.message}', isError: true);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('删除失败: $e'), backgroundColor: Colors.red),
+            SnackBar(content: Text('删除失败: ${e.message}'), backgroundColor: Colors.red),
+          );
+        }
+      } catch (e) {
+        _log('Failed to delete conversation (unexpected): $e', isError: true);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('删除失败，请稍后重试'), backgroundColor: Colors.red),
           );
         }
       }
@@ -215,6 +297,12 @@ class _ConversationsPageState extends State<ConversationsPage> {
   }
 
   Widget _buildConversationItem(Map<String, dynamic> conv, bool isSelected) {
+    final title = _safeGetString(conv, 'title', '新对话');
+    final userNickname = _safeGetString(conv, 'userNickname', '未知用户');
+    final messageCount = (conv['messageCount'] as num?)?.toInt() ?? 0;
+    final lastMessage = _safeGetString(conv, 'lastMessage');
+    final updatedAt = _safeGetString(conv, 'updatedAt');
+    
     return Material(
       color: isSelected ? const Color(0xFF6366F1).withOpacity(0.08) : Colors.transparent,
       child: InkWell(
@@ -244,7 +332,7 @@ class _ConversationsPageState extends State<ConversationsPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      conv['title'] ?? '新对话',
+                      title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -254,13 +342,13 @@ class _ConversationsPageState extends State<ConversationsPage> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${conv['userNickname']} • ${conv['messageCount']} 条消息',
+                      '$userNickname • $messageCount 条消息',
                       style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                     ),
-                    if (conv['lastMessage'] != null) ...[
+                    if (lastMessage.isNotEmpty) ...[
                       const SizedBox(height: 4),
                       Text(
-                        conv['lastMessage'],
+                        lastMessage,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(fontSize: 12, color: Colors.grey[500]),
@@ -273,7 +361,7 @@ class _ConversationsPageState extends State<ConversationsPage> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    _formatDate(conv['updatedAt']),
+                    _formatDate(updatedAt),
                     style: TextStyle(fontSize: 11, color: Colors.grey[500]),
                   ),
                   const SizedBox(height: 8),
@@ -325,7 +413,7 @@ class _ConversationsPageState extends State<ConversationsPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              _selectedConversation!['title'] ?? '新对话',
+                              _safeGetString(_selectedConversation, 'title', '新对话'),
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -333,7 +421,7 @@ class _ConversationsPageState extends State<ConversationsPage> {
                               ),
                             ),
                             Text(
-                              '${_selectedConversation!['userNickname']} (${_selectedConversation!['userEmail']})',
+                              '${_safeGetString(_selectedConversation, 'userNickname', '未知用户')} (${_safeGetString(_selectedConversation, 'userEmail')})',
                               style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                             ),
                           ],
@@ -378,6 +466,9 @@ class _ConversationsPageState extends State<ConversationsPage> {
   }
 
   Widget _buildMessageBubble(Map<String, dynamic> msg, bool isUser) {
+    final content = _safeGetString(msg, 'content');
+    final createdAt = _safeGetString(msg, 'createdAt');
+    
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
@@ -414,7 +505,7 @@ class _ConversationsPageState extends State<ConversationsPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SelectableText(
-                    msg['content'] ?? '',
+                    content,
                     style: TextStyle(
                       color: isUser ? Colors.white : const Color(0xFF1E293B),
                       height: 1.5,
@@ -422,7 +513,7 @@ class _ConversationsPageState extends State<ConversationsPage> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    _formatTime(msg['createdAt']),
+                    _formatTime(createdAt),
                     style: TextStyle(
                       fontSize: 10,
                       color: isUser ? Colors.white60 : Colors.grey[500],
@@ -546,17 +637,21 @@ class _ConversationsPageState extends State<ConversationsPage> {
     );
   }
 
-  String _formatDate(String? dateStr) {
-    if (dateStr == null) return '-';
-    final date = DateTime.tryParse(dateStr);
-    if (date == null) return dateStr;
+  String _formatDate(String dateStr) {
+    if (dateStr.isEmpty) return '-';
+    final parsed = DateTime.tryParse(dateStr);
+    if (parsed == null) return '-';
+    // 统一转换为本地时间
+    final date = parsed.toLocal();
     return '${date.month}/${date.day}';
   }
 
-  String _formatTime(String? dateStr) {
-    if (dateStr == null) return '';
-    final date = DateTime.tryParse(dateStr);
-    if (date == null) return '';
+  String _formatTime(String dateStr) {
+    if (dateStr.isEmpty) return '';
+    final parsed = DateTime.tryParse(dateStr);
+    if (parsed == null) return '';
+    // 统一转换为本地时间
+    final date = parsed.toLocal();
     return '${date.hour}:${date.minute.toString().padLeft(2, '0')}';
   }
 }

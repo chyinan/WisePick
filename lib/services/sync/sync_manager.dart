@@ -1,19 +1,28 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-
 import '../../features/auth/token_manager.dart';
 import '../../features/auth/auth_providers.dart';
 import '../../features/cart/cart_service.dart';
+import '../../core/storage/hive_config.dart';
 import '../../features/chat/conversation_repository.dart';
 import '../../features/chat/conversation_model.dart';
 import '../../features/chat/chat_message.dart';
 import '../../features/products/product_model.dart';
+import '../../core/resilience/resilience.dart';
+import '../../core/logging/app_logger.dart';
 import 'cart_sync_client.dart';
 import 'conversation_sync_client.dart';
 import 'offline_sync_queue.dart';
 import 'conflict_resolver.dart';
+
+/// Sentinel to distinguish "parameter not passed" from "explicitly set to null"
+/// in [SyncState.copyWith] for nullable [String?] fields.
+class _Undefined {
+  const _Undefined();
+}
+
+const _undefined = _Undefined();
 
 /// 同步状态
 enum SyncStatus {
@@ -34,6 +43,8 @@ class SyncState {
   final DateTime? lastConversationSync;
   final int pendingCartChanges;
   final int pendingConversationChanges;
+  final int cartRetryCount;
+  final int conversationRetryCount;
 
   const SyncState({
     this.cartStatus = SyncStatus.idle,
@@ -44,27 +55,43 @@ class SyncState {
     this.lastConversationSync,
     this.pendingCartChanges = 0,
     this.pendingConversationChanges = 0,
+    this.cartRetryCount = 0,
+    this.conversationRetryCount = 0,
   });
 
+  /// Creates a copy with specified fields updated.
+  ///
+  /// For nullable [String?] fields ([cartError], [conversationError]):
+  /// - **Omit** the parameter to preserve the existing value.
+  /// - Pass **`null`** explicitly to clear the value.
+  /// - Pass a **new string** to replace the value.
   SyncState copyWith({
     SyncStatus? cartStatus,
     SyncStatus? conversationStatus,
-    String? cartError,
-    String? conversationError,
+    Object? cartError = _undefined,
+    Object? conversationError = _undefined,
     DateTime? lastCartSync,
     DateTime? lastConversationSync,
     int? pendingCartChanges,
     int? pendingConversationChanges,
+    int? cartRetryCount,
+    int? conversationRetryCount,
   }) {
     return SyncState(
       cartStatus: cartStatus ?? this.cartStatus,
       conversationStatus: conversationStatus ?? this.conversationStatus,
-      cartError: cartError,
-      conversationError: conversationError,
+      cartError: cartError is _Undefined ? this.cartError : cartError as String?,
+      conversationError: conversationError is _Undefined
+          ? this.conversationError
+          : conversationError as String?,
       lastCartSync: lastCartSync ?? this.lastCartSync,
       lastConversationSync: lastConversationSync ?? this.lastConversationSync,
       pendingCartChanges: pendingCartChanges ?? this.pendingCartChanges,
-      pendingConversationChanges: pendingConversationChanges ?? this.pendingConversationChanges,
+      pendingConversationChanges:
+          pendingConversationChanges ?? this.pendingConversationChanges,
+      cartRetryCount: cartRetryCount ?? this.cartRetryCount,
+      conversationRetryCount:
+          conversationRetryCount ?? this.conversationRetryCount,
     );
   }
 
@@ -98,20 +125,69 @@ final offlineSyncQueueProvider = Provider<OfflineSyncQueue>((ref) {
   return queue;
 });
 
+/// 同步操作锁 - 防止并发同步
+class _SyncLock {
+  bool _cartLock = false;
+  bool _conversationLock = false;
+
+  bool tryAcquireCart() {
+    if (_cartLock) return false;
+    _cartLock = true;
+    return true;
+  }
+
+  void releaseCart() => _cartLock = false;
+
+  bool tryAcquireConversation() {
+    if (_conversationLock) return false;
+    _conversationLock = true;
+    return true;
+  }
+
+  void releaseConversation() => _conversationLock = false;
+}
+
 /// 同步状态管理器
+///
+/// 增强版特性：
+/// - 使用 [NetworkErrorDetector] 进行网络错误分类
+/// - 幂等性控制（通过操作 ID 去重）
+/// - 自动重试带指数退避
+/// - 详细日志记录
+/// - 并发控制（防止重复同步）
 class SyncManager extends StateNotifier<SyncState> {
   final CartSyncClient _cartSyncClient;
   final ConversationSyncClient _conversationSyncClient;
   final TokenManager _tokenManager;
   final OfflineSyncQueue _offlineQueue;
   final Ref _ref;
+  final ModuleLogger _logger = AppLogger.instance.module('SyncManager');
+  final _SyncLock _syncLock = _SyncLock();
+
+  /// 重试执行器
+  late final RetryExecutor _retryExecutor;
 
   /// 防抖计时器
   Timer? _cartDebounceTimer;
   Timer? _conversationDebounceTimer;
 
+  /// 重试计时器
+  Timer? _cartRetryTimer;
+  Timer? _conversationRetryTimer;
+
   /// 防抖延迟时间
   static const Duration _debounceDuration = Duration(seconds: 2);
+
+  /// 重试配置
+  static const int _maxAutoRetries = 3;
+  static const Duration _initialRetryDelay = Duration(seconds: 5);
+  static const Duration _maxRetryDelay = Duration(minutes: 2);
+
+  /// 已处理的操作 ID（用于幂等性检查）
+  final Set<String> _processedOperationIds = {};
+
+  /// 是否已被销毁（防止 Timer 在 dispose 后触发）
+  bool _disposed = false;
 
   SyncManager({
     required CartSyncClient cartSyncClient,
@@ -125,25 +201,55 @@ class SyncManager extends StateNotifier<SyncState> {
         _offlineQueue = offlineQueue,
         _ref = ref,
         super(const SyncState()) {
+    // 初始化重试执行器
+    _retryExecutor = RetryExecutor(
+      config: const RetryConfig(
+        maxAttempts: _maxAutoRetries,
+        initialDelay: _initialRetryDelay,
+        maxDelay: _maxRetryDelay,
+      ),
+    );
+
     // 设置网络恢复回调
     _offlineQueue.onNetworkRestored = _onNetworkRestored;
-    // 初始化时更新待同步变更数量
+
+    // Await queue initialization before reading counts to avoid
+    // silently reporting 0 pending changes during the init window.
+    _initPendingCounts();
+
+    _logger.info('SyncManager initialized');
+  }
+
+  /// Ensure the offline queue is initialized before reading pending counts.
+  Future<void> _initPendingCounts() async {
+    try {
+      await _offlineQueue.init();
+    } catch (e) {
+      _logger.warning('OfflineSyncQueue init failed: $e');
+    }
     _updatePendingChangesCount();
   }
 
   /// 网络恢复时自动同步
   void _onNetworkRestored() {
+    _logger.info('Network restored, checking pending changes');
     if (isLoggedIn && _offlineQueue.hasPendingChanges) {
+      _logger.info('Has pending changes, triggering sync');
       syncAll();
     }
   }
 
   /// 更新待同步变更数量
   void _updatePendingChangesCount() {
+    final cartCount = _offlineQueue.pendingCartChangesCount;
+    final convCount = _offlineQueue.pendingConversationChangesCount;
+
     state = state.copyWith(
-      pendingCartChanges: _offlineQueue.pendingCartChangesCount,
-      pendingConversationChanges: _offlineQueue.pendingConversationChangesCount,
+      pendingCartChanges: cartCount,
+      pendingConversationChanges: convCount,
     );
+
+    _logger.debug('Pending changes: cart=$cartCount, conversations=$convCount');
   }
 
   /// 是否已登录
@@ -151,25 +257,44 @@ class SyncManager extends StateNotifier<SyncState> {
 
   /// 同步所有数据
   Future<void> syncAll() async {
-    if (!isLoggedIn) return;
+    if (!isLoggedIn) {
+      _logger.warning('Sync skipped: not logged in');
+      return;
+    }
+
+    _logger.info('Starting full sync');
 
     // 在同步前检查并刷新 token
-    await _ensureValidToken();
+    final tokenValid = await _ensureValidToken();
+    if (!tokenValid) {
+      _logger.warning('Sync skipped: token refresh failed');
+      return;
+    }
 
     await Future.wait([
       syncCart(),
       syncConversations(),
     ]);
+
+    _logger.info('Full sync completed');
   }
 
   /// 确保 token 有效，如果过期则刷新
   Future<bool> _ensureValidToken() async {
     if (_tokenManager.isAccessTokenExpired) {
+      _logger.debug('Access token expired, attempting refresh');
       try {
         final authService = _ref.read(authServiceProvider);
         final result = await authService.refreshToken();
-        return result.success;
+        if (result.success) {
+          _logger.debug('Token refresh successful');
+          return true;
+        } else {
+          _logger.warning('Token refresh failed: ${result.message}');
+          return false;
+        }
       } catch (e) {
+        _logger.error('Token refresh error', error: e);
         return false;
       }
     }
@@ -180,10 +305,25 @@ class SyncManager extends StateNotifier<SyncState> {
   Future<void> syncCart() async {
     if (!isLoggedIn) return;
 
+    // 尝试获取锁
+    if (!_syncLock.tryAcquireCart()) {
+      _logger.warning('Cart sync already in progress, skipping');
+      return;
+    }
+
+    try {
+      await _doSyncCart();
+    } finally {
+      _syncLock.releaseCart();
+    }
+  }
+
+  /// 执行购物车同步
+  Future<void> _doSyncCart() async {
     // 检查网络连接
     final hasNetwork = await _offlineQueue.hasNetwork;
     if (!hasNetwork) {
-      // 离线状态，更新 UI 显示
+      _logger.info('Cart sync skipped: offline');
       state = state.copyWith(
         cartStatus: SyncStatus.offline,
         cartError: '无网络连接，变更已保存到本地队列',
@@ -192,7 +332,12 @@ class SyncManager extends StateNotifier<SyncState> {
       return;
     }
 
-    state = state.copyWith(cartStatus: SyncStatus.syncing, cartError: null);
+    state = state.copyWith(
+      cartStatus: SyncStatus.syncing,
+      cartError: null,
+    );
+
+    _logger.info('Starting cart sync');
 
     try {
       // 获取本地购物车数据
@@ -210,48 +355,101 @@ class SyncManager extends StateNotifier<SyncState> {
         changes.add(CartItemChange.fromLocalItem(offlineChange));
       }
 
-      // 执行同步
-      final result = await _cartSyncClient.sync(changes: changes);
+      _logger.debug('Cart sync: ${changes.length} items to sync');
 
-      if (result.success) {
+      // 使用重试执行器
+      final retryResult = await _retryExecutor.execute(
+        () async {
+          final result = await _cartSyncClient.sync(changes: changes);
+          if (!result.success) {
+            throw Exception(result.message ?? '同步失败');
+          }
+          return result;
+        },
+        operationName: 'cart_sync',
+        retryIf: (e) => NetworkErrorDetector.isRetryable(e),
+      );
+
+      if (retryResult.isSuccess && retryResult.value != null) {
         // 清空离线队列
         await _offlineQueue.clearCartChanges();
-        
+
         // 应用服务器返回的变更到本地
-        await _applyCartSyncResult(result);
+        await _applyCartSyncResult(retryResult.value!);
 
         state = state.copyWith(
           cartStatus: SyncStatus.success,
+          cartError: null, // explicitly clear on success
           lastCartSync: DateTime.now(),
           pendingCartChanges: 0,
+          cartRetryCount: 0,
         );
+
+        _logger.info('Cart sync successful');
       } else {
-        state = state.copyWith(
-          cartStatus: SyncStatus.error,
-          cartError: result.message ?? '同步失败',
-        );
+        final errorMsg = retryResult.error?.toString() ?? '同步失败';
+        _handleCartSyncFailure(errorMsg, retryResult.error);
       }
-    } catch (e) {
-      // 网络错误时保存到离线队列
-      if (e.toString().contains('SocketException') || 
-          e.toString().contains('network') ||
-          e.toString().contains('connection')) {
-        state = state.copyWith(
-          cartStatus: SyncStatus.offline,
-          cartError: '网络错误，变更已保存',
-        );
-      } else {
-        state = state.copyWith(
-          cartStatus: SyncStatus.error,
-          cartError: e.toString(),
-        );
-      }
+    } catch (e, stackTrace) {
+      _logger.error('Cart sync error', error: e, stackTrace: stackTrace);
+      _handleCartSyncFailure(e.toString(), e);
     }
   }
 
+  /// 处理购物车同步失败
+  void _handleCartSyncFailure(String errorMsg, Object? error) {
+    final analysis = error != null
+        ? NetworkErrorDetector.analyze(error)
+        : NetworkErrorAnalysis(
+            type: NetworkErrorType.unknown,
+            message: errorMsg,
+            isRetryable: false,
+            suggestedRetryDelay: Duration.zero,
+            userFriendlyMessage: errorMsg,
+          );
+
+    if (analysis.type == NetworkErrorType.noConnection) {
+      state = state.copyWith(
+        cartStatus: SyncStatus.offline,
+        cartError: analysis.userFriendlyMessage,
+      );
+    } else {
+      state = state.copyWith(
+        cartStatus: SyncStatus.error,
+        cartError: analysis.userFriendlyMessage,
+        cartRetryCount: state.cartRetryCount + 1,
+      );
+
+      // 如果可重试且未超过最大重试次数，安排自动重试
+      if (analysis.isRetryable && state.cartRetryCount < _maxAutoRetries) {
+        _scheduleCartRetry(analysis.suggestedRetryDelay);
+      }
+    }
+
+    _logger.warning(
+      'Cart sync failed: ${analysis.userFriendlyMessage} '
+      '(type: ${analysis.type}, retryable: ${analysis.isRetryable})',
+    );
+  }
+
+  /// 安排购物车重试
+  void _scheduleCartRetry(Duration delay) {
+    _cartRetryTimer?.cancel();
+    _cartRetryTimer = Timer(delay, () {
+      if (_disposed) return; // 防止 dispose 后触发
+      _logger.info('Auto-retrying cart sync');
+      syncCart();
+    });
+  }
+
   /// 应用购物车同步结果到本地（带冲突解决）
+  ///
+  /// Uses incremental put/delete instead of clear-then-rewrite to avoid a
+  /// data-loss window if the process is interrupted mid-operation.
   Future<void> _applyCartSyncResult(CartSyncResponse result) async {
-    final box = await Hive.openBox(CartService.boxName);
+    // Use HiveConfig.getBox for safe open-if-needed semantics, consistent
+    // with the rest of the codebase.
+    final box = await HiveConfig.getBox(CartService.boxName);
     final cartService = CartService();
 
     // 获取本地所有项目
@@ -270,24 +468,34 @@ class SyncManager extends StateNotifier<SyncState> {
       defaultStrategy: ConflictResolutionStrategy.merge,
     );
 
-    // 清空现有数据
-    await box.clear();
-
-    // 删除已在服务器上删除的项目（不重新添加）
+    // Build the desired final set of IDs
     final deletedIds = Set<String>.from(result.deletedIds);
+    final desiredIds = <String>{};
 
-    // 应用解决后的项目
+    // Upsert resolved items (incremental — no clear())
     for (final item in resolutionResult.resolvedItems) {
       final productId = item['id'] as String?;
       if (productId == null) continue;
       if (deletedIds.contains(productId)) continue;
 
+      desiredIds.add(productId);
       await box.put(productId, item);
     }
 
-    // 记录冲突解决统计（静默处理）
+    // Remove items that should no longer exist locally.
+    // Use .map(toString) instead of .cast<String>() to avoid a runtime
+    // CastError if Hive contains a non-String key (e.g. corrupted data).
+    final existingKeys = box.keys.map((k) => k.toString()).toSet();
+    final toRemove = existingKeys.difference(desiredIds);
+    for (final key in toRemove) {
+      await box.delete(key);
+    }
+
+    // 记录冲突解决统计
     if (resolutionResult.autoResolvedCount > 0) {
-      // 冲突已自动解决
+      _logger.debug(
+        'Cart conflicts resolved: ${resolutionResult.autoResolvedCount} auto-resolved',
+      );
     }
   }
 
@@ -320,10 +528,25 @@ class SyncManager extends StateNotifier<SyncState> {
   Future<void> syncConversations() async {
     if (!isLoggedIn) return;
 
+    // 尝试获取锁
+    if (!_syncLock.tryAcquireConversation()) {
+      _logger.warning('Conversation sync already in progress, skipping');
+      return;
+    }
+
+    try {
+      await _doSyncConversations();
+    } finally {
+      _syncLock.releaseConversation();
+    }
+  }
+
+  /// 执行会话同步
+  Future<void> _doSyncConversations() async {
     // 检查网络连接
     final hasNetwork = await _offlineQueue.hasNetwork;
     if (!hasNetwork) {
-      // 离线状态，更新 UI 显示
+      _logger.info('Conversation sync skipped: offline');
       state = state.copyWith(
         conversationStatus: SyncStatus.offline,
         conversationError: '无网络连接，变更已保存到本地队列',
@@ -336,6 +559,8 @@ class SyncManager extends StateNotifier<SyncState> {
       conversationStatus: SyncStatus.syncing,
       conversationError: null,
     );
+
+    _logger.info('Starting conversation sync');
 
     try {
       // 获取本地会话数据
@@ -360,51 +585,103 @@ class SyncManager extends StateNotifier<SyncState> {
         }
       }
 
-      // 执行同步
-      final result = await _conversationSyncClient.sync(
-        conversationChanges: convChanges,
-        messageChanges: msgChanges,
+      _logger.debug(
+        'Conversation sync: ${convChanges.length} conversations, ${msgChanges.length} messages',
       );
 
-      if (result.success) {
+      // 使用重试执行器
+      final retryResult = await _retryExecutor.execute(
+        () async {
+          final result = await _conversationSyncClient.sync(
+            conversationChanges: convChanges,
+            messageChanges: msgChanges,
+          );
+          if (!result.success) {
+            throw Exception(result.message ?? '同步失败');
+          }
+          return result;
+        },
+        operationName: 'conversation_sync',
+        retryIf: (e) => NetworkErrorDetector.isRetryable(e),
+      );
+
+      if (retryResult.isSuccess && retryResult.value != null) {
         // 清空离线队列
         await _offlineQueue.clearConversationChanges();
         await _offlineQueue.clearMessageChanges();
 
         // 应用服务器返回的变更到本地
-        await _applyConversationSyncResult(result);
+        await _applyConversationSyncResult(retryResult.value!);
 
         state = state.copyWith(
           conversationStatus: SyncStatus.success,
+          conversationError: null, // explicitly clear on success
           lastConversationSync: DateTime.now(),
           pendingConversationChanges: 0,
+          conversationRetryCount: 0,
         );
+
+        _logger.info('Conversation sync successful');
       } else {
-        state = state.copyWith(
-          conversationStatus: SyncStatus.error,
-          conversationError: result.message ?? '同步失败',
-        );
+        final errorMsg = retryResult.error?.toString() ?? '同步失败';
+        _handleConversationSyncFailure(errorMsg, retryResult.error);
       }
-    } catch (e) {
-      // 网络错误时保存到离线队列
-      if (e.toString().contains('SocketException') || 
-          e.toString().contains('network') ||
-          e.toString().contains('connection')) {
-        state = state.copyWith(
-          conversationStatus: SyncStatus.offline,
-          conversationError: '网络错误，变更已保存',
-        );
-      } else {
-        state = state.copyWith(
-          conversationStatus: SyncStatus.error,
-          conversationError: e.toString(),
-        );
-      }
+    } catch (e, stackTrace) {
+      _logger.error('Conversation sync error', error: e, stackTrace: stackTrace);
+      _handleConversationSyncFailure(e.toString(), e);
     }
   }
 
+  /// 处理会话同步失败
+  void _handleConversationSyncFailure(String errorMsg, Object? error) {
+    final analysis = error != null
+        ? NetworkErrorDetector.analyze(error)
+        : NetworkErrorAnalysis(
+            type: NetworkErrorType.unknown,
+            message: errorMsg,
+            isRetryable: false,
+            suggestedRetryDelay: Duration.zero,
+            userFriendlyMessage: errorMsg,
+          );
+
+    if (analysis.type == NetworkErrorType.noConnection) {
+      state = state.copyWith(
+        conversationStatus: SyncStatus.offline,
+        conversationError: analysis.userFriendlyMessage,
+      );
+    } else {
+      state = state.copyWith(
+        conversationStatus: SyncStatus.error,
+        conversationError: analysis.userFriendlyMessage,
+        conversationRetryCount: state.conversationRetryCount + 1,
+      );
+
+      // 如果可重试且未超过最大重试次数，安排自动重试
+      if (analysis.isRetryable &&
+          state.conversationRetryCount < _maxAutoRetries) {
+        _scheduleConversationRetry(analysis.suggestedRetryDelay);
+      }
+    }
+
+    _logger.warning(
+      'Conversation sync failed: ${analysis.userFriendlyMessage} '
+      '(type: ${analysis.type}, retryable: ${analysis.isRetryable})',
+    );
+  }
+
+  /// 安排会话重试
+  void _scheduleConversationRetry(Duration delay) {
+    _conversationRetryTimer?.cancel();
+    _conversationRetryTimer = Timer(delay, () {
+      if (_disposed) return; // 防止 dispose 后触发
+      _logger.info('Auto-retrying conversation sync');
+      syncConversations();
+    });
+  }
+
   /// 将本地消息转换为变更对象
-  MessageChange _convertMessageToChange(String conversationId, ChatMessage msg) {
+  MessageChange _convertMessageToChange(
+      String conversationId, ChatMessage msg) {
     List<Map<String, dynamic>>? products;
     if (msg.products != null) {
       products = msg.products!.map((p) => p.toMap()).toList();
@@ -427,12 +704,14 @@ class SyncManager extends StateNotifier<SyncState> {
   }
 
   /// 应用会话同步结果到本地
-  Future<void> _applyConversationSyncResult(ConversationSyncResponse result) async {
+  Future<void> _applyConversationSyncResult(
+      ConversationSyncResponse result) async {
     final convRepo = ConversationRepository();
 
     // 删除已在服务器上删除的会话
     for (final deletedId in result.deletedConversationIds) {
       await convRepo.deleteConversation(deletedId);
+      _logger.debug('Deleted conversation: $deletedId');
     }
 
     // 按会话分组消息
@@ -461,8 +740,9 @@ class SyncManager extends StateNotifier<SyncState> {
         id: convId,
         title: convData['title'] as String? ?? '新对话',
         messages: mergedMessages,
-        timestamp: DateTime.tryParse(convData['updated_at'] as String? ?? '') ??
-            DateTime.now(),
+        timestamp:
+            DateTime.tryParse(convData['updated_at'] as String? ?? '') ??
+                DateTime.now(),
       );
 
       await convRepo.saveConversation(conv);
@@ -530,57 +810,146 @@ class SyncManager extends StateNotifier<SyncState> {
       aiParsedRaw: serverMsg['ai_parsed_raw'] as String?,
       failed: serverMsg['failed'] as bool? ?? false,
       retryForText: serverMsg['retry_for_text'] as String?,
-      timestamp: DateTime.tryParse(serverMsg['created_at'] as String? ?? '') ??
-          DateTime.now(),
+      timestamp:
+          DateTime.tryParse(serverMsg['created_at'] as String? ?? '') ??
+              DateTime.now(),
     );
   }
 
-  /// 添加购物车项变更（用于增量同步）
-  Future<void> addCartChange(Map<String, dynamic> item, {bool isDeleted = false}) async {
+  /// Monotonic counter to guarantee a unique payload ID even within the
+  /// same millisecond (e.g. batch deletes in a tight loop).
+  int _operationCounter = 0;
+
+  /// Generate a **unique** operation ID for the sync payload sent to the
+  /// server. This ID is embedded in the change map and used for server-side
+  /// idempotency tracking.
+  String _generateOperationId(String resourceType, String resourceId) {
+    final timestamp = DateTime.now().microsecondsSinceEpoch;
+    return '${resourceType}_${resourceId}_${timestamp}_${_operationCounter++}';
+  }
+
+  /// Generate a **deterministic, time-windowed** key used for client-side
+  /// dedup. Two calls for the same resource within the same second produce
+  /// the same key, preventing rapid-fire duplicate queuing.
+  ///
+  /// NOTE: The dedup set is in-memory only. After an app restart, duplicate
+  /// submissions are possible; the server must enforce final idempotency.
+  String _generateDedupKey(String resourceType, String resourceId) {
+    final secondTimestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    return '${resourceType}_${resourceId}_$secondTimestamp';
+  }
+
+  /// 检查操作是否已处理（client-side dedup — in-memory, 1-second window）
+  bool _isOperationProcessed(String dedupKey) {
+    return _processedOperationIds.contains(dedupKey);
+  }
+
+  /// 标记操作已处理（存储 dedup key，非 operation ID）
+  void _markOperationProcessed(String dedupKey) {
+    _processedOperationIds.add(dedupKey);
+    // 清理旧的 dedup key（保留最近 1000 个）
+    if (_processedOperationIds.length > 1000) {
+      // 必须先转为 List，因为 take() 返回惰性 Iterable，
+      // 直接 removeAll 会在迭代过程中修改 Set 导致问题
+      final toRemove = _processedOperationIds
+          .take(_processedOperationIds.length - 1000)
+          .toList();
+      _processedOperationIds.removeAll(toRemove);
+    }
+  }
+
+  /// 添加购物车项变更（用于增量同步）- 带幂等性控制
+  Future<void> addCartChange(Map<String, dynamic> item,
+      {bool isDeleted = false}) async {
     if (!isLoggedIn) return;
 
+    final productId = item['id'] as String? ?? 'unknown';
+    final dedupKey = _generateDedupKey('cart', productId);
+
+    // 幂等性检查 — 同一秒内对同一商品的重复调用会被跳过
+    if (_isOperationProcessed(dedupKey)) {
+      _logger.debug('Cart change deduplicated: $dedupKey');
+      return;
+    }
+
+    final operationId = _generateOperationId('cart', productId);
     final change = Map<String, dynamic>.from(item);
     change['is_deleted'] = isDeleted;
+    change['operation_id'] = operationId;
 
     // 同时保存到内存和离线队列
     await _cartSyncClient.addPendingChange(change);
     await _offlineQueue.addCartChange(change);
+
+    _markOperationProcessed(dedupKey);
     _updatePendingChangesCount();
+
+    _logger.debug('Cart change queued: $operationId (deleted: $isDeleted)');
   }
 
-  /// 添加会话变更（用于增量同步）
-  Future<void> addConversationChange(ConversationModel conv, {bool isDeleted = false}) async {
+  /// 添加会话变更（用于增量同步）- 带幂等性控制
+  Future<void> addConversationChange(ConversationModel conv,
+      {bool isDeleted = false}) async {
     if (!isLoggedIn) return;
 
+    final dedupKey = _generateDedupKey('conversation', conv.id);
+
+    // 幂等性检查 — 同一秒内对同一会话的重复调用会被跳过
+    if (_isOperationProcessed(dedupKey)) {
+      _logger.debug('Conversation change deduplicated: $dedupKey');
+      return;
+    }
+
+    final operationId = _generateOperationId('conversation', conv.id);
     final change = {
       'client_id': conv.id,
       'title': conv.title,
       'is_deleted': isDeleted,
       'created_at': conv.timestamp.toIso8601String(),
       'updated_at': DateTime.now().toIso8601String(),
+      'operation_id': operationId,
     };
 
     await _conversationSyncClient.addPendingConversationChange(change);
     await _offlineQueue.addConversationChange(change);
+
+    _markOperationProcessed(dedupKey);
     _updatePendingChangesCount();
+
+    _logger.debug('Conversation change queued: $operationId');
   }
 
-  /// 添加消息变更（用于增量同步）
+  /// 添加消息变更（用于增量同步）- 带幂等性控制
   Future<void> addMessageChange(String conversationId, ChatMessage msg) async {
     if (!isLoggedIn) return;
 
+    final dedupKey = _generateDedupKey('message', msg.id);
+
+    // 幂等性检查 — 同一秒内对同一消息的重复调用会被跳过
+    if (_isOperationProcessed(dedupKey)) {
+      _logger.debug('Message change deduplicated: $dedupKey');
+      return;
+    }
+
+    final operationId = _generateOperationId('message', msg.id);
     final change = _convertMessageToChange(conversationId, msg);
     final changeJson = change.toJson();
-    
+    changeJson['operation_id'] = operationId;
+
     await _conversationSyncClient.addPendingMessageChange(changeJson);
     await _offlineQueue.addMessageChange(changeJson);
+
+    _markOperationProcessed(dedupKey);
     _updatePendingChangesCount();
+
+    _logger.debug('Message change queued: $operationId');
   }
 
   /// 触发延迟同步购物车（防抖）
   void scheduleSyncCart() {
     _cartDebounceTimer?.cancel();
     _cartDebounceTimer = Timer(_debounceDuration, () async {
+      if (_disposed) return; // 防止 dispose 后触发
       await syncCart();
     });
   }
@@ -589,21 +958,46 @@ class SyncManager extends StateNotifier<SyncState> {
   void scheduleSyncConversations() {
     _conversationDebounceTimer?.cancel();
     _conversationDebounceTimer = Timer(_debounceDuration, () async {
+      if (_disposed) return; // 防止 dispose 后触发
       await syncConversations();
     });
+  }
+
+  /// 获取状态摘要（用于调试）
+  Map<String, dynamic> getStatusSummary() {
+    return {
+      'isLoggedIn': isLoggedIn,
+      'cartStatus': state.cartStatus.name,
+      'conversationStatus': state.conversationStatus.name,
+      'pendingCartChanges': state.pendingCartChanges,
+      'pendingConversationChanges': state.pendingConversationChanges,
+      'cartRetryCount': state.cartRetryCount,
+      'conversationRetryCount': state.conversationRetryCount,
+      'lastCartSync': state.lastCartSync?.toIso8601String(),
+      'lastConversationSync': state.lastConversationSync?.toIso8601String(),
+    };
   }
 
   /// 清理资源
   @override
   void dispose() {
+    _disposed = true;
     _cartDebounceTimer?.cancel();
     _conversationDebounceTimer?.cancel();
+    _cartRetryTimer?.cancel();
+    _conversationRetryTimer?.cancel();
+    _cartDebounceTimer = null;
+    _conversationDebounceTimer = null;
+    _cartRetryTimer = null;
+    _conversationRetryTimer = null;
+    _logger.info('SyncManager disposed');
     super.dispose();
   }
 }
 
 /// 同步管理器 Provider
-final syncManagerProvider = StateNotifierProvider<SyncManager, SyncState>((ref) {
+final syncManagerProvider =
+    StateNotifierProvider<SyncManager, SyncState>((ref) {
   final cartSyncClient = ref.watch(cartSyncClientProvider);
   final conversationSyncClient = ref.watch(conversationSyncClientProvider);
   final offlineQueue = ref.watch(offlineSyncQueueProvider);

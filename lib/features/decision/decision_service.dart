@@ -1,5 +1,7 @@
+import 'dart:developer' as dev;
 import 'dart:math';
 import 'decision_models.dart';
+import '../products/search_service.dart';
 
 /// 购物决策服务
 /// 
@@ -89,7 +91,6 @@ class DecisionService {
 
   /// 生成商品对比数据
   Future<ProductComparison> compareProducts(List<Map<String, dynamic>> products) async {
-    await Future.delayed(const Duration(milliseconds: 300));
 
     final comparisonProducts = products.map((p) {
       double rating = (p['rating'] as num?)?.toDouble() ?? 0;
@@ -147,41 +148,63 @@ class DecisionService {
     );
   }
 
-  /// 获取替代商品推荐 (Mock数据)
+  /// 获取替代商品推荐
+  /// 通过搜索服务查找同品类商品，排除当前商品后返回推荐
   Future<List<AlternativeProduct>> getAlternatives({
     required String productId,
     required String category,
     required double priceRange,
     int limit = 3,
   }) async {
-    await Future.delayed(const Duration(milliseconds: 500));
+    try {
+      final searchService = SearchService();
+      final results = await searchService.search(
+        category,
+        pageSize: limit + 5, // 多搜几个以便排除自身
+      );
 
-    final random = Random(productId.hashCode);
-    final alternatives = <AlternativeProduct>[];
+      final alternatives = <AlternativeProduct>[];
+      for (final product in results) {
+        if (product.id == productId) continue;
+        if (alternatives.length >= limit) break;
 
-    final platforms = ['淘宝', '京东', '拼多多'];
-    final reasons = [
-      '同价位中评分更高',
-      '销量更高，用户口碑好',
-      '价格更低，性价比更优',
-      '同品牌其他型号',
-      '热销爆款，好评如潮',
-    ];
+        // 计算相似度（基于价格接近程度）
+        double similarityScore = 0.8;
+        if (priceRange > 0) {
+          final priceDiff = (product.price - priceRange).abs() / priceRange;
+          similarityScore = max(0.5, 1.0 - priceDiff);
+        }
 
-    for (int i = 0; i < limit; i++) {
-      alternatives.add(AlternativeProduct(
-        id: 'alt_${productId}_$i',
-        title: '替代商品 ${i + 1} - $category',
-        platform: platforms[random.nextInt(platforms.length)],
-        price: priceRange * (0.8 + random.nextDouble() * 0.4),
-        rating: 0.85 + random.nextDouble() * 0.15,
-        sales: random.nextInt(10000) + 1000,
-        similarityScore: 0.7 + random.nextDouble() * 0.25,
-        recommendReason: reasons[random.nextInt(reasons.length)],
-      ));
+        // 生成推荐理由
+        String reason;
+        if (product.price < priceRange * 0.9) {
+          reason = '价格更低，性价比更优';
+        } else if (product.sales > 5000) {
+          reason = '销量更高，用户口碑好';
+        } else if (product.rating > 0.9) {
+          reason = '同价位中评分更高';
+        } else {
+          reason = '热销爆款，值得关注';
+        }
+
+        alternatives.add(AlternativeProduct(
+          id: product.id,
+          title: product.title,
+          imageUrl: product.imageUrl,
+          platform: product.platform,
+          price: product.finalPrice > 0 ? product.finalPrice : product.price,
+          rating: product.rating,
+          sales: product.sales,
+          similarityScore: similarityScore,
+          recommendReason: reason,
+        ));
+      }
+
+      return alternatives;
+    } catch (e) {
+      dev.log('Error fetching alternatives: $e', name: 'DecisionService');
+      return [];
     }
-
-    return alternatives;
   }
 
   // ========== 私有方法 ==========

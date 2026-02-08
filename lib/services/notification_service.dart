@@ -102,12 +102,21 @@ class NotificationService {
       linux: linuxDetails,
     );
 
-    await _plugin.show(
-      _notificationId++,
-      '降价提醒',
-      body,
-      notificationDetails,
-    );
+    try {
+      // 防止 ID 溢出（虽然实际中几乎不可能达到）
+      if (_notificationId > 2147483647) {
+        _notificationId = 0;
+      }
+      await _plugin.show(
+        _notificationId++,
+        '降价提醒',
+        body,
+        notificationDetails,
+      );
+    } catch (e, st) {
+      // 通知发送失败不应影响主流程，仅记录日志
+      log('发送本地通知失败: $e', stackTrace: st);
+    }
   }
 }
 

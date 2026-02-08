@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer' as dev;
 
 class PddProduct {
   final String goodsSign;
@@ -33,7 +34,9 @@ class PddProduct {
           final dec = jsonDecode(v);
           if (dec is List) return dec.map((e) => (e as num).toInt()).toList();
         }
-      } catch (_) {}
+      } catch (e, st) {
+        dev.log('Error parsing PDD goods_gallery_urls: $e', name: 'PddProductModel', error: e, stackTrace: st);
+      }
       return <int>[];
     }
 

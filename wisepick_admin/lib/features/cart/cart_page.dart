@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import '../../core/api_client.dart';
 import 'cart_service.dart';
@@ -20,6 +21,28 @@ class _CartPageState extends State<CartPage> {
   bool _isLoading = true;
   String? _error;
   String? _selectedPlatform;
+  
+  /// 防止并发加载的锁标志
+  bool _isLoadingInProgress = false;
+  
+  void _log(String message, {bool isError = false}) {
+    final prefix = isError ? '❌ Cart' : '🛒 Cart';
+    developer.log('$prefix: $message', name: 'CartPage');
+  }
+  
+  // 安全地从 Map 获取值
+  T _safeGet<T>(Map<String, dynamic>? map, String key, T defaultValue) {
+    if (map == null) return defaultValue;
+    final value = map[key];
+    if (value is T) return value;
+    return defaultValue;
+  }
+
+  String _safeGetString(Map<String, dynamic>? map, String key, [String defaultValue = '']) {
+    final value = map?[key];
+    if (value == null) return defaultValue;
+    return value.toString();
+  }
 
   @override
   void initState() {
@@ -28,46 +51,75 @@ class _CartPageState extends State<CartPage> {
   }
 
   Future<void> _loadData() async {
+    // 防止并发请求
+    if (_isLoadingInProgress) return;
+    _isLoadingInProgress = true;
+    
     setState(() {
       _isLoading = true;
       _error = null;
     });
 
     try {
+      _log('Loading cart data (page: $_currentPage, platform: $_selectedPlatform)');
       final results = await Future.wait([
         _service.getCartItems(
           page: _currentPage,
           platform: _selectedPlatform,
         ),
-        _service.getCartStats(),
+        _service.getCartStats().catchError((e) {
+          _log('Failed to load cart stats: $e', isError: true);
+          return <String, dynamic>{};
+        }),
       ]);
 
       if (mounted) {
+        final itemsResult = results[0];
         setState(() {
-          final itemsResult = results[0];
-          _items = itemsResult['items'];
-          _total = itemsResult['total'];
-          _totalPages = itemsResult['totalPages'];
-          _stats = results[1];
+          _items = List<Map<String, dynamic>>.from(itemsResult['items'] ?? []);
+          _total = (itemsResult['total'] as num?)?.toInt() ?? 0;
+          // 确保 totalPages 至少为 1，避免显示 "1/0"
+          _totalPages = ((itemsResult['totalPages'] as num?)?.toInt() ?? 1).clamp(1, 10000);
+          _stats = results[1] as Map<String, dynamic>?;
           _isLoading = false;
         });
+        _log('Cart data loaded: ${_items.length} items');
       }
-    } catch (e) {
+    } on ApiException catch (e) {
+      _log('Cart loading failed (API): ${e.message}', isError: true);
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _error = e.toString();
+          _error = e.message;
         });
       }
+    } catch (e) {
+      _log('Cart loading failed (unexpected): $e', isError: true);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _error = '加载购物车数据失败';
+        });
+      }
+    } finally {
+      _isLoadingInProgress = false;
     }
   }
 
   Future<void> _deleteItem(Map<String, dynamic> item) async {
+    final itemId = item['id']?.toString();
+    final itemTitle = _safeGetString(item, 'title', '未知商品');
+    
+    if (itemId == null || itemId.isEmpty) {
+      _log('Cannot delete item: missing ID', isError: true);
+      return;
+    }
+    
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('确认删除'),
-        content: Text('确定要删除商品"${item['title']}"吗？'),
+        content: Text('确定要删除商品"$itemTitle"吗？'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -84,17 +136,26 @@ class _CartPageState extends State<CartPage> {
 
     if (confirmed == true) {
       try {
-        await _service.deleteCartItem(item['id']);
+        _log('Deleting cart item: $itemId');
+        await _service.deleteCartItem(itemId);
         _loadData();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('商品已删除'), backgroundColor: Colors.green),
           );
         }
-      } catch (e) {
+      } on ApiException catch (e) {
+        _log('Failed to delete cart item: ${e.message}', isError: true);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('删除失败: $e'), backgroundColor: Colors.red),
+            SnackBar(content: Text('删除失败: ${e.message}'), backgroundColor: Colors.red),
+          );
+        }
+      } catch (e) {
+        _log('Unexpected error deleting cart item: $e', isError: true);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('删除失败，请稍后重试'), backgroundColor: Colors.red),
           );
         }
       }
@@ -118,7 +179,13 @@ class _CartPageState extends State<CartPage> {
   }
 
   Widget _buildStatsCards() {
-    final platforms = _stats!['byPlatform'] as List? ?? [];
+    if (_stats == null) return const SizedBox.shrink();
+    
+    // 安全解析 List<Map>，避免使用 cast<> 导致运行时异常
+    final rawPlatforms = _stats!['byPlatform'];
+    final platforms = rawPlatforms is List
+        ? rawPlatforms.whereType<Map<String, dynamic>>().toList()
+        : <Map<String, dynamic>>[];
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
@@ -126,28 +193,31 @@ class _CartPageState extends State<CartPage> {
           _buildStatCard(
             icon: Icons.shopping_cart_rounded,
             title: '总商品数',
-            value: '${_stats!['total'] ?? 0}',
-            subtitle: '今日新增 ${_stats!['todayNew'] ?? 0}',
+            value: '${_safeGet<num>(_stats, 'total', 0)}',
+            subtitle: '今日新增 ${_safeGet<num>(_stats, 'todayNew', 0)}',
             color: const Color(0xFF6366F1),
           ),
           const SizedBox(width: 16),
           _buildStatCard(
             icon: Icons.attach_money_rounded,
             title: '总价值',
-            value: '¥${_stats!['totalValue'] ?? '0.00'}',
-            subtitle: '本周新增 ${_stats!['weekNew'] ?? 0} 件',
+            value: '¥${_safeGetString(_stats, 'totalValue', '0.00')}',
+            subtitle: '本周新增 ${_safeGet<num>(_stats, 'weekNew', 0)} 件',
             color: const Color(0xFF10B981),
           ),
-          ...platforms.take(3).map((p) => Padding(
-            padding: const EdgeInsets.only(left: 16),
-            child: _buildStatCard(
-              icon: _getPlatformIcon(p['platform']),
-              title: _getPlatformName(p['platform']),
-              value: '${p['count']}',
-              subtitle: '¥${p['totalValue']}',
-              color: _getPlatformColor(p['platform']),
-            ),
-          )),
+          ...platforms.take(3).map((p) {
+            final platform = _safeGetString(p, 'platform');
+            return Padding(
+              padding: const EdgeInsets.only(left: 16),
+              child: _buildStatCard(
+                icon: _getPlatformIcon(platform),
+                title: _getPlatformName(platform),
+                value: '${_safeGet<num>(p, 'count', 0)}',
+                subtitle: '¥${_safeGetString(p, 'totalValue', '0.00')}',
+                color: _getPlatformColor(platform),
+              ),
+            );
+          }),
         ],
       ),
     );
@@ -330,48 +400,63 @@ class _CartPageState extends State<CartPage> {
             DataColumn(label: Text('操作')),
           ],
         rows: _items.map((item) {
+          final imageUrl = _safeGetString(item, 'imageUrl');
+          final title = _safeGetString(item, 'title', '未知商品');
+          final shopTitle = _safeGetString(item, 'shopTitle');
+          final platform = _safeGetString(item, 'platform');
+          final finalPrice = item['finalPrice'] ?? item['price'] ?? '0';
+          final originalPrice = item['originalPrice'];
+          final userNickname = _safeGetString(item, 'userNickname', '未知');
+          final userEmail = _safeGetString(item, 'userEmail');
+          final createdAt = _safeGetString(item, 'createdAt');
+          
           return DataRow(cells: [
             DataCell(
               Row(
                 children: [
-                  if (item['imageUrl'] != null)
-                    Container(
-                      width: 50,
-                      height: 50,
-                      margin: const EdgeInsets.only(right: 12),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
-                        image: DecorationImage(
-                          image: NetworkImage(item['imageUrl']),
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    )
-                  else
-                    Container(
-                      width: 50,
-                      height: 50,
-                      margin: const EdgeInsets.only(right: 12),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(Icons.image, color: Colors.grey),
+                  Container(
+                    width: 50,
+                    height: 50,
+                    margin: const EdgeInsets.only(right: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      borderRadius: BorderRadius.circular(8),
                     ),
+                    clipBehavior: Clip.antiAlias,
+                    child: imageUrl.isNotEmpty
+                        ? Image.network(
+                            imageUrl,
+                            fit: BoxFit.cover,
+                            width: 50,
+                            height: 50,
+                            errorBuilder: (_, __, ___) => const Icon(Icons.image, color: Colors.grey),
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return const Center(
+                                child: SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                              );
+                            },
+                          )
+                        : const Icon(Icons.image, color: Colors.grey),
+                  ),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          item['title'] ?? '',
+                          title,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(fontWeight: FontWeight.w500),
                         ),
-                        if (item['shopTitle'] != null)
+                        if (shopTitle.isNotEmpty)
                           Text(
-                            item['shopTitle'],
+                            shopTitle,
                             style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                           ),
                       ],
@@ -380,45 +465,53 @@ class _CartPageState extends State<CartPage> {
                 ],
               ),
             ),
-            DataCell(_buildPlatformChip(item['platform'])),
+            DataCell(_buildPlatformChip(platform)),
             DataCell(
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '¥${item['finalPrice'] ?? item['price'] ?? '0'}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFFEF4444),
-                    ),
-                  ),
-                  if (item['originalPrice'] != null)
+              Builder(builder: (context) {
+                final fp = double.tryParse('$finalPrice') ?? 0;
+                final op = double.tryParse('${originalPrice ?? finalPrice}') ?? 0;
+                final hasDiscount = originalPrice != null && op > fp && (op - fp).abs() > 0.01;
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                     Text(
-                      '¥${item['originalPrice']}',
+                      '¥$finalPrice',
                       style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[500],
-                        decoration: TextDecoration.lineThrough,
+                        fontWeight: FontWeight.bold,
+                        color: hasDiscount
+                            ? const Color(0xFFEF4444)
+                            : const Color(0xFF1E293B),
                       ),
                     ),
-                ],
-              ),
+                    if (hasDiscount)
+                      Text(
+                        '¥$originalPrice',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[500],
+                          decoration: TextDecoration.lineThrough,
+                        ),
+                      ),
+                  ],
+                );
+              }),
             ),
             DataCell(
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(item['userNickname'] ?? '未知'),
+                  Text(userNickname),
                   Text(
-                    item['userEmail'] ?? '',
+                    userEmail,
                     style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                   ),
                 ],
               ),
             ),
-            DataCell(Text(_formatDate(item['createdAt']))),
+            DataCell(Text(_formatDate(createdAt))),
             DataCell(
               IconButton(
                 icon: const Icon(Icons.delete_outline, color: Colors.red),
@@ -433,17 +526,18 @@ class _CartPageState extends State<CartPage> {
     );
   }
 
-  Widget _buildPlatformChip(String? platform) {
+  Widget _buildPlatformChip(String platform) {
+    final color = _getPlatformColor(platform);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: _getPlatformColor(platform).withOpacity(0.1),
+        color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
         _getPlatformName(platform),
         style: TextStyle(
-          color: _getPlatformColor(platform),
+          color: color,
           fontSize: 12,
           fontWeight: FontWeight.w500,
         ),
@@ -518,15 +612,17 @@ class _CartPageState extends State<CartPage> {
     );
   }
 
-  String _formatDate(String? dateStr) {
-    if (dateStr == null) return '-';
-    final date = DateTime.tryParse(dateStr);
-    if (date == null) return dateStr;
+  String _formatDate(String dateStr) {
+    if (dateStr.isEmpty) return '-';
+    final parsed = DateTime.tryParse(dateStr);
+    if (parsed == null) return '-';
+    // 统一转换为本地时间
+    final date = parsed.toLocal();
     return '${date.month}/${date.day} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
   }
 
-  IconData _getPlatformIcon(String? platform) {
-    switch (platform) {
+  IconData _getPlatformIcon(String platform) {
+    switch (platform.toLowerCase()) {
       case 'jd':
         return Icons.store;
       case 'taobao':
@@ -538,8 +634,8 @@ class _CartPageState extends State<CartPage> {
     }
   }
 
-  String _getPlatformName(String? platform) {
-    switch (platform) {
+  String _getPlatformName(String platform) {
+    switch (platform.toLowerCase()) {
       case 'jd':
         return '京东';
       case 'taobao':
@@ -547,12 +643,12 @@ class _CartPageState extends State<CartPage> {
       case 'pdd':
         return '拼多多';
       default:
-        return platform ?? '未知';
+        return platform.isEmpty ? '未知' : platform;
     }
   }
 
-  Color _getPlatformColor(String? platform) {
-    switch (platform) {
+  Color _getPlatformColor(String platform) {
+    switch (platform.toLowerCase()) {
       case 'jd':
         return const Color(0xFFE52B2B);
       case 'taobao':

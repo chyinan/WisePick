@@ -4,8 +4,8 @@ import '../analytics_models.dart';
 
 /// 消费结构图表组件
 /// 
-/// 支持饼图和柱状图两种展示方式
-class ConsumptionStructureChart extends StatelessWidget {
+/// 支持饼图和柱状图两种展示方式，饼图支持触摸高亮选中区域
+class ConsumptionStructureChart extends StatefulWidget {
   final List<CategoryDistribution> data;
   final bool showPieChart;
 
@@ -14,6 +14,13 @@ class ConsumptionStructureChart extends StatelessWidget {
     required this.data,
     this.showPieChart = true,
   });
+
+  @override
+  State<ConsumptionStructureChart> createState() => _ConsumptionStructureChartState();
+}
+
+class _ConsumptionStructureChartState extends State<ConsumptionStructureChart> {
+  int _touchedIndex = -1;
 
   // 图表颜色方案（基于UI设计规范）
   static const List<Color> chartColors = [
@@ -25,6 +32,9 @@ class ConsumptionStructureChart extends StatelessWidget {
     Color(0xFF2E7D32), // 成功绿
     Color(0xFFF57C00), // 警告橙
   ];
+
+  List<CategoryDistribution> get data => widget.data;
+  bool get showPieChart => widget.showPieChart;
 
   @override
   Widget build(BuildContext context) {
@@ -68,7 +78,16 @@ class ConsumptionStructureChart extends StatelessWidget {
               sections: _buildPieSections(),
               pieTouchData: PieTouchData(
                 touchCallback: (FlTouchEvent event, pieTouchResponse) {
-                  // TODO: 处理触摸交互
+                  setState(() {
+                    if (!event.isInterestedForInteractions ||
+                        pieTouchResponse == null ||
+                        pieTouchResponse.touchedSection == null) {
+                      _touchedIndex = -1;
+                      return;
+                    }
+                    _touchedIndex =
+                        pieTouchResponse.touchedSection!.touchedSectionIndex;
+                  });
                 },
               ),
             ),
@@ -85,14 +104,19 @@ class ConsumptionStructureChart extends StatelessWidget {
       final index = entry.key;
       final item = entry.value;
       final color = chartColors[index % chartColors.length];
+      final isTouched = index == _touchedIndex;
+      final radius = isTouched ? 95.0 : 80.0;
+      final fontSize = isTouched ? 14.0 : 12.0;
 
       return PieChartSectionData(
         color: color,
         value: item.percentage,
-        title: '${item.percentage.toStringAsFixed(1)}%',
-        radius: 80,
-        titleStyle: const TextStyle(
-          fontSize: 12,
+        title: isTouched
+            ? '${item.category}\n${item.percentage.toStringAsFixed(1)}%'
+            : '${item.percentage.toStringAsFixed(1)}%',
+        radius: radius,
+        titleStyle: TextStyle(
+          fontSize: fontSize,
           fontWeight: FontWeight.bold,
           color: Colors.white,
         ),

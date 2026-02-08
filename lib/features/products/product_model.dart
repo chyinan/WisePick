@@ -1,3 +1,5 @@
+import 'dart:developer' as dev;
+
 import 'package:hive/hive.dart';
 
 part 'product_model.g.dart';
@@ -79,7 +81,9 @@ class ProductModel {
         final basic = m['item_basic_info'] as Map<String, dynamic>;
         desc = (basic['short_title'] as String?) ?? (basic['sub_title'] as String?);
       }
-    } catch (_) {}
+    } catch (e, st) {
+      dev.log('Error parsing Taobao description: $e', name: 'ProductModel', error: e, stackTrace: st);
+    }
 
     // extract shop title from top-level or nested item_basic_info
     String? shopTitle = (m['shop_title'] as String?) ?? (m['shopTitle'] as String?);
@@ -88,7 +92,9 @@ class ProductModel {
         final basic = m['item_basic_info'] as Map<String, dynamic>;
         shopTitle = (basic['shop_title'] as String?) ?? (basic['shopTitle'] as String?);
       }
-    } catch (_) {}
+    } catch (e, st) {
+      dev.log('Error parsing Taobao shop title: $e', name: 'ProductModel', error: e, stackTrace: st);
+    }
 
     // Helper for robust number parsing
     double? parseDouble(dynamic v) {
@@ -132,76 +138,7 @@ class ProductModel {
     );
   }
 
-  /// 从 veapi/tb_search 返回的单项结果解析到统一 ProductModel
-  factory ProductModel.fromVeApi(Map<String, dynamic> m) {
-    // helper to safely parse numbers
-    num? _num(Map map, List<String> keys) {
-      for (final k in keys) {
-        if (map.containsKey(k) && map[k] != null) {
-          final v = map[k];
-          if (v is num) return v;
-          if (v is String) {
-            final parsed = num.tryParse(v.replaceAll(RegExp('[^0-9\.]'), ''));
-            if (parsed != null) return parsed;
-          }
-        }
-      }
-      return null;
-    }
-
-    String? _str(Map map, List<String> keys) {
-      for (final k in keys) {
-        if (map.containsKey(k) && map[k] != null) return map[k].toString();
-      }
-      return null;
-    }
-
-    String normalizeUrl(String? url) {
-      if (url == null || url.isEmpty) return '';
-      if (url.startsWith('//')) return 'https:$url';
-      if (!url.startsWith('http')) return 'https://$url';
-      return url;
-    }
-
-    final id = _str(m, ['num_iid', 'id', 'item_id', 'goods_id']) ?? _str(m, ['id']) ?? '';
-    final title = (_str(m, ['title', 'item_title', 'name']) ?? '').trim();
-    final imageUrl = normalizeUrl(_str(m, ['pic_url', 'pict_url', 'small_images', 'image_url']));
-    final price = (_num(m, ['zk_final_price', 'price', 'reserve_price', 'final_price']) ?? 0).toDouble();
-    final originalPrice = (_num(m, ['reserve_price', 'original_price', 'price']) ?? price).toDouble();
-    final coupon = (_num(m, ['coupon_amount', 'coupon', 'CouponAmount']) ?? 0).toDouble();
-    final finalPrice = (_num(m, ['after_coupon_price', 'final_price']) ?? (price - coupon)).toDouble();
-    final sales = (_num(m, ['volume', 'sell_num', 'sales', 'trade_count']) ?? 0).toInt();
-    final commission = (_num(m, ['commission', 'commission_rate', 'max_commission']) ?? 0).toDouble();
-    final link = _str(m, ['click_url', 'clickURL', 'url', 'coupon_click_url', 'tklink', 'clickUrl']) ?? '';
-    // prefer explicit short/sub title as description when available
-    // prefer short_title over sub_title when available
-    final descCandidate = _str(m, ['short_title', 'sub_title', 'subtitle', 'desc', 'description']);
-
-    // extract shop title from veapi response: prefer top-level keys, then nested item_basic_info
-    String? shopTitle = _str(m, ['shop_title', 'shopTitle', 'seller_shop_title']);
-    try {
-      if ((shopTitle == null || shopTitle.isEmpty) && m['item_basic_info'] is Map) {
-        shopTitle = _str(m['item_basic_info'] as Map, ['shop_title', 'shopTitle', 'seller_shop_title']);
-      }
-    } catch (_) {}
-
-    return ProductModel(
-      id: id,
-      platform: 'taobao',
-      title: title,
-      price: price,
-      originalPrice: originalPrice,
-      coupon: coupon,
-      finalPrice: finalPrice,
-      imageUrl: imageUrl,
-      sales: sales,
-      rating: ((_num(m, ['rating', 'score']) ?? 0) as num).toDouble(),
-      link: link,
-      commission: commission,
-      description: descCandidate ?? '',
-      shopTitle: shopTitle ?? '',
-    );
-  }
+  // fromVeApi 已移除 — VEAPI 已弃用，所有淘宝商品解析统一通过 TaobaoAdapter + fromJson
 
   Map<String, dynamic> toMap() => {
         'id': id,

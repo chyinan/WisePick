@@ -38,13 +38,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     return null;
   }
 
-  /// 验证密码
+  /// 验证密码 — 与注册页面保持一致：至少8位，含字母和数字
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) {
       return '请输入密码';
     }
-    if (value.length < 6) {
-      return '密码至少6位';
+    if (value.length < 8) {
+      return '密码至少8位';
     }
     return null;
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/api_client.dart';
 import 'users_service.dart';
 
+/// 用户管理页面
 class UsersPage extends StatefulWidget {
   const UsersPage({super.key});
 
@@ -10,22 +11,32 @@ class UsersPage extends StatefulWidget {
 }
 
 class _UsersPageState extends State<UsersPage> {
-  final _service = UsersService(ApiClient());
-  
+  late final UsersService _service;
+
   List<Map<String, dynamic>> _users = [];
   int _total = 0;
   int _currentPage = 1;
   int _totalPages = 1;
   bool _isLoading = true;
   String? _error;
+  
+  /// 防止并发加载的锁标志
+  bool _isLoadingInProgress = false;
 
   @override
   void initState() {
     super.initState();
+    _service = UsersService(ApiClient());
     _loadUsers();
   }
 
   Future<void> _loadUsers() async {
+    if (!mounted) return;
+    
+    // 防止并发请求
+    if (_isLoadingInProgress) return;
+    _isLoadingInProgress = true;
+
     setState(() {
       _isLoading = true;
       _error = null;
@@ -33,30 +44,47 @@ class _UsersPageState extends State<UsersPage> {
 
     try {
       final result = await _service.getUsers(page: _currentPage);
-      if (mounted) {
-        setState(() {
-          _users = result['users'];
-          _total = result['total'];
-          _totalPages = result['totalPages'];
-          _isLoading = false;
-        });
+      if (!mounted) {
+        _isLoadingInProgress = false;
+        return;
       }
+
+      setState(() {
+        _users = _safeGetList(result, 'users');
+        _total = _safeGetInt(result, 'total', 0);
+        _totalPages = _safeGetInt(result, 'totalPages', 1).clamp(1, 10000);
+        _isLoading = false;
+      });
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _error = e.toString();
-        });
+      if (!mounted) {
+        _isLoadingInProgress = false;
+        return;
       }
+
+      setState(() {
+        _isLoading = false;
+        _error = _formatErrorMessage(e);
+      });
+    } finally {
+      _isLoadingInProgress = false;
     }
   }
 
   Future<void> _deleteUser(Map<String, dynamic> user) async {
+    final userId = _safeGetString(user, 'id');
+    if (userId.isEmpty) {
+      _showError('无效的用户 ID');
+      return;
+    }
+
+    final userEmail = _safeGetString(user, 'email', '未知用户');
+
     final confirmed = await showDialog<bool>(
       context: context,
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
         title: const Text('确认删除'),
-        content: Text('确定要删除用户 ${user['email']} 吗？此操作不可恢复。'),
+        content: Text('确定要删除用户 $userEmail 吗？此操作不可恢复。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -71,89 +99,128 @@ class _UsersPageState extends State<UsersPage> {
       ),
     );
 
-    if (confirmed == true) {
-      try {
-        await _service.deleteUser(user['id']);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('用户已删除'), backgroundColor: Colors.green),
-          );
-          _loadUsers();
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('删除失败: $e'), backgroundColor: Colors.red),
-          );
-        }
-      }
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await _service.deleteUser(userId);
+      if (!mounted) return;
+
+      _showSuccess('用户已删除');
+      _loadUsers();
+    } catch (e) {
+      if (!mounted) return;
+      _showError('删除失败: ${_formatErrorMessage(e)}');
     }
   }
 
   Future<void> _editUser(Map<String, dynamic> user) async {
-    final emailController = TextEditingController(text: user['email']);
-    final nicknameController = TextEditingController(text: user['nickname']);
-    
-    final result = await showDialog<Map<String, dynamic>>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('编辑用户'),
-        content: SizedBox(
-          width: 400,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: emailController,
-                decoration: const InputDecoration(
-                  labelText: '邮箱',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: nicknameController,
-                decoration: const InputDecoration(
-                  labelText: '昵称',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, {
-              'email': emailController.text,
-              'nickname': nicknameController.text,
-            }),
-            child: const Text('保存'),
-          ),
-        ],
-      ),
+    final userId = _safeGetString(user, 'id');
+    if (userId.isEmpty) {
+      _showError('无效的用户 ID');
+      return;
+    }
+
+    final emailController = TextEditingController(
+      text: _safeGetString(user, 'email'),
+    );
+    final nicknameController = TextEditingController(
+      text: _safeGetString(user, 'nickname'),
     );
 
-    if (result != null) {
-      try {
-        await _service.updateUser(user['id'], result);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('用户信息已更新'), backgroundColor: Colors.green),
-          );
-          _loadUsers();
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('更新失败: $e'), backgroundColor: Colors.red),
-          );
-        }
-      }
+    try {
+      final result = await showDialog<Map<String, dynamic>>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => _EditUserDialog(
+          emailController: emailController,
+          nicknameController: nicknameController,
+        ),
+      );
+
+      if (result == null || !mounted) return;
+
+      await _service.updateUser(userId, result);
+      if (!mounted) return;
+
+      _showSuccess('用户信息已更新');
+      _loadUsers();
+    } catch (e) {
+      if (!mounted) return;
+      _showError('更新失败: ${_formatErrorMessage(e)}');
+    } finally {
+      emailController.dispose();
+      nicknameController.dispose();
     }
+  }
+
+  void _showSuccess(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.green),
+    );
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
+  }
+
+  String _formatErrorMessage(dynamic error) {
+    if (error is ApiException) {
+      return error.message;
+    }
+    final str = error.toString();
+    // 移除 "Exception: " 前缀
+    if (str.startsWith('Exception: ')) {
+      return str.substring(11);
+    }
+    return str;
+  }
+
+  List<Map<String, dynamic>> _safeGetList(
+    Map<String, dynamic> data,
+    String key,
+  ) {
+    final value = data[key];
+    if (value == null) return [];
+    if (value is List) {
+      // 先过滤出所有 Map 类型，再转换为 Map<String, dynamic>
+      // 避免 whereType<Map<String, dynamic>> 过滤掉 Map<dynamic, dynamic>
+      return value
+          .whereType<Map>()
+          .map((item) => item is Map<String, dynamic>
+              ? item
+              : Map<String, dynamic>.from(item))
+          .toList();
+    }
+    return [];
+  }
+
+  int _safeGetInt(Map<String, dynamic> data, String key, int defaultValue) {
+    final value = data[key];
+    if (value == null) return defaultValue;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? defaultValue;
+    return defaultValue;
+  }
+
+  String _safeGetString(Map<String, dynamic> data, String key, [String defaultValue = '']) {
+    final value = data[key];
+    if (value == null) return defaultValue;
+    return value.toString();
+  }
+
+  String _getAvatarInitial(String email) {
+    if (email.isEmpty) return '?';
+    final firstChar = email[0].toUpperCase();
+    // 确保是有效字符
+    if (RegExp(r'[A-Z0-9]').hasMatch(firstChar)) {
+      return firstChar;
+    }
+    return '?';
   }
 
   @override
@@ -240,10 +307,12 @@ class _UsersPageState extends State<UsersPage> {
                       : null,
                   icon: const Icon(Icons.chevron_left),
                 ),
-                for (int i = 1; i <= _totalPages && i <= 5; i++)
+                for (final page in _getVisiblePageNumbers())
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: _buildPageButton(i),
+                    child: page == -1
+                        ? const Text('...', style: TextStyle(color: Color(0xFF64748B)))
+                        : _buildPageButton(page),
                   ),
                 IconButton(
                   onPressed: _currentPage < _totalPages
@@ -259,6 +328,57 @@ class _UsersPageState extends State<UsersPage> {
           ),
       ],
     );
+  }
+
+  /// 计算应该显示的页码列表
+  /// 返回页码列表，-1 表示省略号
+  List<int> _getVisiblePageNumbers() {
+    const int maxVisible = 7; // 最多显示的按钮数（包括省略号）
+    
+    if (_totalPages <= maxVisible) {
+      return List.generate(_totalPages, (i) => i + 1);
+    }
+    
+    final List<int> pages = [];
+    
+    // 始终显示第一页
+    pages.add(1);
+    
+    // 计算中间显示范围
+    int start = _currentPage - 1;
+    int end = _currentPage + 1;
+    
+    // 调整范围确保不超出边界
+    if (start <= 2) {
+      start = 2;
+      end = 4;
+    }
+    if (end >= _totalPages - 1) {
+      end = _totalPages - 1;
+      start = _totalPages - 3;
+    }
+    
+    // 如果起始位置离第一页有间隔，添加省略号
+    if (start > 2) {
+      pages.add(-1); // -1 表示省略号
+    }
+    
+    // 添加中间页码
+    for (int i = start; i <= end; i++) {
+      if (i > 1 && i < _totalPages) {
+        pages.add(i);
+      }
+    }
+    
+    // 如果结束位置离最后一页有间隔，添加省略号
+    if (end < _totalPages - 1) {
+      pages.add(-1);
+    }
+    
+    // 始终显示最后一页
+    pages.add(_totalPages);
+    
+    return pages;
   }
 
   Widget _buildPageButton(int page) {
@@ -327,17 +447,18 @@ class _UsersPageState extends State<UsersPage> {
   }
 
   Widget _buildUserRow(Map<String, dynamic> user) {
-    final createdAt = user['createdAt'] as String?;
+    final createdAt = _safeGetString(user, 'createdAt');
     String formattedDate = '未知';
-    if (createdAt != null) {
+    if (createdAt.isNotEmpty) {
       final date = DateTime.tryParse(createdAt);
       if (date != null) {
-        formattedDate = '${date.year}/${date.month}/${date.day} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+        formattedDate = '${date.year}/${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')} '
+            '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
       }
     }
 
     final isVerified = user['emailVerified'] == true;
-    final status = user['status'] ?? 'active';
+    final status = _safeGetString(user, 'status', 'active');
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -354,7 +475,7 @@ class _UsersPageState extends State<UsersPage> {
                   radius: 16,
                   backgroundColor: const Color(0xFF6366F1).withOpacity(0.1),
                   child: Text(
-                    (user['email'] as String?)?.substring(0, 1).toUpperCase() ?? '?',
+                    _getAvatarInitial(_safeGetString(user, 'email')),
                     style: const TextStyle(
                       color: Color(0xFF6366F1),
                       fontWeight: FontWeight.w600,
@@ -367,15 +488,20 @@ class _UsersPageState extends State<UsersPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        user['email'] as String? ?? '',
+                        _safeGetString(user, 'email', '未知邮箱'),
                         style: const TextStyle(color: Color(0xFF1E293B)),
                         overflow: TextOverflow.ellipsis,
                       ),
-                      if (user['lastLoginAt'] != null)
-                        Text(
-                          '最近登录: ${_formatLastLogin(user['lastLoginAt'])}',
-                          style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
-                        ),
+                      Builder(
+                        builder: (context) {
+                          final lastLogin = _safeGetString(user, 'lastLoginAt');
+                          if (lastLogin.isEmpty) return const SizedBox.shrink();
+                          return Text(
+                            '最近登录: ${_formatLastLogin(lastLogin)}',
+                            style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+                          );
+                        },
+                      ),
                     ],
                   ),
                 ),
@@ -385,7 +511,7 @@ class _UsersPageState extends State<UsersPage> {
           Expanded(
             flex: 2,
             child: Text(
-              user['nickname'] as String? ?? '未设置',
+              _safeGetString(user, 'nickname', '未设置'),
               style: const TextStyle(color: Color(0xFF64748B)),
             ),
           ),
@@ -465,13 +591,87 @@ class _UsersPageState extends State<UsersPage> {
   }
 
   String _formatLastLogin(String? dateStr) {
-    if (dateStr == null) return '从未';
+    if (dateStr == null || dateStr.isEmpty) return '从未';
+
     final date = DateTime.tryParse(dateStr);
     if (date == null) return '未知';
-    final diff = DateTime.now().difference(date);
+
+    final now = DateTime.now();
+    final diff = now.difference(date);
+
+    // 防止负数时间差（时钟偏差）
+    if (diff.isNegative) return '刚刚';
+
+    if (diff.inMinutes < 1) return '刚刚';
     if (diff.inMinutes < 60) return '${diff.inMinutes}分钟前';
     if (diff.inHours < 24) return '${diff.inHours}小时前';
     if (diff.inDays < 7) return '${diff.inDays}天前';
-    return '${date.month}/${date.day}';
+
+    // 安全格式化日期
+    return '${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}';
+  }
+}
+
+/// 编辑用户对话框
+class _EditUserDialog extends StatelessWidget {
+  final TextEditingController emailController;
+  final TextEditingController nicknameController;
+
+  const _EditUserDialog({
+    required this.emailController,
+    required this.nicknameController,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('编辑用户'),
+      content: SizedBox(
+        width: 400,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: emailController,
+              decoration: const InputDecoration(
+                labelText: '邮箱',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.emailAddress,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: nicknameController,
+              decoration: const InputDecoration(
+                labelText: '昵称',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('取消'),
+        ),
+        FilledButton(
+          onPressed: () {
+            final email = emailController.text.trim();
+            final nickname = nicknameController.text.trim();
+
+            if (email.isEmpty) {
+              return; // 不允许空邮箱
+            }
+
+            Navigator.pop(context, {
+              'email': email,
+              'nickname': nickname,
+            });
+          },
+          child: const Text('保存'),
+        ),
+      ],
+    );
   }
 }

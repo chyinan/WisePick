@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:developer' as dev;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
+
+import '../../core/storage/hive_config.dart';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 
@@ -75,8 +77,21 @@ class TokenManager {
     }
   }
 
-  /// 获取设备 ID
-  String get deviceId => _cachedDeviceId ?? const Uuid().v4();
+  /// 获取设备 ID.
+  ///
+  /// Callers MUST ensure [init] has completed before accessing this.
+  /// Throws [StateError] if called before initialization to prevent
+  /// silently generating a different random UUID on every access.
+  String get deviceId {
+    final id = _cachedDeviceId;
+    if (id == null) {
+      throw StateError(
+        'TokenManager.deviceId accessed before init() completed. '
+        'Ensure TokenManager.instance.init() is awaited at startup.',
+      );
+    }
+    return id;
+  }
 
   /// 获取设备名称
   String get deviceName {
@@ -87,7 +102,9 @@ class TokenManager {
       if (Platform.isMacOS) return 'macOS';
       if (Platform.isWindows) return 'Windows';
       if (Platform.isLinux) return 'Linux';
-    } catch (_) {}
+    } catch (e) {
+      dev.log('Error detecting device name: $e', name: 'TokenManager');
+    }
     return 'Unknown Device';
   }
 
@@ -100,7 +117,9 @@ class TokenManager {
       if (Platform.isMacOS) return 'macos';
       if (Platform.isWindows) return 'windows';
       if (Platform.isLinux) return 'linux';
-    } catch (_) {}
+    } catch (e) {
+      dev.log('Error detecting device type: $e', name: 'TokenManager');
+    }
     return 'unknown';
   }
 
@@ -197,23 +216,27 @@ class TokenManager {
   /// 保存用户数据到本地缓存（非敏感数据用 Hive）
   Future<void> saveUserData(Map<String, dynamic> userData) async {
     try {
-      final box = await Hive.openBox('auth');
+      final box = await HiveConfig.getBox(HiveConfig.authBox);
       await box.put(_userDataKey, jsonEncode(userData));
-    } catch (_) {
-      // 静默处理保存错误
+    } catch (e) {
+      // Non-critical: cache miss is acceptable, but log for diagnostics
+      // so persistent storage failures are observable.
+      dev.log('Failed to save user data to Hive: $e', name: 'TokenManager');
     }
   }
 
   /// 获取缓存的用户数据
   Future<Map<String, dynamic>?> getCachedUserData() async {
     try {
-      final box = await Hive.openBox('auth');
+      final box = await HiveConfig.getBox(HiveConfig.authBox);
       final data = box.get(_userDataKey);
       if (data != null && data is String) {
         return jsonDecode(data) as Map<String, dynamic>;
       }
-    } catch (_) {
-      // 静默处理读取错误
+    } catch (e) {
+      // Non-critical: returning null is acceptable, but log for diagnostics.
+      dev.log('Failed to read cached user data from Hive: $e',
+          name: 'TokenManager');
     }
     return null;
   }
@@ -236,9 +259,11 @@ class TokenManager {
 
     // 清除用户缓存
     try {
-      final box = await Hive.openBox('auth');
+      final box = await HiveConfig.getBox(HiveConfig.authBox);
       await box.delete(_userDataKey);
-    } catch (_) {}
+    } catch (e) {
+      dev.log('Failed to clear user data cache: $e', name: 'TokenManager');
+    }
   }
 
   /// 获取授权头

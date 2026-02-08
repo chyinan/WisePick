@@ -1,8 +1,11 @@
+import 'dart:developer' as dev;
+
+import 'package:flutter/foundation.dart' show kDebugMode, kProfileMode;
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:dio/dio.dart';
 
-// config not used here
+import '../core/backend_config.dart';
+import '../core/storage/hive_config.dart';
 
 class AdminSettingsPage extends StatefulWidget {
   const AdminSettingsPage({super.key});
@@ -35,7 +38,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
 
   Future<void> _loadSettings() async {
     try {
-      final box = await Hive.openBox('settings');
+      final box = await HiveConfig.getBox(HiveConfig.settingsBox);
       final String? openai = box.get('openai_api') as String?;
       // VEAPI 已弃用，不再读取 veapi_key
       final String? backendBase = box.get('backend_base') as String?;
@@ -65,7 +68,9 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
       }
       // Attempt to fetch available models after loading settings
       _fetchModels();
-    } catch (_) {}
+    } catch (e, st) {
+      dev.log('Error loading admin settings: $e', name: 'AdminSettings', error: e, stackTrace: st);
+    }
   }
 
   @override
@@ -169,6 +174,8 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                     ),
                     const Divider(height: 0),
+                    // Mock AI 开关仅在 debug/profile 模式下显示，release 构建不暴露此选项
+                    if (kDebugMode || kProfileMode)
                     SwitchListTile(
                       value: _useMockAi,
                       onChanged: (v) => setState(() => _useMockAi = v),
@@ -194,7 +201,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                   FilledButton(
                     onPressed: () async {
                       try {
-                        final box = await Hive.openBox('settings');
+                        final box = await HiveConfig.getBox(HiveConfig.settingsBox);
                         await box.put('openai_api', _openAiController.text.trim());
                         await box.put('openai_base', _baseUrlController.text.trim());
                         await box.put('openai_model', _modelController.text.trim());
@@ -205,6 +212,8 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                         await box.put('show_product_json', _showProductJson);
                         await box.put('max_tokens', _maxTokens);
                         await box.put('use_mock_ai', _useMockAi);
+                        // 使 BackendConfig 缓存失效，以便新地址立即生效
+                        BackendConfig.invalidateCache();
                         if (!mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('保存成功')));
                         Navigator.of(context).pop();

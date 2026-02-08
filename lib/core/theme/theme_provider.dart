@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import '../storage/hive_config.dart';
 
 /// 主题状态管理
 /// 
@@ -17,7 +17,7 @@ class ThemeNotifier extends StateNotifier<ThemeMode> {
   /// 从本地存储加载主题设置
   Future<void> _loadTheme() async {
     try {
-      final box = await Hive.openBox(_boxName);
+      final box = await HiveConfig.getBox(HiveConfig.settingsBox);
       final savedMode = box.get(_key) as String?;
       if (savedMode != null) {
         state = ThemeMode.values.firstWhere(
@@ -35,7 +35,7 @@ class ThemeNotifier extends StateNotifier<ThemeMode> {
   Future<void> setThemeMode(ThemeMode mode) async {
     state = mode;
     try {
-      final box = await Hive.openBox(_boxName);
+      final box = await HiveConfig.getBox(HiveConfig.settingsBox);
       await box.put(_key, mode.name);
     } catch (e) {
       debugPrint('保存主题设置失败: $e');

@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import '../../core/api_client.dart';
 import 'settings_service.dart';
@@ -22,6 +23,29 @@ class _SettingsPageState extends State<SettingsPage> with SingleTickerProviderSt
   bool _isLoadingSessions = false;
   String? _error;
   bool _activeOnly = true;
+  
+  void _log(String message, {bool isError = false}) {
+    final prefix = isError ? '❌ Settings' : '⚙️ Settings';
+    developer.log('$prefix: $message', name: 'SettingsPage');
+  }
+  
+  // 安全地从 Map 获取值
+  String _safeGetString(Map<String, dynamic>? map, String key, [String defaultValue = '-']) {
+    final value = map?[key];
+    if (value == null) return defaultValue;
+    return value.toString();
+  }
+
+  T? _safeGetNested<T>(Map<String, dynamic>? map, List<String> keys) {
+    if (map == null) return null;
+    dynamic current = map;
+    for (final key in keys) {
+      if (current is! Map<String, dynamic>) return null;
+      current = current[key];
+      if (current == null) return null;
+    }
+    return current is T ? current : null;
+  }
 
   @override
   void initState() {
@@ -44,18 +68,29 @@ class _SettingsPageState extends State<SettingsPage> with SingleTickerProviderSt
     });
 
     try {
+      _log('Loading settings...');
       final settings = await _service.getSettings();
       if (mounted) {
         setState(() {
           _settings = settings;
           _isLoading = false;
         });
+        _log('Settings loaded successfully');
       }
-    } catch (e) {
+    } on ApiException catch (e) {
+      _log('Failed to load settings (API): ${e.message}', isError: true);
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _error = e.toString();
+          _error = e.message;
+        });
+      }
+    } catch (e) {
+      _log('Failed to load settings (unexpected): $e', isError: true);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _error = '加载设置失败，请稍后重试';
         });
       }
     }
@@ -65,34 +100,54 @@ class _SettingsPageState extends State<SettingsPage> with SingleTickerProviderSt
     setState(() => _isLoadingSessions = true);
 
     try {
+      _log('Loading sessions (page: $_sessionsPage, activeOnly: $_activeOnly)');
       final result = await _service.getSessions(
         page: _sessionsPage,
         activeOnly: _activeOnly,
       );
       if (mounted) {
         setState(() {
-          _sessions = result['sessions'];
-          _sessionsTotal = result['total'];
-          _sessionsTotalPages = result['totalPages'];
+          _sessions = List<Map<String, dynamic>>.from(result['sessions'] ?? []);
+          _sessionsTotal = (result['total'] as num?)?.toInt() ?? 0;
+          // 确保 totalPages 至少为 1，避免显示 "1/0"
+          _sessionsTotalPages = ((result['totalPages'] as num?)?.toInt() ?? 1).clamp(1, 10000);
           _isLoadingSessions = false;
         });
+        _log('Loaded ${_sessions.length} sessions');
       }
-    } catch (e) {
+    } on ApiException catch (e) {
+      _log('Failed to load sessions (API): ${e.message}', isError: true);
       if (mounted) {
         setState(() => _isLoadingSessions = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('加载会话失败: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('加载会话失败: ${e.message}'), backgroundColor: Colors.red),
+        );
+      }
+    } catch (e) {
+      _log('Failed to load sessions (unexpected): $e', isError: true);
+      if (mounted) {
+        setState(() => _isLoadingSessions = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('加载会话失败，请稍后重试'), backgroundColor: Colors.red),
         );
       }
     }
   }
 
   Future<void> _deleteSession(Map<String, dynamic> session) async {
+    final sessionId = session['id']?.toString();
+    final deviceName = _safeGetString(session, 'deviceName', '未知设备');
+    
+    if (sessionId == null || sessionId.isEmpty) {
+      _log('Cannot delete session: missing ID', isError: true);
+      return;
+    }
+    
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('强制下线'),
-        content: Text('确定要强制下线设备"${session['deviceName']}"吗？用户将需要重新登录。'),
+        content: Text('确定要强制下线设备"$deviceName"吗？用户将需要重新登录。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -109,17 +164,26 @@ class _SettingsPageState extends State<SettingsPage> with SingleTickerProviderSt
 
     if (confirmed == true) {
       try {
-        await _service.deleteSession(session['id']);
+        _log('Deleting session: $sessionId');
+        await _service.deleteSession(sessionId);
         _loadSessions();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('已强制下线'), backgroundColor: Colors.green),
           );
         }
-      } catch (e) {
+      } on ApiException catch (e) {
+        _log('Failed to delete session (API): ${e.message}', isError: true);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('操作失败: $e'), backgroundColor: Colors.red),
+            SnackBar(content: Text('操作失败: ${e.message}'), backgroundColor: Colors.red),
+          );
+        }
+      } catch (e) {
+        _log('Failed to delete session (unexpected): $e', isError: true);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('操作失败，请稍后重试'), backgroundColor: Colors.red),
           );
         }
       }
@@ -197,6 +261,22 @@ class _SettingsPageState extends State<SettingsPage> with SingleTickerProviderSt
       return const Center(child: Text('无配置数据'));
     }
 
+    // 使用安全方式提取嵌套值
+    final serverHost = _safeGetNested<String>(_settings, ['server', 'host']) ?? '-';
+    final serverPort = _safeGetNested(_settings, ['server', 'port'])?.toString() ?? '-';
+    final dbHost = _safeGetNested<String>(_settings, ['database', 'host']) ?? '-';
+    final dbPort = _safeGetNested(_settings, ['database', 'port'])?.toString() ?? '-';
+    final dbName = _safeGetNested<String>(_settings, ['database', 'name']) ?? '-';
+    final dbStatus = _safeGetNested<String>(_settings, ['database', 'status']);
+    final aiProvider = _safeGetNested<String>(_settings, ['ai', 'provider']) ?? '-';
+    final aiModel = _safeGetNested<String>(_settings, ['ai', 'model']) ?? '-';
+    final aiBaseUrl = _safeGetNested<String>(_settings, ['ai', 'baseUrl']) ?? '-';
+    final aiHasApiKey = _safeGetNested<bool>(_settings, ['ai', 'hasApiKey']) ?? false;
+    final jdHasCookie = _safeGetNested<bool>(_settings, ['jd', 'hasCookie']) ?? false;
+    final jdCookieSource = _safeGetNested<String>(_settings, ['jd', 'cookieSource']) ?? '-';
+    final emailVerification = _safeGetNested<bool>(_settings, ['features', 'emailVerification']) ?? false;
+    final rateLimit = _safeGetNested<bool>(_settings, ['features', 'rateLimit']) ?? false;
+    
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -205,8 +285,8 @@ class _SettingsPageState extends State<SettingsPage> with SingleTickerProviderSt
             title: '服务器配置',
             icon: Icons.dns_rounded,
             children: [
-              _buildSettingItem('监听地址', _settings!['server']?['host'] ?? '-'),
-              _buildSettingItem('端口', _settings!['server']?['port'] ?? '-'),
+              _buildSettingItem('监听地址', serverHost),
+              _buildSettingItem('端口', serverPort),
             ],
           ),
           const SizedBox(height: 20),
@@ -215,13 +295,13 @@ class _SettingsPageState extends State<SettingsPage> with SingleTickerProviderSt
             icon: Icons.storage_rounded,
             color: const Color(0xFF10B981),
             children: [
-              _buildSettingItem('数据库主机', _settings!['database']?['host'] ?? '-'),
-              _buildSettingItem('端口', _settings!['database']?['port'] ?? '-'),
-              _buildSettingItem('数据库名', _settings!['database']?['name'] ?? '-'),
+              _buildSettingItem('数据库主机', dbHost),
+              _buildSettingItem('端口', dbPort),
+              _buildSettingItem('数据库名', dbName),
               _buildSettingItem(
                 '连接状态',
-                _settings!['database']?['status'] == 'connected' ? '已连接' : '断开',
-                valueColor: _settings!['database']?['status'] == 'connected'
+                dbStatus == 'connected' ? '已连接' : '断开',
+                valueColor: dbStatus == 'connected'
                     ? const Color(0xFF10B981)
                     : Colors.red,
               ),
@@ -233,13 +313,13 @@ class _SettingsPageState extends State<SettingsPage> with SingleTickerProviderSt
             icon: Icons.psychology_rounded,
             color: const Color(0xFF8B5CF6),
             children: [
-              _buildSettingItem('AI 服务商', _settings!['ai']?['provider'] ?? '-'),
-              _buildSettingItem('模型', _settings!['ai']?['model'] ?? '-'),
-              _buildSettingItem('API 地址', _settings!['ai']?['baseUrl'] ?? '-'),
+              _buildSettingItem('AI 服务商', aiProvider),
+              _buildSettingItem('模型', aiModel),
+              _buildSettingItem('API 地址', aiBaseUrl),
               _buildSettingItem(
                 'API Key',
-                _settings!['ai']?['hasApiKey'] == true ? '已配置' : '未配置',
-                valueColor: _settings!['ai']?['hasApiKey'] == true
+                aiHasApiKey ? '已配置' : '未配置',
+                valueColor: aiHasApiKey
                     ? const Color(0xFF10B981)
                     : Colors.orange,
               ),
@@ -253,12 +333,12 @@ class _SettingsPageState extends State<SettingsPage> with SingleTickerProviderSt
             children: [
               _buildSettingItem(
                 'Cookie 状态',
-                _settings!['jd']?['hasCookie'] == true ? '已配置' : '未配置',
-                valueColor: _settings!['jd']?['hasCookie'] == true
+                jdHasCookie ? '已配置' : '未配置',
+                valueColor: jdHasCookie
                     ? const Color(0xFF10B981)
                     : Colors.orange,
               ),
-              _buildSettingItem('Cookie 来源', _settings!['jd']?['cookieSource'] ?? '-'),
+              _buildSettingItem('Cookie 来源', jdCookieSource),
             ],
           ),
           const SizedBox(height: 20),
@@ -269,15 +349,15 @@ class _SettingsPageState extends State<SettingsPage> with SingleTickerProviderSt
             children: [
               _buildSettingItem(
                 '邮箱验证',
-                _settings!['features']?['emailVerification'] == true ? '开启' : '关闭',
-                valueColor: _settings!['features']?['emailVerification'] == true
+                emailVerification ? '开启' : '关闭',
+                valueColor: emailVerification
                     ? const Color(0xFF10B981)
                     : Colors.grey,
               ),
               _buildSettingItem(
                 '请求限流',
-                _settings!['features']?['rateLimit'] == true ? '开启' : '关闭',
-                valueColor: _settings!['features']?['rateLimit'] == true
+                rateLimit ? '开启' : '关闭',
+                valueColor: rateLimit
                     ? const Color(0xFF10B981)
                     : Colors.grey,
               ),
@@ -453,7 +533,12 @@ class _SettingsPageState extends State<SettingsPage> with SingleTickerProviderSt
 
   Widget _buildSessionItem(Map<String, dynamic> session) {
     final isActive = session['isActive'] == true;
-    final deviceType = session['deviceType'] ?? 'unknown';
+    final deviceType = _safeGetString(session, 'deviceType', 'unknown');
+    final deviceName = _safeGetString(session, 'deviceName', '未知设备');
+    final userNickname = _safeGetString(session, 'userNickname', '未知用户');
+    final userEmail = _safeGetString(session, 'userEmail', '');
+    final ipAddress = _safeGetString(session, 'ipAddress', '-');
+    final lastActiveAt = _safeGetString(session, 'lastActiveAt', '');
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -482,7 +567,7 @@ class _SettingsPageState extends State<SettingsPage> with SingleTickerProviderSt
                 Row(
                   children: [
                     Text(
-                      session['deviceName'] ?? '未知设备',
+                      deviceName,
                       style: const TextStyle(
                         fontWeight: FontWeight.w600,
                         color: Color(0xFF1E293B),
@@ -510,12 +595,12 @@ class _SettingsPageState extends State<SettingsPage> with SingleTickerProviderSt
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${session['userNickname']} (${session['userEmail']})',
+                  '$userNickname ($userEmail)',
                   style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'IP: ${session['ipAddress'] ?? '-'} • 最后活跃: ${_formatDateTime(session['lastActiveAt'])}',
+                  'IP: $ipAddress • 最后活跃: ${_formatDateTime(lastActiveAt)}',
                   style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                 ),
               ],
@@ -605,13 +690,17 @@ class _SettingsPageState extends State<SettingsPage> with SingleTickerProviderSt
     }
   }
 
-  String _formatDateTime(String? dateStr) {
-    if (dateStr == null) return '-';
-    final date = DateTime.tryParse(dateStr);
-    if (date == null) return dateStr;
+  String _formatDateTime(String dateStr) {
+    if (dateStr.isEmpty) return '-';
+    final parsed = DateTime.tryParse(dateStr);
+    if (parsed == null) return '-';
+    // 统一转换为本地时间，确保与 DateTime.now() 比较准确
+    final date = parsed.toLocal();
     final now = DateTime.now();
     final diff = now.difference(date);
     
+    // 防止负数时间差（时钟偏差或服务器时间超前）
+    if (diff.isNegative) return '刚刚';
     if (diff.inMinutes < 1) return '刚刚';
     if (diff.inMinutes < 60) return '${diff.inMinutes}分钟前';
     if (diff.inHours < 24) return '${diff.inHours}小时前';

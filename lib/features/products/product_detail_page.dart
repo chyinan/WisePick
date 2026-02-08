@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer' as dev;
 
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:wisepick_dart_version/core/storage/hive_config.dart';
 import 'package:wisepick_dart_version/features/cart/cart_providers.dart';
 import 'package:wisepick_dart_version/features/cart/cart_service.dart';
 import 'package:flutter/services.dart';
@@ -188,18 +189,20 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
 
   Future<void> _loadFavoriteState() async {
     try {
-      final box = await Hive.openBox('favorites');
+      final box = await HiveConfig.getBox(HiveConfig.favoritesBox);
       final exists = box.containsKey(widget.product.id);
       if (!mounted) return;
       setState(() {
         _isFavorited = exists;
       });
-    } catch (_) {}
+    } catch (e, st) {
+      dev.log('Failed to load favorite state: $e', name: 'ProductDetail', error: e, stackTrace: st);
+    }
   }
 
   Future<void> _loadCartPriceInfo() async {
     try {
-      final box = await Hive.openBox(CartService.boxName);
+      final box = await HiveConfig.getBox(CartService.boxName);
       final raw = box.get(widget.product.id);
       if (raw is Map) {
         final map = Map<String, dynamic>.from(raw);
@@ -219,7 +222,8 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
           _lastCartPrice = null;
         });
       }
-    } catch (_) {
+    } catch (e, st) {
+      dev.log('Error loading cart record: $e', name: 'ProductDetail', error: e, stackTrace: st);
       if (!mounted) return;
       setState(() {
         _hasCartRecord = false;
@@ -233,10 +237,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
   Future<void> _loadCachedAiIntro() async {
     try {
       const boxName = 'ai_intro_cache';
-      if (!Hive.isBoxOpen(boxName)) {
-        await Hive.openBox(boxName);
-      }
-      final box = Hive.box(boxName);
+      final box = await HiveConfig.getBox(boxName);
       final cacheKey = '${widget.product.platform}_${widget.product.id}';
       final cached = box.get(cacheKey);
       
@@ -267,10 +268,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
   Future<void> _saveAiIntroToCache(String content) async {
     try {
       const boxName = 'ai_intro_cache';
-      if (!Hive.isBoxOpen(boxName)) {
-        await Hive.openBox(boxName);
-      }
-      final box = Hive.box(boxName);
+      final box = await HiveConfig.getBox(boxName);
       final cacheKey = '${widget.product.platform}_${widget.product.id}';
       
       await box.put(cacheKey, {
@@ -757,9 +755,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
       return List<String>.from(memory);
     }
     try {
-      if (!Hive.isBoxOpen('taobao_item_cache'))
-        await Hive.openBox('taobao_item_cache');
-      final box = Hive.box('taobao_item_cache');
+      final box = await HiveConfig.getBox(HiveConfig.taobaoItemCacheBox);
       final stored = box.get('${productId}_images');
       if (stored is List) {
         final list = stored
@@ -771,7 +767,9 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
           return list;
         }
       }
-    } catch (_) {}
+    } catch (e, st) {
+      dev.log('Failed to load cached taobao images: $e', name: 'ProductDetail', error: e, stackTrace: st);
+    }
     return null;
   }
 
@@ -786,42 +784,42 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
     if (sanitized.isEmpty) return;
     _taobaoImageMemoryCache[productId] = sanitized;
     try {
-      if (!Hive.isBoxOpen('taobao_item_cache'))
-        await Hive.openBox('taobao_item_cache');
-      final box = Hive.box('taobao_item_cache');
+      final box = await HiveConfig.getBox(HiveConfig.taobaoItemCacheBox);
       await box.put('${productId}_images', sanitized);
-    } catch (_) {}
+    } catch (e, st) {
+      dev.log('Failed to persist taobao images: $e', name: 'ProductDetail', error: e, stackTrace: st);
+    }
   }
 
   Future<double?> _loadCachedTaobaoPrice(String productId) async {
     final memory = _taobaoPriceMemoryCache[productId];
     if (memory != null) return memory;
     try {
-      if (!Hive.isBoxOpen('taobao_item_cache'))
-        await Hive.openBox('taobao_item_cache');
-      final box = Hive.box('taobao_item_cache');
+      final box = await HiveConfig.getBox(HiveConfig.taobaoItemCacheBox);
       final cached = box.get('${productId}_price');
       final value = _parseDouble(cached);
       if (value != null) {
         _taobaoPriceMemoryCache[productId] = value;
         return value;
       }
-    } catch (_) {}
+    } catch (e, st) {
+      dev.log('Failed to load cached taobao price: $e', name: 'ProductDetail', error: e, stackTrace: st);
+    }
     return null;
   }
 
   Future<void> _persistTaobaoPrice(String productId, double price) async {
     _taobaoPriceMemoryCache[productId] = price;
     try {
-      if (!Hive.isBoxOpen('taobao_item_cache'))
-        await Hive.openBox('taobao_item_cache');
-      final box = Hive.box('taobao_item_cache');
+      final box = await HiveConfig.getBox(HiveConfig.taobaoItemCacheBox);
       await box.put('${productId}_price', price);
       await box.put(
         '${productId}_price_updated_at',
         DateTime.now().millisecondsSinceEpoch,
       );
-    } catch (_) {}
+    } catch (e, st) {
+      dev.log('Error persisting taobao price: $e', name: 'ProductDetail', error: e, stackTrace: st);
+    }
   }
 
   Future<void> _loadPddDetail({bool forceRefresh = false}) async {
@@ -874,9 +872,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
       return List<String>.from(memory);
     }
     try {
-      if (!Hive.isBoxOpen('pdd_item_cache'))
-        await Hive.openBox('pdd_item_cache');
-      final box = Hive.box('pdd_item_cache');
+      final box = await HiveConfig.getBox(HiveConfig.pddItemCacheBox);
       final stored = box.get('${productId}_images');
       if (stored is List) {
         final list = stored
@@ -888,7 +884,9 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
           return list;
         }
       }
-    } catch (_) {}
+    } catch (e, st) {
+      dev.log('Error loading cached PDD images: $e', name: 'ProductDetail', error: e, stackTrace: st);
+    }
     return null;
   }
 
@@ -903,42 +901,42 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
     if (sanitized.isEmpty) return;
     _pddImageMemoryCache[productId] = sanitized;
     try {
-      if (!Hive.isBoxOpen('pdd_item_cache'))
-        await Hive.openBox('pdd_item_cache');
-      final box = Hive.box('pdd_item_cache');
+      final box = await HiveConfig.getBox(HiveConfig.pddItemCacheBox);
       await box.put('${productId}_images', sanitized);
-    } catch (_) {}
+    } catch (e, st) {
+      dev.log('Error persisting PDD images: $e', name: 'ProductDetail', error: e, stackTrace: st);
+    }
   }
 
   Future<double?> _loadCachedPddPrice(String productId) async {
     final memory = _pddPriceMemoryCache[productId];
     if (memory != null) return memory;
     try {
-      if (!Hive.isBoxOpen('pdd_item_cache'))
-        await Hive.openBox('pdd_item_cache');
-      final box = Hive.box('pdd_item_cache');
+      final box = await HiveConfig.getBox(HiveConfig.pddItemCacheBox);
       final cached = box.get('${productId}_price');
       final value = _parseDouble(cached);
       if (value != null) {
         _pddPriceMemoryCache[productId] = value;
         return value;
       }
-    } catch (_) {}
+    } catch (e, st) {
+      dev.log('Error loading cached PDD price: $e', name: 'ProductDetail', error: e, stackTrace: st);
+    }
     return null;
   }
 
   Future<void> _persistPddPrice(String productId, double price) async {
     _pddPriceMemoryCache[productId] = price;
     try {
-      if (!Hive.isBoxOpen('pdd_item_cache'))
-        await Hive.openBox('pdd_item_cache');
-      final box = Hive.box('pdd_item_cache');
+      final box = await HiveConfig.getBox(HiveConfig.pddItemCacheBox);
       await box.put('${productId}_price', price);
       await box.put(
         '${productId}_price_updated_at',
         DateTime.now().millisecondsSinceEpoch,
       );
-    } catch (_) {}
+    } catch (e, st) {
+      dev.log('Error persisting PDD price: $e', name: 'ProductDetail', error: e, stackTrace: st);
+    }
   }
 
   double? _parseDouble(dynamic value) {
@@ -1388,7 +1386,9 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
         if (item.containsKey('title') || item.containsKey('description')) {
           out.add(item);
         }
-      } catch (_) {}
+      } catch (e, st) {
+        dev.log('Error parsing AI intro item: $e', name: 'ProductDetail', error: e, stackTrace: st);
+      }
     }
 
     return out;
@@ -1421,11 +1421,10 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                 child: FutureBuilder<bool>(
                   future: () async {
                     try {
-                      if (!Hive.isBoxOpen('settings'))
-                        await Hive.openBox('settings');
-                      final box = Hive.box('settings');
+                      final box = await HiveConfig.getBox(HiveConfig.settingsBox);
                       return box.get('show_product_json') as bool? ?? false;
-                    } catch (_) {
+                    } catch (e, st) {
+                      dev.log('Error reading show_product_json setting: $e', name: 'ProductDetail', error: e, stackTrace: st);
                       return false;
                     }
                   }(),
@@ -1789,12 +1788,14 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                                   if (ln != null && ln.isNotEmpty)
                                     finalUrl = ln;
                                 }
-                              } catch (_) {}
+                              } catch (e, st) {
+                                dev.log('Error generating promotion link: $e', name: 'ProductDetail', error: e, stackTrace: st);
+                              }
                               try {
-                                final box = await Hive.openBox('settings');
+                                final box = await HiveConfig.getBox(HiveConfig.settingsBox);
+                                // veapi_key 已弃用，仅读取 affiliate_api
                                 final String? tpl =
-                                    box.get('affiliate_api') as String? ??
-                                    box.get('veapi_key') as String?;
+                                    box.get('affiliate_api') as String?;
                                 if (tpl != null &&
                                     tpl.isNotEmpty &&
                                     finalUrl.isNotEmpty) {
@@ -1810,7 +1811,9 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                                     );
                                   }
                                 }
-                              } catch (_) {}
+                              } catch (e, st) {
+                                dev.log('Error applying affiliate API template: $e', name: 'ProductDetail', error: e, stackTrace: st);
+                              }
                             }
 
                             if (finalUrl.isNotEmpty) {
@@ -1864,7 +1867,8 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                                                         ),
                                                       );
                                                     }
-                                                  } catch (_) {
+                                                  } catch (e, st) {
+                                                    dev.log('Error launching URL (JD/PDD dialog): $e', name: 'ProductDetail', error: e, stackTrace: st);
                                                     await Clipboard.setData(
                                                       ClipboardData(
                                                         text: normalized,
@@ -1937,7 +1941,8 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                                       ).showSnackBar(
                                         const SnackBar(content: Text('无法打开链接')),
                                       );
-                                  } catch (_) {
+                                  } catch (e, st) {
+                                    dev.log('Error launching URL: $e', name: 'ProductDetail', error: e, stackTrace: st);
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(content: Text('打开链接出错')),
                                     );
@@ -1992,7 +1997,8 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                                                           ),
                                                         );
                                                       }
-                                                    } catch (_) {
+                                                    } catch (e, st) {
+                                                      dev.log('Error launching URL (non-JD dialog): $e', name: 'ProductDetail', error: e, stackTrace: st);
                                                       await Clipboard.setData(
                                                         ClipboardData(
                                                           text: normalized,
@@ -2075,7 +2081,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                     onPressed: () async {
                       // 切换收藏并持久化到 Hive，同时同步到购物车（收藏时添加、取消收藏时移除）
                       try {
-                        final box = await Hive.openBox('favorites');
+                        final box = await HiveConfig.getBox(HiveConfig.favoritesBox);
                         final cartSvc = ref.read(cartServiceProvider);
 
                         final bool currentlyFavorited = _isFavorited;
@@ -2108,7 +2114,8 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                           }
                           // 刷新购物车 Provider
                           final _ = ref.refresh(cartItemsProvider);
-                        } catch (_) {
+                        } catch (e, st) {
+                          dev.log('Cart sync after favorite toggle failed: $e', name: 'ProductDetail', error: e, stackTrace: st);
                           // 同步购物车失败不影响收藏结果
                         }
 
@@ -2121,7 +2128,8 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                             content: Text(_isFavorited ? '已加入收藏' : '已取消收藏'),
                           ),
                         );
-                      } catch (_) {
+                      } catch (e, st) {
+                        dev.log('Favorite toggle failed: $e', name: 'ProductDetail', error: e, stackTrace: st);
                         if (!mounted) return;
                         ScaffoldMessenger.of(
                           context,

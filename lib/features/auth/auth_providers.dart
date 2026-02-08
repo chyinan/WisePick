@@ -1,3 +1,4 @@
+import 'dart:developer';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'user_model.dart';
 import 'auth_service.dart';
@@ -168,8 +169,9 @@ class AuthStateNotifier extends StateNotifier<AuthState> {
         if (user != null && state.status == AuthStatus.authenticated) {
           state = state.copyWith(user: user);
         }
-      } catch (_) {
-        // 静默处理，不影响当前登录状态
+      } catch (e, st) {
+        // 不影响当前登录状态，但记录异常
+        log('Background user refresh failed: $e', name: 'AuthProviders', error: e, stackTrace: st);
       }
     });
   }
@@ -243,8 +245,9 @@ class AuthStateNotifier extends StateNotifier<AuthState> {
       Future.microtask(() async {
         try {
           await onLoginSuccess!();
-        } catch (_) {
-          // 静默处理同步回调错误
+        } catch (e, st) {
+          // 不阻塞登录流程，但记录同步回调错误
+          log('Post-login sync callback failed: $e', name: 'AuthProviders', error: e, stackTrace: st);
         }
       });
     }

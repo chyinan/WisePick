@@ -1,3 +1,5 @@
+import 'dart:developer' as dev;
+
 import 'package:flutter/material.dart';
 
 typedef KeywordCallback = Future<void> Function(String keyword);
@@ -34,8 +36,8 @@ class _KeywordPromptState extends State<KeywordPrompt> {
                       setState(() => _loadingKeyword = k);
                       try {
                         await widget.onSelected(k);
-                      } catch (_) {
-                        // swallow here; caller handles errors (e.g. shows SnackBar)
+                      } catch (e, st) {
+                        dev.log('Error executing keyword callback: $e', name: 'KeywordPrompt', error: e, stackTrace: st);
                       } finally {
                         if (mounted) setState(() => _loadingKeyword = null);
                       }

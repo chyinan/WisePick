@@ -1,5 +1,7 @@
 import 'dart:math';
 import 'package:hive_flutter/hive_flutter.dart';
+
+import '../../core/storage/hive_config.dart';
 import 'price_history_model.dart';
 import '../products/product_model.dart';
 
@@ -14,12 +16,13 @@ class PriceHistoryService {
   PriceHistoryService._internal();
 
   static const String _boxName = 'price_history_records';
+  
+  /// Maximum number of price history records to keep per product.
+  /// ~2 records/day × 365 days ≈ 730; 1000 gives comfortable headroom.
+  static const int _maxRecordsPerProduct = 1000;
 
   Future<Box> _getBox() async {
-    if (!Hive.isBoxOpen(_boxName)) {
-      return await Hive.openBox(_boxName);
-    }
-    return Hive.box(_boxName);
+    return HiveConfig.getBox(_boxName);
   }
 
   /// 清除指定商品的价格历史数据
@@ -93,6 +96,10 @@ class PriceHistoryService {
 
     if (shouldAdd) {
       historyList.add(record.toMap());
+      // Evict oldest records to prevent unbounded storage growth.
+      if (historyList.length > _maxRecordsPerProduct) {
+        historyList.removeRange(0, historyList.length - _maxRecordsPerProduct);
+      }
       await box.put(productId, historyList);
     }
   }

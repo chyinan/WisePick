@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import '../../core/api_client.dart';
 import '../../core/auth/auth_service.dart';
@@ -6,6 +7,7 @@ import '../users/users_page.dart';
 import '../cart/cart_page.dart';
 import '../conversations/conversations_page.dart';
 import '../settings/settings_page.dart';
+import '../reliability/reliability_page.dart';
 import 'dashboard_service.dart';
 import 'widgets/stats_dashboard.dart';
 
@@ -17,8 +19,34 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
-  final _service = DashboardService(ApiClient());
-  final _authService = AuthService(ApiClient());
+  late final ApiClient _apiClient;
+  late final DashboardService _service;
+  late final AuthService _authService;
+  
+  void _log(String message, {bool isError = false}) {
+    final prefix = isError ? '❌ Dashboard' : '📊 Dashboard';
+    developer.log('$prefix: $message', name: 'DashboardPage');
+  }
+  
+  /// 安全地将 dynamic 转换为 `List<Map<String, dynamic>>`
+  List<Map<String, dynamic>> _safeParseList(dynamic data) {
+    if (data == null) return [];
+    if (data is! List) return [];
+    return data
+        .whereType<Map>()
+        .map((item) => item is Map<String, dynamic> 
+            ? item 
+            : Map<String, dynamic>.from(item))
+        .toList();
+  }
+  
+  /// 安全地将 dynamic 转换为 `Map<String, dynamic>`
+  Map<String, dynamic> _safeParseMap(dynamic data) {
+    if (data == null) return {};
+    if (data is Map<String, dynamic>) return data;
+    if (data is Map) return Map<String, dynamic>.from(data);
+    return {};
+  }
   
   Map<String, dynamic>? _userStats;
   Map<String, dynamic>? _systemStats;
@@ -28,46 +56,110 @@ class _DashboardPageState extends State<DashboardPage> {
   String? _error;
   DateTime? _lastRefresh;
   int _selectedNavIndex = 0;
+  
+  /// 防止并发加载的锁标志
+  bool _isLoadingInProgress = false;
 
   @override
   void initState() {
     super.initState();
+    _apiClient = ApiClient();
+    _service = DashboardService(_apiClient);
+    _authService = AuthService(_apiClient);
+    
+    // 连接全局 401 未授权回调，触发自动登出
+    _apiClient.onUnauthorized = _handleUnauthorized;
+    
     _loadData();
+  }
+  
+  /// 处理 401 未授权错误，执行全局登出
+  void _handleUnauthorized() {
+    _log('Received 401 unauthorized, triggering logout');
+    // 使用 Future.microtask 避免在请求处理中直接导航
+    Future.microtask(() async {
+      if (!mounted) return;
+      await _authService.logout();
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+      );
+    });
   }
 
   Future<void> _loadData() async {
+    // 防止并发请求
+    if (_isLoadingInProgress) {
+      _log('Skipping load: another load is already in progress');
+      return;
+    }
+    
+    _isLoadingInProgress = true;
+    
     setState(() {
       _isLoading = true;
       _error = null;
     });
 
     try {
+      _log('Loading dashboard data...');
       // 并行加载所有数据
       final results = await Future.wait([
         _service.getUserStats(),
         _service.getSystemStats(),
-        _service.getRecentUsers().catchError((_) => <Map<String, dynamic>>[]),
-        _service.getActivityChart().catchError((_) => <Map<String, dynamic>>[]),
+        _service.getRecentUsers().catchError((e) {
+          _log('Failed to load recent users: $e', isError: true);
+          return <Map<String, dynamic>>[];
+        }),
+        _service.getActivityChart().catchError((e) {
+          _log('Failed to load activity chart: $e', isError: true);
+          return <Map<String, dynamic>>[];
+        }),
       ]);
 
       if (mounted) {
         setState(() {
-          _userStats = results[0] as Map<String, dynamic>;
-          _systemStats = results[1] as Map<String, dynamic>;
-          _recentUsers = results[2] as List<Map<String, dynamic>>;
-          _chartData = results[3] as List<Map<String, dynamic>>;
+          _userStats = _safeParseMap(results[0]);
+          _systemStats = _safeParseMap(results[1]);
+          _recentUsers = _safeParseList(results[2]);
+          _chartData = _safeParseList(results[3]);
           _isLoading = false;
           _lastRefresh = DateTime.now();
         });
+        _log('Dashboard data loaded successfully');
       }
-    } catch (e) {
+    } on ApiException catch (e) {
+      _log('Dashboard loading failed (API): ${e.message}', isError: true);
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _error = e.toString();
+          _error = e.message;
         });
       }
+    } catch (e) {
+      _log('Dashboard loading failed (unexpected): $e', isError: true);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _error = '加载数据失败，请稍后重试';
+        });
+      }
+    } finally {
+      _isLoadingInProgress = false;
     }
+  }
+
+  @override
+  void dispose() {
+    // 清理 onUnauthorized 回调，避免在 widget 销毁后被调用。
+    // 
+    // 由于 ApiClient 是单例，多个页面可能设置此回调。
+    // 通过检查引用相等性确保只清除本实例设置的回调，
+    // 避免意外清除其他页面的回调（边界情况防护）。
+    if (_apiClient.onUnauthorized == _handleUnauthorized) {
+      _apiClient.onUnauthorized = null;
+    }
+    super.dispose();
   }
 
   Future<void> _logout() async {
@@ -180,6 +272,19 @@ class _DashboardPageState extends State<DashboardPage> {
             icon: Icons.settings_rounded,
             label: '系统设置',
             index: 4,
+          ),
+          
+          // 分隔线
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            child: Divider(color: Colors.white.withOpacity(0.1)),
+          ),
+          
+          // 可靠性监控
+          _buildNavItem(
+            icon: Icons.monitor_heart_rounded,
+            label: '可靠性监控',
+            index: 5,
           ),
           
           const Spacer(),
@@ -299,6 +404,7 @@ class _DashboardPageState extends State<DashboardPage> {
       case 2: return '购物车数据';
       case 3: return '会话记录';
       case 4: return '系统设置';
+      case 5: return '可靠性监控';
       default: return '管理后台';
     }
   }
@@ -405,6 +511,8 @@ class _DashboardPageState extends State<DashboardPage> {
           padding: EdgeInsets.all(32),
           child: SettingsPage(),
         );
+      case 5: // 可靠性监控
+        return const ReliabilityPage();
       default: // 数据概览
         return _buildDashboardContent();
     }

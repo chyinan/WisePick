@@ -1,25 +1,30 @@
+import 'dart:developer';
+
 import 'package:hive_flutter/hive_flutter.dart';
 
+import '../../core/storage/hive_config.dart';
 import 'conversation_model.dart';
 
 class ConversationRepository {
   static const _boxName = 'conversations';
 
   Future<Box> _openBox() async {
-    if (!Hive.isBoxOpen(_boxName)) {
-      return await Hive.openBox(_boxName);
-    }
-    return Hive.box(_boxName);
+    return HiveConfig.getBox(HiveConfig.conversationsBox);
   }
 
   Future<List<ConversationModel>> listConversations() async {
     final box = await _openBox();
     final List<ConversationModel> list = [];
-    for (final v in box.values) {
+    for (final key in box.keys) {
       try {
+        final v = box.get(key);
         final m = v as Map;
         list.add(ConversationModel.fromMap(Map<String, dynamic>.from(m)));
-      } catch (_) {}
+      } catch (e) {
+        // Log corrupted entries so data loss is observable in diagnostics.
+        log('Skipping corrupted conversation entry (key=$key): $e',
+            name: 'ConversationRepository');
+      }
     }
     // sort by timestamp desc
     list.sort((a, b) => b.timestamp.compareTo(a.timestamp));

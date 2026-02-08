@@ -1,3 +1,5 @@
+import 'dart:developer' as dev;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -72,8 +74,8 @@ class CartPage extends ConsumerWidget {
                             await syncManager.syncCart();
                             // 同步后重新加载本地数据
                             ref.invalidate(cartItemsProvider);
-                          } catch (_) {
-                            // 忽略同步错误
+                          } catch (e, st) {
+                            dev.log('Cart sync error (non-blocking): $e', name: 'CartPage', error: e, stackTrace: st);
                           }
                         }
                       },

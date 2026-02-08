@@ -1,8 +1,11 @@
+import 'dart:convert';
+import 'dart:developer' as dev;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dart:convert';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../core/storage/hive_config.dart';
 import 'package:flutter_animate/flutter_animate.dart'; // Import flutter_animate
 import '../../features/chat/chat_providers.dart';
 import 'home_drawer.dart';
@@ -34,7 +37,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   void dispose() {
     try {
       ref.read(chatStateNotifierProvider.notifier).saveCurrentConversation();
-    } catch (_) {}
+    } catch (e, st) {
+      dev.log('Error saving conversation on dispose: $e', name: 'ChatPage', error: e, stackTrace: st);
+    }
     _textController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -193,11 +198,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             if (title.isNotEmpty) {
               buf.writeln('${title}：${desc}');
             }
-          } catch (_) {}
+          } catch (e, st) {
+            dev.log('Error parsing product item in context: $e', name: 'ChatPage', error: e, stackTrace: st);
+          }
         }
       }
       return buf.toString().trim();
-    } catch (_) {
+    } catch (e, st) {
+      dev.log('Error building product context: $e', name: 'ChatPage', error: e, stackTrace: st);
       return base;
     }
   }
@@ -352,7 +360,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                           ),
                           onFavorite: (product) async {
                              // ... favorite logic (same as before)
-                             final box = await Hive.openBox('favorites');
+                             final box = await HiveConfig.getBox(HiveConfig.favoritesBox);
                              final exists = box.containsKey(product.id);
                              if (exists) {
                                await box.delete(product.id);
@@ -513,9 +521,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           Map tbMeta = {};
           Map pddMeta = {};
 
-          try { jdMeta = await fJd as Map<String, dynamic>; } catch (_) { jdMeta = {'products': []}; }
-          try { tbMeta = await fTb as Map<String, dynamic>; } catch (_) { tbMeta = {'products': []}; }
-          try { pddMeta = await fPdd as Map<String, dynamic>; } catch (_) { pddMeta = {'products': []}; }
+          try { jdMeta = await fJd as Map<String, dynamic>; } catch (e, st) { dev.log('JD search failed: $e', name: 'ChatPage', error: e, stackTrace: st); jdMeta = {'products': []}; }
+          try { tbMeta = await fTb as Map<String, dynamic>; } catch (e, st) { dev.log('Taobao search failed: $e', name: 'ChatPage', error: e, stackTrace: st); tbMeta = {'products': []}; }
+          try { pddMeta = await fPdd as Map<String, dynamic>; } catch (e, st) { dev.log('PDD search failed: $e', name: 'ChatPage', error: e, stackTrace: st); pddMeta = {'products': []}; }
 
           final List<ProductModel> jdList = List<ProductModel>.from(jdMeta['products'] ?? []);
           final List<ProductModel> tbList = List<ProductModel>.from(tbMeta['products'] ?? []);

@@ -1,6 +1,9 @@
 import 'dart:convert';
+import 'dart:developer';
 import 'package:dio/dio.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import '../../core/backend_config.dart';
+import '../../core/storage/hive_config.dart';
+import '../../core/resilience/network_error_detector.dart';
 import '../../features/auth/token_manager.dart';
 
 /// 会话同步请求
@@ -195,18 +198,8 @@ class ConversationSyncClient {
   final Dio _dio;
   final TokenManager _tokenManager;
 
-  String get _baseUrl {
-    try {
-      if (Hive.isBoxOpen('settings')) {
-        final box = Hive.box('settings');
-        final proxyUrl = box.get('proxy_url') as String?;
-        if (proxyUrl != null && proxyUrl.isNotEmpty) {
-          return proxyUrl;
-        }
-      }
-    } catch (_) {}
-    return 'http://localhost:9527';
-  }
+  // 通过集中式 BackendConfig 解析后端地址
+  String get _baseUrl => BackendConfig.resolveSync();
 
   String get _syncBaseUrl => '$_baseUrl/api/v1/sync';
 
@@ -231,26 +224,26 @@ class ConversationSyncClient {
 
   /// 获取本地保存的同步版本号
   Future<int> getLocalSyncVersion() async {
-    final box = await Hive.openBox('sync_meta');
+    final box = await HiveConfig.getBox(HiveConfig.syncMetaBox);
     return box.get(_syncVersionKey, defaultValue: 0) as int;
   }
 
   /// 保存本地同步版本号
   Future<void> saveLocalSyncVersion(int version) async {
-    final box = await Hive.openBox('sync_meta');
+    final box = await HiveConfig.getBox(HiveConfig.syncMetaBox);
     await box.put(_syncVersionKey, version);
   }
 
   /// 获取待同步的会话变更
   Future<List<Map<String, dynamic>>> getPendingConversationChanges() async {
-    final box = await Hive.openBox('sync_meta');
+    final box = await HiveConfig.getBox(HiveConfig.syncMetaBox);
     final changes = box.get(_pendingConvChangesKey, defaultValue: <dynamic>[]) as List<dynamic>;
     return changes.map((e) => Map<String, dynamic>.from(e as Map)).toList();
   }
 
   /// 添加待同步的会话变更
   Future<void> addPendingConversationChange(Map<String, dynamic> change) async {
-    final box = await Hive.openBox('sync_meta');
+    final box = await HiveConfig.getBox(HiveConfig.syncMetaBox);
     final changes = await getPendingConversationChanges();
 
     final existingIndex = changes.indexWhere(
@@ -268,14 +261,14 @@ class ConversationSyncClient {
 
   /// 获取待同步的消息变更
   Future<List<Map<String, dynamic>>> getPendingMessageChanges() async {
-    final box = await Hive.openBox('sync_meta');
+    final box = await HiveConfig.getBox(HiveConfig.syncMetaBox);
     final changes = box.get(_pendingMsgChangesKey, defaultValue: <dynamic>[]) as List<dynamic>;
     return changes.map((e) => Map<String, dynamic>.from(e as Map)).toList();
   }
 
   /// 添加待同步的消息变更
   Future<void> addPendingMessageChange(Map<String, dynamic> change) async {
-    final box = await Hive.openBox('sync_meta');
+    final box = await HiveConfig.getBox(HiveConfig.syncMetaBox);
     final changes = await getPendingMessageChanges();
 
     final existingIndex = changes.indexWhere(
@@ -293,7 +286,7 @@ class ConversationSyncClient {
 
   /// 清除所有待同步的变更
   Future<void> clearPendingChanges() async {
-    final box = await Hive.openBox('sync_meta');
+    final box = await HiveConfig.getBox(HiveConfig.syncMetaBox);
     await box.put(_pendingConvChangesKey, <dynamic>[]);
     await box.put(_pendingMsgChangesKey, <dynamic>[]);
   }
@@ -413,8 +406,12 @@ class ConversationSyncClient {
                 .toList() ??
             [];
       }
+      log('getCloudMessages returned success=false: ${data['message']}',
+          name: 'ConversationSyncClient');
       return [];
-    } catch (e) {
+    } catch (e, st) {
+      log('Failed to get cloud messages for $conversationClientId: $e',
+          name: 'ConversationSyncClient', error: e, stackTrace: st);
       return [];
     }
   }
@@ -433,12 +430,14 @@ class ConversationSyncClient {
 
       final data = response.data as Map<String, dynamic>;
       return data['current_version'] as int? ?? 0;
-    } catch (e) {
+    } catch (e, st) {
+      log('Failed to get cloud conversation version: $e',
+          name: 'ConversationSyncClient', error: e, stackTrace: st);
       return 0;
     }
   }
 
-  /// 处理 Dio 错误
+  /// 处理 Dio 错误 — 使用 [NetworkErrorDetector] 提供精确的错误分类和用户友好消息
   ConversationSyncResponse _handleDioError(DioException e) {
     if (e.response != null) {
       try {
@@ -446,7 +445,10 @@ class ConversationSyncClient {
         if (data is Map<String, dynamic>) {
           return ConversationSyncResponse.fromJson(data);
         }
-      } catch (_) {}
+      } catch (parseErr, st) {
+        log('Failed to parse error response body: $parseErr',
+            name: 'ConversationSyncClient', error: parseErr, stackTrace: st);
+      }
 
       switch (e.response!.statusCode) {
         case 401:
@@ -460,15 +462,10 @@ class ConversationSyncClient {
       }
     }
 
-    if (e.type == DioExceptionType.connectionTimeout ||
-        e.type == DioExceptionType.receiveTimeout) {
-      return ConversationSyncResponse.error('连接超时');
-    }
-
-    if (e.type == DioExceptionType.connectionError) {
-      return ConversationSyncResponse.error('无法连接服务器');
-    }
-
-    return ConversationSyncResponse.error('网络错误: ${e.message}');
+    // 使用 NetworkErrorDetector 进行精确错误分类
+    final analysis = NetworkErrorDetector.analyze(e);
+    log('Conversation sync network error: ${analysis.type} - ${analysis.message}',
+        name: 'ConversationSyncClient');
+    return ConversationSyncResponse.error(analysis.userFriendlyMessage);
   }
 }

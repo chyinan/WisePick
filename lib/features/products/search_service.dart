@@ -1,25 +1,13 @@
 import 'dart:convert';
-import 'dart:io';
+import 'dart:developer';
 import 'package:http/http.dart' as http;
-import 'package:hive_flutter/hive_flutter.dart';
 import 'product_model.dart';
+import '../../core/backend_config.dart';
 
 class SearchService {
   final String baseUrl;
 
-  SearchService({String? baseUrl}) : baseUrl = baseUrl ?? _resolveBackendBase();
-
-  static String _resolveBackendBase() {
-    String backend = 'http://localhost:9527';
-    try {
-      if (Hive.isBoxOpen('settings')) {
-        final box = Hive.box('settings');
-        final String? b = box.get('backend_base') as String?;
-        if (b != null && b.trim().isNotEmpty) return b.trim();
-      }
-    } catch (_) {}
-    return Platform.environment['BACKEND_BASE'] ?? backend;
-  }
+  SearchService({String? baseUrl}) : baseUrl = baseUrl ?? BackendConfig.resolveSync();
 
   Future<List<ProductModel>> search(String query, {int page = 1, int pageSize = 20, String? platform}) async {
     final uri = Uri.parse('$baseUrl/api/products/search?query=${Uri.encodeComponent(query)}&page_no=$page&page_size=$pageSize' + (platform != null ? '&platform=${Uri.encodeComponent(platform)}' : ''));
@@ -62,7 +50,9 @@ class SearchService {
           }
         }
       }
-    } catch (_) {}
+    } catch (e, st) {
+      log('Error merging raw JD results: $e', name: 'SearchService', error: e, stackTrace: st);
+    }
     final attempts = body['attempts'] ?? [];
     return {'products': products, 'attempts': attempts, 'raw': body};
   }
@@ -88,7 +78,9 @@ class SearchService {
         try {
           if (it['Content'] is Map) title = (it['Content']['warename'] ?? it['Content']['wareName'] ?? '').toString();
           if (title.isNotEmpty) title = Uri.decodeComponent(title);
-        } catch (_) {}
+        } catch (e, st) {
+          log('Error parsing JD ware title: $e', name: 'SearchService', error: e, stackTrace: st);
+        }
         String imageUrl = '';
         try {
           if (it['Content'] is Map && it['Content']['imageurl'] != null) imageUrl = it['Content']['imageurl'].toString();
@@ -97,7 +89,9 @@ class SearchService {
             if (sw is Map && sw['Content'] is Map && sw['Content']['imageurl'] != null) imageUrl = sw['Content']['imageurl'].toString();
           }
           if (imageUrl.isNotEmpty && !imageUrl.startsWith('http')) imageUrl = 'https://img.360buyimg.com/' + imageUrl.replaceAll(RegExp(r'^/+'), '');
-        } catch (_) {}
+        } catch (e, st) {
+          log('Error parsing JD ware image: $e', name: 'SearchService', error: e, stackTrace: st);
+        }
         final sales = (num.tryParse((it['good'] ?? it['sales'] ?? '0').toString()) ?? 0).toInt();
         final shopTitle = (it['shop_id'] ?? it['shopId'] ?? it['shopTitle'] ?? '').toString();
         out.add(ProductModel(
@@ -118,7 +112,8 @@ class SearchService {
         ));
       }
       return out;
-    } catch (_) {
+    } catch (e, st) {
+      log('Error mapping JD search ware: $e', name: 'SearchService', error: e, stackTrace: st);
       return [];
     }
   }

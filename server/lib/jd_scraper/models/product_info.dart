@@ -33,8 +33,17 @@ class JdProductInfo {
   /// 是否来自缓存
   final bool cached;
 
+  /// 兼容旧版本的 isCached 别名
+  bool get isCached => cached;
+
   /// 是否下架/无货状态
   final bool isOffShelf;
+
+  /// 是否为降级数据
+  final bool isDegraded;
+
+  /// 降级原因
+  final String? degradationReason;
 
   /// 获取时间
   final DateTime fetchTime;
@@ -55,6 +64,8 @@ class JdProductInfo {
     this.shortLink,
     this.cached = false,
     this.isOffShelf = false,
+    this.isDegraded = false,
+    this.degradationReason,
     DateTime? fetchTime,
     this.rawData,
   }) : fetchTime = fetchTime ?? DateTime.now();
@@ -72,8 +83,10 @@ class JdProductInfo {
       shopName: json['shopName']?.toString(),
       promotionLink: json['promotionLink']?.toString(),
       shortLink: json['shortLink']?.toString(),
-      cached: json['cached'] == true,
+      cached: json['cached'] == true || json['isCached'] == true,
       isOffShelf: json['isOffShelf'] == true,
+      isDegraded: json['isDegraded'] == true,
+      degradationReason: json['degradationReason']?.toString(),
       fetchTime: json['fetchTime'] != null
           ? DateTime.parse(json['fetchTime'] as String)
           : DateTime.now(),
@@ -181,6 +194,8 @@ class JdProductInfo {
         if (shortLink != null) 'shortLink': shortLink,
         'cached': cached,
         'isOffShelf': isOffShelf,
+        'isDegraded': isDegraded,
+        if (degradationReason != null) 'degradationReason': degradationReason,
         'fetchTime': fetchTime.toIso8601String(),
       };
 
@@ -199,8 +214,49 @@ class JdProductInfo {
       shortLink: shortLink,
       cached: true,
       isOffShelf: isOffShelf,
+      isDegraded: isDegraded,
+      degradationReason: degradationReason,
       fetchTime: fetchTime,
       rawData: rawData,
+    );
+  }
+
+  /// 创建一个带有自定义属性的副本
+  JdProductInfo copyWith({
+    String? skuId,
+    String? title,
+    double? price,
+    double? originalPrice,
+    double? commission,
+    double? commissionRate,
+    String? imageUrl,
+    String? shopName,
+    String? promotionLink,
+    String? shortLink,
+    bool? cached,
+    bool? isOffShelf,
+    bool? isDegraded,
+    String? degradationReason,
+    DateTime? fetchTime,
+    Map<String, dynamic>? rawData,
+  }) {
+    return JdProductInfo(
+      skuId: skuId ?? this.skuId,
+      title: title ?? this.title,
+      price: price ?? this.price,
+      originalPrice: originalPrice ?? this.originalPrice,
+      commission: commission ?? this.commission,
+      commissionRate: commissionRate ?? this.commissionRate,
+      imageUrl: imageUrl ?? this.imageUrl,
+      shopName: shopName ?? this.shopName,
+      promotionLink: promotionLink ?? this.promotionLink,
+      shortLink: shortLink ?? this.shortLink,
+      cached: cached ?? this.cached,
+      isOffShelf: isOffShelf ?? this.isOffShelf,
+      isDegraded: isDegraded ?? this.isDegraded,
+      degradationReason: degradationReason ?? this.degradationReason,
+      fetchTime: fetchTime ?? this.fetchTime,
+      rawData: rawData ?? this.rawData,
     );
   }
 
@@ -222,6 +278,8 @@ class JdProductInfo {
       shortLink: shortLink ?? other.shortLink,
       cached: cached,
       isOffShelf: isOffShelf && other.isOffShelf, // 只有两边都下架才认为下架
+      isDegraded: isDegraded || other.isDegraded, // 任一为降级则标记为降级
+      degradationReason: degradationReason ?? other.degradationReason,
       fetchTime: fetchTime,
       rawData: _mergeRawData(rawData, other.rawData),
     );

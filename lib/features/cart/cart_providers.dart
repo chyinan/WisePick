@@ -1,8 +1,8 @@
+import 'dart:developer';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'cart_service.dart';
 import '../auth/auth_providers.dart';
 import '../../services/sync/sync_manager.dart';
-import '../../services/sync/cart_sync_client.dart';
 import '../products/product_model.dart';
 
 final cartServiceProvider = Provider<CartService>((ref) => CartService());
@@ -19,12 +19,18 @@ final cartSelectionProvider = StateProvider<Map<String, bool>>((ref) => <String,
 final cartCountProvider = Provider<int>((ref) {
   final itemsAsync = ref.watch(cartItemsProvider);
   return itemsAsync.whenOrNull(data: (items) => items.length) ?? 0;
-});/// 带云端同步的购物车操作管理器
+});
+
+/// 带云端同步的购物车操作管理器
 class SyncedCartNotifier extends StateNotifier<AsyncValue<List<Map<String, dynamic>>>> {
   final CartService _cartService;
-  final Ref _ref;  SyncedCartNotifier(this._cartService, this._ref) : super(const AsyncValue.loading()) {
+  final Ref _ref;
+
+  SyncedCartNotifier(this._cartService, this._ref) : super(const AsyncValue.loading()) {
     _loadItems();
-  }  Future<void> _loadItems() async {
+  }
+
+  Future<void> _loadItems() async {
     state = const AsyncValue.loading();
     try {
       final items = await _cartService.getAllItems();
@@ -32,15 +38,21 @@ class SyncedCartNotifier extends StateNotifier<AsyncValue<List<Map<String, dynam
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
-  }  /// 刷新购物车（从本地重新加载）
+  }
+
+  /// 刷新购物车（从本地重新加载）
   Future<void> refresh() async {
     await _loadItems();
-  }  /// 添加或更新商品到购物车
+  }
+
+  /// 添加或更新商品到购物车
   Future<void> addOrUpdateItem(ProductModel product, {int qty = 1, String? rawJson}) async {
     await _cartService.addOrUpdateItem(product, qty: qty, rawJson: rawJson);
-    
+
     // 重新加载本地数据
-    await _loadItems();    // 如果已登录，添加待同步变更并触发同步
+    await _loadItems();
+
+    // 如果已登录，添加待同步变更并触发同步
     final isLoggedIn = _ref.read(isLoggedInProvider);
     if (isLoggedIn) {
       try {
@@ -50,12 +62,16 @@ class SyncedCartNotifier extends StateNotifier<AsyncValue<List<Map<String, dynam
         await syncManager.addCartChange(item);
         // 延迟同步（可以用防抖机制优化）
         syncManager.scheduleSyncCart();
-      } catch (_) {}
+      } catch (e, st) { log('Cart sync error: $e', name: 'CartProviders', error: e, stackTrace: st); }
     }
-  }  /// 设置商品数量
+  }
+
+  /// 设置商品数量
   Future<void> setQuantity(String productId, int qty) async {
     await _cartService.setQuantity(productId, qty);
-    await _loadItems();    // 如果已登录，同步变更
+    await _loadItems();
+
+    // 如果已登录，同步变更
     final isLoggedIn = _ref.read(isLoggedInProvider);
     if (isLoggedIn) {
       try {
@@ -69,9 +85,11 @@ class SyncedCartNotifier extends StateNotifier<AsyncValue<List<Map<String, dynam
           await syncManager.addCartChange(item);
           syncManager.scheduleSyncCart();
         }
-      } catch (_) {}
+      } catch (e, st) { log('Cart sync error: $e', name: 'CartProviders', error: e, stackTrace: st); }
     }
-  }  /// 删除商品
+  }
+
+  /// 删除商品
   Future<void> removeItem(String productId) async {
     // 先获取商品信息用于同步
     Map<String, dynamic>? itemToDelete;
@@ -83,7 +101,7 @@ class SyncedCartNotifier extends StateNotifier<AsyncValue<List<Map<String, dynam
           (i) => i['id'] == productId,
           orElse: () => <String, dynamic>{},
         );
-      } catch (_) {}
+      } catch (e, st) { log('Cart sync error: $e', name: 'CartProviders', error: e, stackTrace: st); }
     }
 
     await _cartService.removeItem(productId);
@@ -95,7 +113,7 @@ class SyncedCartNotifier extends StateNotifier<AsyncValue<List<Map<String, dynam
         final syncManager = _ref.read(syncManagerProvider.notifier);
         await syncManager.addCartChange(itemToDelete, isDeleted: true);
         syncManager.scheduleSyncCart();
-      } catch (_) {}
+      } catch (e, st) { log('Cart sync error: $e', name: 'CartProviders', error: e, stackTrace: st); }
     }
   }
 
@@ -107,7 +125,7 @@ class SyncedCartNotifier extends StateNotifier<AsyncValue<List<Map<String, dynam
     if (isLoggedIn) {
       try {
         itemsToDelete = await _cartService.getAllItems();
-      } catch (_) {}
+      } catch (e, st) { log('Cart sync error: $e', name: 'CartProviders', error: e, stackTrace: st); }
     }
 
     await _cartService.clear();
@@ -121,7 +139,7 @@ class SyncedCartNotifier extends StateNotifier<AsyncValue<List<Map<String, dynam
           await syncManager.addCartChange(item, isDeleted: true);
         }
         syncManager.scheduleSyncCart();
-      } catch (_) {}
+      } catch (e, st) { log('Cart sync error: $e', name: 'CartProviders', error: e, stackTrace: st); }
     }
   }
 
@@ -135,7 +153,7 @@ class SyncedCartNotifier extends StateNotifier<AsyncValue<List<Map<String, dynam
       await syncManager.syncCart();
       // 同步完成后重新加载本地数据
       await _loadItems();
-    } catch (_) {}
+    } catch (e, st) { log('Cart sync error: $e', name: 'CartProviders', error: e, stackTrace: st); }
   }
 }
 
@@ -145,7 +163,5 @@ final syncedCartProvider = StateNotifierProvider<SyncedCartNotifier, AsyncValue<
   return SyncedCartNotifier(cartService, ref);
 });
 
-/// 购物车同步客户端 Provider
-final cartSyncClientProvider = Provider<CartSyncClient>((ref) {
-  return CartSyncClient();
-});
+// Note: cartSyncClientProvider is defined in sync_manager.dart with proper
+// TokenManager injection. Do not duplicate here.

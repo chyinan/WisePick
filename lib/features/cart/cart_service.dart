@@ -1,10 +1,13 @@
-import 'package:hive/hive.dart';
+import 'dart:developer';
+
 import '../products/product_model.dart';
 import '../price_history/price_history_service.dart';
+import '../../core/storage/hive_config.dart';
 
 /// 购物车服务：基于 Hive 存储购物车条目（包含数量）
 class CartService {
-  static const String boxName = 'cart_box';
+  /// Cart box name — delegates to the single source of truth in [HiveConfig].
+  static String get boxName => HiveConfig.cartBox;
   
   final PriceHistoryService _priceHistoryService;
   
@@ -14,7 +17,7 @@ class CartService {
   /// 获取所有购物车商品（包含数量）
   /// 存储格式：key = product.id, value = {product fields..., 'qty': int}
   Future<List<Map<String, dynamic>>> getAllItems() async {
-    final box = await Hive.openBox(boxName);
+    final box = await HiveConfig.getBox(boxName);
     return box.values.map((e) => Map<String, dynamic>.from(e)).toList();
   }
 
@@ -23,7 +26,7 @@ class CartService {
   /// 
   /// 当商品首次加入购物车时，会同时记录初始价格历史
   Future<void> addOrUpdateItem(ProductModel p, {int qty = 1, String? rawJson}) async {
-    final box = await Hive.openBox(boxName);
+    final box = await HiveConfig.getBox(boxName);
     final existing = box.get(p.id);
     final bool isNewItem = existing == null;
     
@@ -61,7 +64,7 @@ class CartService {
   }
 
   Future<void> setQuantity(String productId, int qty) async {
-    final box = await Hive.openBox(boxName);
+    final box = await HiveConfig.getBox(boxName);
     final existing = box.get(productId);
     if (existing != null) {
       final m = Map<String, dynamic>.from(existing);
@@ -71,19 +74,22 @@ class CartService {
   }
 
   Future<void> removeItem(String productId) async {
-    final box = await Hive.openBox(boxName);
+    final box = await HiveConfig.getBox(boxName);
     await box.delete(productId);
     // 同步删除 favorites 中的收藏（若购物车删除时希望取消收藏）
     try {
-      final favBox = await Hive.openBox('favorites');
+      final favBox = await HiveConfig.getBox(HiveConfig.favoritesBox);
       if (favBox.containsKey(productId)) {
         await favBox.delete(productId);
       }
-    } catch (_) {}
+    } catch (e) {
+      log('Failed to remove favorite for $productId: $e',
+          name: 'CartService');
+    }
   }
 
   Future<void> clear() async {
-    final box = await Hive.openBox(boxName);
+    final box = await HiveConfig.getBox(boxName);
     await box.clear();
   }
 

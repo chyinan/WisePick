@@ -207,7 +207,7 @@ class AdminService {
         'database': {
           'status': dbStatus,
         },
-        'serverStartTime': DateTime.now().subtract(const Duration(hours: 24)).toIso8601String(),
+        'serverStartTime': Database.serverStartTime.toIso8601String(),
       };
 
       return Response.ok(jsonEncode(stats), headers: _corsHeaders);
@@ -983,11 +983,30 @@ class AdminService {
   // 系统设置管理
   // ============================================================
 
+  /// 检测 JD Cookie 文件是否存在
+  bool _detectJdCookieFile() {
+    const fileName = 'jd_cookies.json';
+    final possiblePaths = [
+      'data/$fileName',            // 从 server 目录启动
+      'server/data/$fileName',     // 从项目根目录启动
+    ];
+    for (final p in possiblePaths) {
+      if (File(p).existsSync()) return true;
+    }
+    return false;
+  }
+
   /// 获取系统设置
   Future<Response> _handleGetSettings(Request request) async {
     try {
       // 从环境变量获取当前设置
       final env = Platform.environment;
+
+      // 判断 Cookie 是否存在：优先检查环境变量，再检查文件
+      final hasEnvCookie = (env['JD_COOKIE'] ?? '').isNotEmpty;
+      final hasFileCookie = _detectJdCookieFile();
+      final hasCookie = hasEnvCookie || hasFileCookie;
+      final cookieSource = hasEnvCookie ? 'env' : (hasFileCookie ? 'file' : '-');
       
       final settings = {
         'server': {
@@ -1007,8 +1026,8 @@ class AdminService {
           'hasApiKey': (env['AI_API_KEY'] ?? '').isNotEmpty,
         },
         'jd': {
-          'hasCookie': (env['JD_COOKIE'] ?? '').isNotEmpty,
-          'cookieSource': env['JD_COOKIE_SOURCE'] ?? 'file',
+          'hasCookie': hasCookie,
+          'cookieSource': cookieSource,
         },
         'features': {
           'emailVerification': env['ENABLE_EMAIL_VERIFICATION'] == 'true',

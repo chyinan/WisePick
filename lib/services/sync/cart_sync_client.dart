@@ -1,6 +1,9 @@
 import 'dart:convert';
+import 'dart:developer';
 import 'package:dio/dio.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import '../../core/backend_config.dart';
+import '../../core/storage/hive_config.dart';
+import '../../core/resilience/network_error_detector.dart';
 import '../../features/auth/token_manager.dart';
 
 /// 购物车同步请求模型
@@ -176,18 +179,8 @@ class CartSyncClient {
   final Dio _dio;
   final TokenManager _tokenManager;
 
-  String get _baseUrl {
-    try {
-      if (Hive.isBoxOpen('settings')) {
-        final box = Hive.box('settings');
-        final proxyUrl = box.get('proxy_url') as String?;
-        if (proxyUrl != null && proxyUrl.isNotEmpty) {
-          return proxyUrl;
-        }
-      }
-    } catch (_) {}
-    return 'http://localhost:9527';
-  }
+  // 通过集中式 BackendConfig 解析后端地址
+  String get _baseUrl => BackendConfig.resolveSync();
 
   String get _syncBaseUrl => '$_baseUrl/api/v1/sync';
 
@@ -212,26 +205,26 @@ class CartSyncClient {
 
   /// 获取本地保存的同步版本号
   Future<int> getLocalSyncVersion() async {
-    final box = await Hive.openBox('sync_meta');
+    final box = await HiveConfig.getBox(HiveConfig.syncMetaBox);
     return box.get(_syncVersionKey, defaultValue: 0) as int;
   }
 
   /// 保存本地同步版本号
   Future<void> saveLocalSyncVersion(int version) async {
-    final box = await Hive.openBox('sync_meta');
+    final box = await HiveConfig.getBox(HiveConfig.syncMetaBox);
     await box.put(_syncVersionKey, version);
   }
 
   /// 获取待同步的变更
   Future<List<Map<String, dynamic>>> getPendingChanges() async {
-    final box = await Hive.openBox('sync_meta');
+    final box = await HiveConfig.getBox(HiveConfig.syncMetaBox);
     final changes = box.get(_pendingChangesKey, defaultValue: <dynamic>[]) as List<dynamic>;
     return changes.map((e) => Map<String, dynamic>.from(e as Map)).toList();
   }
 
   /// 添加待同步的变更
   Future<void> addPendingChange(Map<String, dynamic> change) async {
-    final box = await Hive.openBox('sync_meta');
+    final box = await HiveConfig.getBox(HiveConfig.syncMetaBox);
     final changes = await getPendingChanges();
     
     // 查找是否已有相同 product_id 的变更
@@ -252,7 +245,7 @@ class CartSyncClient {
 
   /// 清除待同步的变更
   Future<void> clearPendingChanges() async {
-    final box = await Hive.openBox('sync_meta');
+    final box = await HiveConfig.getBox(HiveConfig.syncMetaBox);
     await box.put(_pendingChangesKey, <dynamic>[]);
   }
 
@@ -351,12 +344,13 @@ class CartSyncClient {
 
       final data = response.data as Map<String, dynamic>;
       return data['current_version'] as int? ?? 0;
-    } catch (e) {
+    } catch (e, st) {
+      log('Failed to get cloud cart version: $e', name: 'CartSyncClient', error: e, stackTrace: st);
       return 0;
     }
   }
 
-  /// 处理 Dio 错误
+  /// 处理 Dio 错误 — 使用 [NetworkErrorDetector] 提供精确的错误分类和用户友好消息
   CartSyncResponse _handleDioError(DioException e) {
     if (e.response != null) {
       try {
@@ -364,7 +358,10 @@ class CartSyncClient {
         if (data is Map<String, dynamic>) {
           return CartSyncResponse.fromJson(data);
         }
-      } catch (_) {}
+      } catch (parseErr, st) {
+        log('Failed to parse error response body: $parseErr',
+            name: 'CartSyncClient', error: parseErr, stackTrace: st);
+      }
 
       switch (e.response!.statusCode) {
         case 401:
@@ -378,15 +375,10 @@ class CartSyncClient {
       }
     }
 
-    if (e.type == DioExceptionType.connectionTimeout ||
-        e.type == DioExceptionType.receiveTimeout) {
-      return CartSyncResponse.error('连接超时');
-    }
-
-    if (e.type == DioExceptionType.connectionError) {
-      return CartSyncResponse.error('无法连接服务器');
-    }
-
-    return CartSyncResponse.error('网络错误: ${e.message}');
+    // 使用 NetworkErrorDetector 进行精确错误分类
+    final analysis = NetworkErrorDetector.analyze(e);
+    log('Cart sync network error: ${analysis.type} - ${analysis.message}',
+        name: 'CartSyncClient');
+    return CartSyncResponse.error(analysis.userFriendlyMessage);
   }
 }

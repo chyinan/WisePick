@@ -1,14 +1,19 @@
-// 保留以便后续扩展 HTTP 实现，但当前 mock 实现不需要 dio
+// ChatService: 通过 OpenAI 兼容接口提供 AI 交互能力
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer';
 import 'package:dio/dio.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-
+import 'package:flutter/foundation.dart' show kDebugMode, kProfileMode;
 import '../../core/api_client.dart';
+import '../../core/backend_config.dart';
 import '../../core/config.dart';
+import '../../core/storage/hive_config.dart';
 import '../../services/ai_prompt_service.dart';
 
-/// ChatService 负责与 OpenAI（或 mock）交互，返回聊天回复文本或结构化推荐
+/// ChatService 负责与 OpenAI 兼容接口交互，返回聊天回复文本或结构化推荐。
+///
+/// 注意：`use_mock_ai` 仅用于开发/调试模式，默认为 false。
+/// 生产环境中必须配置真实的 OpenAI API Key 或后端代理。
 class ChatService {
   final ApiClient apiClient;
 
@@ -19,10 +24,10 @@ class ChatService {
     // Allow using a local mock AI response for offline/debugging. When enabled via
     // Hive settings key `use_mock_ai`, return a canned JSON-like reply to avoid
     // calling external APIs (helps during development to save cost).
+    // 安全保护：Mock AI 仅在 debug/profile 模式下可用，release 模式强制忽略
     try {
-      if (!Hive.isBoxOpen('settings')) await Hive.openBox('settings');
-      final box = Hive.box('settings');
-      final bool useMock = box.get('use_mock_ai') as bool? ?? false;
+      final box = await HiveConfig.getBox(HiveConfig.settingsBox);
+      final bool useMock = (kDebugMode || kProfileMode) && (box.get('use_mock_ai') as bool? ?? false);
       if (useMock) {
         // small delay to simulate network latency
         await Future.delayed(const Duration(milliseconds: 200));
@@ -46,7 +51,9 @@ class ChatService {
         }
         return _mockResponseString();
       }
-    } catch (_) {}
+    } catch (e, st) {
+      log('Error checking mock AI setting: $e', name: 'ChatService', error: e, stackTrace: st);
+    }
 
     // Decide whether to call OpenAI directly (if user saved API key) or use local proxy
     final localKey = await _localApiKey();
@@ -55,13 +62,14 @@ class ChatService {
     String baseUrl = 'https://api.openai.com';
     String model = 'gpt-3.5-turbo';
     try {
-      if (!Hive.isBoxOpen('settings')) await Hive.openBox('settings');
-      final box = Hive.box('settings');
+      final box = await HiveConfig.getBox(HiveConfig.settingsBox);
       final b = box.get('openai_base') as String?;
       final m = box.get('openai_model') as String?;
       if (b != null && b.trim().isNotEmpty) baseUrl = b.trim();
       if (m != null && m.trim().isNotEmpty) model = m.trim();
-    } catch (_) {}
+    } catch (e, st) {
+      log('Error reading AI settings (base/model): $e', name: 'ChatService', error: e, stackTrace: st);
+    }
     String url;
     if (useDirect) {
       final baseTrimmed = baseUrl.trim();
@@ -73,26 +81,19 @@ class ChatService {
         url = '$baseNoTrailing/v1/chat/completions';
       }
     } else {
-      // resolve backend base saved in settings if present
-      String backend = 'http://localhost:9527';
-      try {
-        if (!Hive.isBoxOpen('settings')) await Hive.openBox('settings');
-        final box = Hive.box('settings');
-        final String? b = box.get('backend_base') as String?;
-        if (b != null && b.trim().isNotEmpty) backend = b.trim();
-        else backend = const String.fromEnvironment('BACKEND_BASE', defaultValue: 'http://localhost:9527');
-      } catch (_) {}
-      final baseNoTrailing = backend.replaceAll(RegExp(r'/+$'), '');
-      url = '$baseNoTrailing/v1/chat/completions';
+      // 使用集中式后端地址解析
+      final backend = BackendConfig.resolveSync();
+      url = '$backend/v1/chat/completions';
     }
     // Check settings flag: if embed_prompts is disabled, send a lightweight user-only message
     bool embedPrompts = true;
     try {
-      if (!Hive.isBoxOpen('settings')) await Hive.openBox('settings');
-      final box = Hive.box('settings');
+      final box = await HiveConfig.getBox(HiveConfig.settingsBox);
       final b = box.get('embed_prompts') as bool?;
       if (b != null) embedPrompts = b;
-    } catch (_) {}
+    } catch (e, st) {
+      log('Error reading embed_prompts setting: $e', name: 'ChatService', error: e, stackTrace: st);
+    }
 
     final dynamic messages = isProductDetail
         ? AiPromptService.buildProductDetailMessages(userQuestion: prompt)
@@ -101,10 +102,12 @@ class ChatService {
     // Read max_tokens setting (string): 'unlimited' means omit the field so upstream can use model's max
     int? maxTokens;
     try {
-      final box = Hive.box('settings');
+      final box = await HiveConfig.getBox(HiveConfig.settingsBox);
       final String? t = box.get('max_tokens') as String?;
       if (t != null && t != 'unlimited') maxTokens = int.tryParse(t);
-    } catch (_) {}
+    } catch (e, st) {
+      log('Error reading max_tokens setting: $e', name: 'ChatService', error: e, stackTrace: st);
+    }
 
     final requestBody = {
       'model': model,
@@ -115,21 +118,12 @@ class ChatService {
     try {
       // If calling upstream directly, include Authorization header with localKey
       final headers = useDirect ? {'Authorization': 'Bearer $localKey', 'Content-Type': 'application/json'} : {'Content-Type': 'application/json'};
-      // Allow long-running responses when max_tokens is unlimited; raise receiveTimeout
-      // Do a longer timeout by temporarily adjusting the dio instance when max_tokens is unlimited.
+      // Allow long-running responses when max_tokens is unlimited; use per-request timeout
+      // to avoid mutating the shared Dio instance (race condition with concurrent calls).
       final useLongTimeout = (requestBody['max_tokens'] == null);
+      final Duration? requestTimeout = useLongTimeout ? const Duration(minutes: 5) : null;
       Response resp;
-      if (useLongTimeout) {
-        final oldReceive = apiClient.dio.options.receiveTimeout;
-        try {
-          apiClient.dio.options.receiveTimeout = const Duration(minutes: 5);
-          resp = await apiClient.post(url, data: requestBody, headers: headers);
-        } finally {
-          apiClient.dio.options.receiveTimeout = oldReceive;
-        }
-      } else {
-        resp = await apiClient.post(url, data: requestBody, headers: headers);
-      }
+      resp = await apiClient.post(url, data: requestBody, headers: headers, timeout: requestTimeout);
       if (resp.statusCode != 200) {
         throw Exception('AI proxy returned status ${resp.statusCode}');
       }
@@ -149,14 +143,15 @@ class ChatService {
 
       // If debug flag enabled in settings, prepend full raw JSON response for inspection
       try {
-        if (!Hive.isBoxOpen('settings')) await Hive.openBox('settings');
-        final box = Hive.box('settings');
+        final box = await HiveConfig.getBox(HiveConfig.settingsBox);
         final bool debug = box.get('debug_ai_response') as bool? ?? false;
         if (debug) {
           final raw = jsonEncode(body);
           result = '原始AI返回(JSON)：$raw\n\n' + result;
         }
-      } catch (_) {}
+      } catch (e, st) {
+        log('Error reading debug_ai_response setting: $e', name: 'ChatService', error: e, stackTrace: st);
+      }
 
       // If embedding was enabled but model returned empty content, retry once without embedding
       try {
@@ -182,19 +177,22 @@ class ChatService {
               }
               // prepend raw fb JSON if debug
               try {
-                final box = Hive.box('settings');
+                final box = await HiveConfig.getBox(HiveConfig.settingsBox);
                 final bool debug = box.get('debug_ai_response') as bool? ?? false;
                 if (debug) {
                   fbResult = '原始AI返回(JSON)(回退)：${jsonEncode(fb)}\n\n' + fbResult;
                 }
-              } catch (_) {}
+              } catch (e, st) {
+                log('Error reading debug setting in fallback: $e', name: 'ChatService', error: e, stackTrace: st);
+              }
 
               if (fbResult.trim().isNotEmpty) return fbResult;
             }
           }
         }
-      } catch (_) {
-        // ignore fallback errors and continue returning original result
+      } catch (e, st) {
+        // Fallback AI call failed — log but continue returning original result
+        log('Fallback AI call failed: $e', name: 'ChatService', error: e, stackTrace: st);
       }
 
       return result;
@@ -213,13 +211,14 @@ class ChatService {
     String baseUrl = 'https://api.openai.com';
     String model = 'gpt-3.5-turbo';
     try {
-      if (!Hive.isBoxOpen('settings')) await Hive.openBox('settings');
-      final box = Hive.box('settings');
+      final box = await HiveConfig.getBox(HiveConfig.settingsBox);
       final b = box.get('openai_base') as String?;
       final m = box.get('openai_model') as String?;
       if (b != null && b.trim().isNotEmpty) baseUrl = b.trim();
       if (m != null && m.trim().isNotEmpty) model = m.trim();
-    } catch (_) {}
+    } catch (e, st) {
+      log('Error reading AI settings (stream base/model): $e', name: 'ChatService', error: e, stackTrace: st);
+    }
     String url;
     if (useDirect) {
       final baseTrimmed = baseUrl.trim();
@@ -230,21 +229,24 @@ class ChatService {
         url = '$baseNoTrailing/v1/chat/completions';
       }
     } else {
-      url = 'http://localhost:9527/v1/chat/completions';
+      // 使用集中式后端地址解析（与非流式路径一致）
+      final backend = BackendConfig.resolveSync();
+      url = '$backend/v1/chat/completions';
     }
     // Build messages consistent with non-streaming API and respect embed/debug/max_tokens settings
     bool embedPrompts = true;
     bool debugOutgoing = false;
     int? maxTokens;
     try {
-      if (!Hive.isBoxOpen('settings')) await Hive.openBox('settings');
-      final box = Hive.box('settings');
+      final box = await HiveConfig.getBox(HiveConfig.settingsBox);
       final b = box.get('embed_prompts') as bool?;
       if (b != null) embedPrompts = b;
       debugOutgoing = box.get('debug_ai_response') as bool? ?? false;
       final String? t = box.get('max_tokens') as String?;
       if (t != null && t != 'unlimited') maxTokens = int.tryParse(t);
-    } catch (_) {}
+    } catch (e, st) {
+      log('Error reading stream settings: $e', name: 'ChatService', error: e, stackTrace: st);
+    }
 
     final dynamic messages = embedPrompts
         ? AiPromptService.buildMessages(userProfile: ' ', context: ' ', userQuestion: prompt, includeTitleInstruction: includeTitleInstruction)
@@ -262,10 +264,10 @@ class ChatService {
     // If mock mode enabled, return a simulated streaming response composed of
     // small text chunks so the UI streaming logic behaves the same as with a
     // real upstream.
+    // 安全保护：Mock AI 仅在 debug/profile 模式下可用
     try {
-      if (!Hive.isBoxOpen('settings')) await Hive.openBox('settings');
-      final box = Hive.box('settings');
-      final bool useMock = box.get('use_mock_ai') as bool? ?? false;
+      final box = await HiveConfig.getBox(HiveConfig.settingsBox);
+      final bool useMock = (kDebugMode || kProfileMode) && (box.get('use_mock_ai') as bool? ?? false);
       if (useMock) {
         final controllerMock = StreamController<String>();
         final content = _mockResponseString();
@@ -281,53 +283,39 @@ class ChatService {
         });
         return controllerMock.stream;
       }
-    } catch (_) {}
+    } catch (e, st) {
+      log('Error checking mock AI (stream): $e', name: 'ChatService', error: e, stackTrace: st);
+    }
 
     final controller = StreamController<String>();
     try {
       final headers = useDirect ? {'Authorization': 'Bearer $localKey', 'Content-Type': 'application/json'} : {'Content-Type': 'application/json'};
-      // If max_tokens is unlimited (null), extend receiveTimeout to avoid truncation
+      // Use per-request timeout to avoid mutating shared Dio options (race condition).
       final useLongTimeout = (requestBody['max_tokens'] == null);
+      final Duration? requestTimeout = useLongTimeout ? const Duration(minutes: 5) : null;
       Response resp;
-      if (useLongTimeout) {
-        final oldReceive = apiClient.dio.options.receiveTimeout;
-        try {
-          apiClient.dio.options.receiveTimeout = const Duration(minutes: 5);
-          try {
-            resp = await apiClient.post(url, data: requestBody, headers: headers, responseType: ResponseType.stream);
-          } on DioException catch (e) {
-            final controllerErr = StreamController<String>();
-            if (e.response?.statusCode == 429) {
-              controllerErr.add('AI streaming error: 请求过多 (429)，请稍后重试。');
-            } else {
-              controllerErr.add('AI streaming error: ${e.toString()}');
-            }
-            controllerErr.close();
-            return controllerErr.stream;
-          }
-        } finally {
-          apiClient.dio.options.receiveTimeout = oldReceive;
+      try {
+        resp = await apiClient.post(url, data: requestBody, headers: headers, responseType: ResponseType.stream, timeout: requestTimeout);
+      } on DioException catch (e) {
+        // Close the outer controller to prevent resource leak before returning error stream.
+        controller.close();
+        final controllerErr = StreamController<String>();
+        if (e.response?.statusCode == 429) {
+          controllerErr.add('AI streaming error: 请求过多 (429)，请稍后重试。');
+        } else {
+          controllerErr.add('AI streaming error: ${e.toString()}');
         }
-      } else {
-        try {
-          resp = await apiClient.post(url, data: requestBody, headers: headers, responseType: ResponseType.stream);
-        } on DioException catch (e) {
-          final controllerErr = StreamController<String>();
-          if (e.response?.statusCode == 429) {
-            controllerErr.add('AI streaming error: 请求过多 (429)，请稍后重试。');
-          } else {
-            controllerErr.add('AI streaming error: ${e.toString()}');
-          }
-          controllerErr.close();
-          return controllerErr.stream;
-        }
+        controllerErr.close();
+        return controllerErr.stream;
       }
 
       // If debug outgoing enabled, emit the outgoing request body first
       if (debugOutgoing) {
         try {
           controller.add('原始请求(JSON)：' + jsonEncode(requestBody));
-        } catch (_) {}
+        } catch (e, st) {
+          log('Error encoding debug request body: $e', name: 'ChatService', error: e, stackTrace: st);
+        }
       }
 
       // resp.data may be a Stream<List<int>> or a Dio ResponseBody with .stream
@@ -373,8 +361,8 @@ class ChatService {
               }
             }
           }
-        } catch (_) {
-          // not JSON, fallthrough to emit raw
+        } catch (e) {
+          // not JSON, fallthrough to emit raw line
         }
         controller.add(l);
       }, onError: (e) {
@@ -392,7 +380,7 @@ class ChatService {
     }
   }
 
-  /// 使用 AI 为会话生成一个简短描述作为会话标题（mock 实现）
+  /// 使用 AI 为会话生成一个简短描述作为会话标题
   Future<String> generateConversationTitle(String firstUserMsg) async {
     // Try to use AI to generate a concise (<=15 char) title in Chinese. Fallback to a simple truncation if AI fails.
     try {
@@ -404,7 +392,9 @@ class ChatService {
         final clean = line.replaceAll(RegExp(r'[\r\n"]'), '').trim();
         return clean.length <= 15 ? clean : '${clean.substring(0, 15)}';
       }
-    } catch (_) {}
+    } catch (e, st) {
+      log('AI title generation failed, using fallback: $e', name: 'ChatService', error: e, stackTrace: st);
+    }
 
     // Fallback: simple truncation
     final t = firstUserMsg.replaceAll(RegExp(r"\s+"), ' ').trim();
@@ -415,16 +405,15 @@ class ChatService {
   /// 尝试从 Hive 设置中读取用户保存的 OpenAI API Key
   Future<String?> _localApiKey() async {
     try {
-      if (!Hive.isBoxOpen('settings')) {
-        await Hive.openBox('settings');
-      }
-      final box = Hive.box('settings');
+      final box = await HiveConfig.getBox(HiveConfig.settingsBox);
       final v = box.get('openai_api') as String?;
       if (v != null && v.trim().isNotEmpty) return v.trim();
-    } catch (_) {}
+    } catch (e, st) {
+      log('Error reading local API key: $e', name: 'ChatService', error: e, stackTrace: st);
+    }
 
     // Fallback to compile-time config when set
-    if (Config.openAiApiKey != 'YOUR_OPENAI_API_KEY' && Config.openAiApiKey.isNotEmpty) return Config.openAiApiKey;
+    if (!Config.isPlaceholder(Config.openAiApiKey)) return Config.openAiApiKey;
     return null;
   }
 

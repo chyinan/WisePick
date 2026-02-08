@@ -1,3 +1,5 @@
+import 'dart:developer' as dev;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../features/chat/chat_providers.dart';
@@ -47,7 +49,9 @@ class _HomeDrawerState extends ConsumerState<HomeDrawer> {
         _conversations.clear();
         _conversations.addAll(list);
       });
-    } catch (_) {}
+    } catch (e, st) {
+      dev.log('Error loading conversations: $e', name: 'HomeDrawer', error: e, stackTrace: st);
+    }
   }
 
   Future<void> _newConversation() async {
@@ -62,7 +66,9 @@ class _HomeDrawerState extends ConsumerState<HomeDrawer> {
         _conversations.clear();
         _conversations.addAll(list);
       });
-    } catch (_) {}
+    } catch (e, st) {
+      dev.log('Error refreshing conversations after new: $e', name: 'HomeDrawer', error: e, stackTrace: st);
+    }
     Navigator.of(context).pop();
   }
 
@@ -108,7 +114,8 @@ class _HomeDrawerState extends ConsumerState<HomeDrawer> {
         _isMultiSelect = false;
         _selectedIds.clear();
       });
-    } catch (_) {
+    } catch (e, st) {
+      dev.log('Error reloading after bulk delete: $e', name: 'HomeDrawer', error: e, stackTrace: st);
       setState(() {
         _isMultiSelect = false;
         _selectedIds.clear();

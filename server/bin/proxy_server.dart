@@ -19,6 +19,7 @@ import '../lib/analytics/analytics_service.dart';
 import '../lib/price_history/price_history_service.dart';
 import '../lib/decision/decision_service.dart';
 import '../lib/admin/admin_service.dart';
+import '../lib/reliability/reliability_api.dart';
 
 // NOTE: veapi support removed per user request
 
@@ -181,6 +182,15 @@ Future<void> runServer(List<String> args) async {
       
       await Database.instance.connect();
       print('[Server] Database connected successfully');
+
+      // 运行数据库迁移
+      try {
+        await Database.instance.runMigrations();
+        print('[Server] Database migrations completed');
+      } catch (e) {
+        print('[Server] WARNING: Database migration failed: $e');
+        print('[Server] Some features may not work correctly');
+      }
       
       // 注册认证路由
       final authHandler = AuthHandler(Database.instance);
@@ -216,6 +226,12 @@ Future<void> runServer(List<String> args) async {
     print('[Server] Database not configured. Auth features disabled.');
     print('[Server] Set DB_HOST, DB_USER, DB_PASSWORD to enable user accounts.');
   }
+
+  // 可靠性监控 API (无需数据库)
+  initializeReliabilityCollector();
+  final reliabilityHandler = ReliabilityApiHandler();
+  router.mount('/api/v1/reliability', reliabilityHandler.router.call);
+  print('[Server] Reliability routes registered at /api/v1/reliability/*');
 
   router.options(
       '/<ignore|.*>',
@@ -3984,8 +4000,10 @@ Future<void> runServer(List<String> args) async {
     }
   });
 
-  final handler =
-      const Pipeline().addMiddleware(logRequests()).addHandler(router.call);
+  final handler = const Pipeline()
+      .addMiddleware(observabilityMiddleware())
+      .addMiddleware(logRequests())
+      .addHandler(router.call);
 
   final envPortRaw = Platform.environment['PORT'];
   final envPort = int.tryParse(envPortRaw ?? '');

@@ -1,7 +1,10 @@
+import 'dart:developer' as dev;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:dio/dio.dart';
+
+import '../core/storage/hive_config.dart';
 
 /// AI服务商API自定义设置页面
 /// 支持：API KEY输入、自定义OpenAI域名、获取模型列表并选择
@@ -35,7 +38,7 @@ class _AiProviderSettingsPageState extends State<AiProviderSettingsPage> {
 
   Future<void> _loadSettings() async {
     try {
-      final box = await Hive.openBox('settings');
+      final box = await HiveConfig.getBox(HiveConfig.settingsBox);
       if (mounted) {
         setState(() {
           _apiKeyController.text = (box.get('openai_api') as String?) ?? '';
@@ -43,7 +46,9 @@ class _AiProviderSettingsPageState extends State<AiProviderSettingsPage> {
           _modelController.text = (box.get('openai_model') as String?) ?? 'gpt-3.5-turbo';
         });
       }
-    } catch (_) {}
+    } catch (e, st) {
+      dev.log('Error loading AI provider settings: $e', name: 'AiProviderSettings', error: e, stackTrace: st);
+    }
   }
 
   @override
@@ -268,7 +273,7 @@ class _AiProviderSettingsPageState extends State<AiProviderSettingsPage> {
   Future<void> _saveSettings() async {
     try {
       setState(() => _loading = true);
-      final box = await Hive.openBox('settings');
+      final box = await HiveConfig.getBox(HiveConfig.settingsBox);
       await box.put('openai_api', _apiKeyController.text.trim());
       await box.put('openai_base', _baseUrlController.text.trim());
       await box.put('openai_model', _modelController.text.trim());

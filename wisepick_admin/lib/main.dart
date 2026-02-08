@@ -3,6 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'core/auth/login_page.dart';
 
 void main() {
+  // 允许 google_fonts 在本地字体不可用时从网络加载，避免 AssetManifest.json 404 报错
+  GoogleFonts.config.allowRuntimeFetching = true;
   runApp(const WisePickAdminApp());
 }
 

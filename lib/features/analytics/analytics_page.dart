@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'analytics_models.dart';
 import 'analytics_providers.dart';
 import 'widgets/consumption_structure_chart.dart';
@@ -578,16 +580,42 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage>
       final exportNotifier = ref.read(reportExportStateProvider.notifier);
       await exportNotifier.exportToPdf(report);
 
+      final exportState = ref.read(reportExportStateProvider);
+      final filePath = exportState.exportedFilePath;
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('报告已生成'),
-            action: SnackBarAction(
-              label: '查看',
-              onPressed: () {
-                // TODO: 打开PDF文件
-              },
-            ),
+            content: Text(filePath != null ? '报告已保存: $filePath' : '报告已生成'),
+            duration: const Duration(seconds: 5),
+            action: filePath != null
+                ? SnackBarAction(
+                    label: '打开',
+                    onPressed: () async {
+                      try {
+                        final file = File(filePath);
+                        if (await file.exists()) {
+                          // 使用系统默认应用打开 PDF
+                          final uri = Uri.file(filePath);
+                          if (await canLaunchUrl(uri)) {
+                            await launchUrl(uri);
+                          } else {
+                            // 回退：打开文件所在目录
+                            final dir = file.parent.path;
+                            final dirUri = Uri.file(dir);
+                            await launchUrl(dirUri);
+                          }
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('无法打开文件: $e')),
+                          );
+                        }
+                      }
+                    },
+                  )
+                : null,
           ),
         );
       }

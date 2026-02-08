@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:developer';
 import '../../core/api_client.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import '../../core/backend_config.dart';
+import '../../core/storage/hive_config.dart';
 import 'product_model.dart';
 import 'taobao_adapter.dart';
 import 'jd_adapter.dart';
@@ -44,6 +46,7 @@ class ProductService {
 
     final List<ProductModel> taobaoList = List<ProductModel>.from(results[0]);
     final List<ProductModel> jdList = List<ProductModel>.from(results[1]);
+    final List<ProductModel> pddList = List<ProductModel>.from(results[2]);
 
     final merged = <ProductModel>[];
     final seenIds = <String, ProductModel>{};
@@ -57,11 +60,17 @@ class ProductService {
     // Then add/replace with JD items when available (prefer JD)
     for (final p in jdList) {
       if (p.id.isEmpty) continue;
-      // if JD item exists, prefer it (replace)
       seenIds[p.id] = p;
     }
 
-    // produce merged preserving order: JD items first (as they are often preferred), then remaining Taobao
+    // Then add PDD items (only if not already seen — PDD ids are typically
+    // different from JD/Taobao ids, so most will be new entries)
+    for (final p in pddList) {
+      if (p.id.isEmpty) continue;
+      seenIds.putIfAbsent(p.id, () => p);
+    }
+
+    // Produce merged preserving order: JD first, then Taobao, then PDD
     final added = <String>{};
     for (final p in jdList) {
       if (p.id.isEmpty) continue;
@@ -71,6 +80,13 @@ class ProductService {
       }
     }
     for (final p in taobaoList) {
+      if (p.id.isEmpty) continue;
+      if (!added.contains(p.id)) {
+        merged.add(seenIds[p.id]!);
+        added.add(p.id);
+      }
+    }
+    for (final p in pddList) {
       if (p.id.isEmpty) continue;
       if (!added.contains(p.id)) {
         merged.add(seenIds[p.id]!);
@@ -94,8 +110,8 @@ class ProductService {
 
     // try load from persistent Hive cache
     try {
-      if (!Hive.isBoxOpen('promo_cache')) await Hive.openBox('promo_cache');
-      final box = Hive.box('promo_cache');
+      await HiveConfig.getBox(HiveConfig.promoCacheBox);
+      final box = await HiveConfig.getBox(HiveConfig.promoCacheBox);
       final stored = box.get(p.id) as Map<dynamic, dynamic>?;
       if (stored != null) {
         final sLink = stored['link'] as String?;
@@ -105,20 +121,12 @@ class ProductService {
           return sLink;
         }
       }
-    } catch (_) {}
+    } catch (e, st) {
+      log('Error reading promo cache from Hive: $e', name: 'ProductService', error: e, stackTrace: st);
+    }
 
-    // read backend base from Hive settings if available, else default to localhost
-    String backend = 'http://localhost:9527';
-    try {
-      if (await _ensureHiveOpen()) {
-        final box = Hive.box('settings');
-        final String? b = box.get('backend_base') as String?;
-        if (b != null && b.trim().isNotEmpty) backend = b.trim();
-        else backend = const String.fromEnvironment('BACKEND_BASE', defaultValue: 'http://localhost:9527');
-      } else {
-        backend = const String.fromEnvironment('BACKEND_BASE', defaultValue: 'http://localhost:9527');
-      }
-    } catch (_) {}
+    // 使用集中式后端地址解析
+    final backend = BackendConfig.resolveSync();
 
     try {
       // If product is from JD, prefer backend sign endpoint for JD and DO NOT fall
@@ -136,14 +144,18 @@ class ProductService {
               final expiry = now + 30 * 60 * 1000;
               _promoCache[p.id] = {'link': link, 'expiry': expiry};
               try {
-                if (!Hive.isBoxOpen('promo_cache')) await Hive.openBox('promo_cache');
-                final box = Hive.box('promo_cache');
+                await HiveConfig.getBox(HiveConfig.promoCacheBox);
+                final box = await HiveConfig.getBox(HiveConfig.promoCacheBox);
                 await box.put(p.id, {'link': link, 'expiry': expiry});
-              } catch (_) {}
+              } catch (e, st) {
+                log('Error writing JD sign link to promo cache: $e', name: 'ProductService', error: e, stackTrace: st);
+              }
               return link;
             }
           }
-        } catch (_) {}
+        } catch (e, st) {
+          log('JD sign endpoint failed for ${p.id}: $e', name: 'ProductService', error: e, stackTrace: st);
+        }
         // If sign endpoint didn't return a link, try the new promotion API (bysubunionid)
         try {
           // build promotionCodeReq: prefer existing product.link; fallback to mobile item url
@@ -156,13 +168,14 @@ class ProductService {
 
           // optionally include subUnionId or pid from settings if configured
           try {
-            if (!Hive.isBoxOpen('settings')) await Hive.openBox('settings');
-            final box = Hive.box('settings');
+            final box = await HiveConfig.getBox(HiveConfig.settingsBox);
             final String? sub = box.get('jd_sub_union_id') as String?;
             final String? pid = box.get('jd_pid') as String?;
             if (sub != null && sub.trim().isNotEmpty) promoReq['subUnionId'] = sub.trim();
             if (pid != null && pid.trim().isNotEmpty) promoReq['pid'] = pid.trim();
-          } catch (_) {}
+          } catch (e, st) {
+            log('Error reading JD union settings: $e', name: 'ProductService', error: e, stackTrace: st);
+          }
 
           final resp = await _client.post('$backend/jd/union/promotion/bysubunionid', data: {'promotionCodeReq': promoReq});
           if (resp.data != null) {
@@ -171,7 +184,9 @@ class ProductService {
             else {
               try {
                 m = Map<String, dynamic>.from(jsonDecode(resp.data.toString()) as Map);
-              } catch (_) {}
+              } catch (e, st) {
+                log('Error parsing JD promotion response: $e', name: 'ProductService', error: e, stackTrace: st);
+              }
             }
 
             // robustly search common response shapes for clickURL/shortURL/jCommand
@@ -188,7 +203,9 @@ class ProductService {
                   }
                 }
               }
-            } catch (_) {}
+            } catch (e, st) {
+              log('Error parsing JD bysubunionid response (top): $e', name: 'ProductService', error: e, stackTrace: st);
+            }
 
             try {
               // fallback: getResult -> data
@@ -197,7 +214,9 @@ class ProductService {
                 final data = gr['data'] ?? gr['getResult'] ?? gr['result'];
                 if (data is Map) link = (data['clickURL'] ?? data['shortURL'] ?? data['jCommand'] ?? data['jShortCommand'])?.toString();
               }
-            } catch (_) {}
+            } catch (e, st) {
+              log('Error parsing JD bysubunionid response (getResult): $e', name: 'ProductService', error: e, stackTrace: st);
+            }
 
             try {
               // generic search for common keys
@@ -217,20 +236,22 @@ class ProductService {
                   }
                 }
               }
-            } catch (_) {}
+            } catch (e, st) {
+              log('Error parsing JD promotion response (generic): $e', name: 'ProductService', error: e, stackTrace: st);
+            }
 
             if (link != null && link.isNotEmpty) {
               final expiry = now + 30 * 60 * 1000;
               _promoCache[p.id] = {'link': link, 'expiry': expiry};
               try {
-                if (!Hive.isBoxOpen('promo_cache')) await Hive.openBox('promo_cache');
-                final box = Hive.box('promo_cache');
+                await HiveConfig.getBox(HiveConfig.promoCacheBox);
+                final box = await HiveConfig.getBox(HiveConfig.promoCacheBox);
                 await box.put(p.id, {'link': link, 'expiry': expiry});
-              } catch (_) {}
+              } catch (e, st) { log('ProductService cache/parse error: $e', name: 'ProductService', error: e, stackTrace: st); }
               return link;
             }
           }
-        } catch (_) {}
+        } catch (e, st) { log('ProductService cache/parse error: $e', name: 'ProductService', error: e, stackTrace: st); }
 
         // For JD products, if all attempts fail, fallback to a simple item page link
         // so the user can still go to the JD product page. Use skuId when available.
@@ -241,13 +262,13 @@ class ProductService {
             final expiry = now + 30 * 60 * 1000;
             _promoCache[p.id] = {'link': fallback, 'expiry': expiry};
             try {
-              if (!Hive.isBoxOpen('promo_cache')) await Hive.openBox('promo_cache');
-              final box = Hive.box('promo_cache');
+              await HiveConfig.getBox(HiveConfig.promoCacheBox);
+              final box = await HiveConfig.getBox(HiveConfig.promoCacheBox);
               await box.put(p.id, {'link': fallback, 'expiry': expiry});
-            } catch (_) {}
+            } catch (e, st) { log('ProductService cache/parse error: $e', name: 'ProductService', error: e, stackTrace: st); }
             return fallback;
           }
-        } catch (_) {}
+        } catch (e, st) { log('ProductService cache/parse error: $e', name: 'ProductService', error: e, stackTrace: st); }
 
         // If fallback not possible, return null so caller can show a message
         return null;
@@ -271,20 +292,20 @@ class ProductService {
                     link = (entry['mobile_url'] ?? entry['url'] ?? entry['short_url'] ?? entry['mobile_short_url'])?.toString();
                   }
                 }
-              } catch (_) {}
+              } catch (e, st) { log('ProductService cache/parse error: $e', name: 'ProductService', error: e, stackTrace: st); }
             }
             if (link != null && link.isNotEmpty) {
               final expiry = now + 30 * 60 * 1000;
               _promoCache[p.id] = {'link': link, 'expiry': expiry};
               try {
-                if (!Hive.isBoxOpen('promo_cache')) await Hive.openBox('promo_cache');
-                final box = Hive.box('promo_cache');
+                await HiveConfig.getBox(HiveConfig.promoCacheBox);
+                final box = await HiveConfig.getBox(HiveConfig.promoCacheBox);
                 await box.put(p.id, {'link': link, 'expiry': expiry});
-              } catch (_) {}
+              } catch (e, st) { log('ProductService cache/parse error: $e', name: 'ProductService', error: e, stackTrace: st); }
               return link;
             }
           }
-        } catch (_) {}
+        } catch (e, st) { log('ProductService cache/parse error: $e', name: 'ProductService', error: e, stackTrace: st); }
       }
 
       // Try to call backend Taobao convert endpoint instead of veapi
@@ -296,7 +317,7 @@ class ProductService {
           else {
             try {
               m = Map<String, dynamic>.from(jsonDecode(resp.data.toString()) as Map);
-            } catch (_) {}
+            } catch (e, st) { log('ProductService cache/parse error: $e', name: 'ProductService', error: e, stackTrace: st); }
           }
 
           // extract common fields; prefer coupon_share_url, then clickURL, then tpwd
@@ -309,26 +330,21 @@ class ProductService {
             final expiry = now + 30 * 60 * 1000;
             _promoCache[p.id] = {'link': link, 'expiry': expiry};
             try {
-              if (!Hive.isBoxOpen('promo_cache')) await Hive.openBox('promo_cache');
-              final box = Hive.box('promo_cache');
+              await HiveConfig.getBox(HiveConfig.promoCacheBox);
+              final box = await HiveConfig.getBox(HiveConfig.promoCacheBox);
               await box.put(p.id, {'link': link, 'expiry': expiry});
-            } catch (_) {}
+            } catch (e, st) { log('ProductService cache/parse error: $e', name: 'ProductService', error: e, stackTrace: st); }
             return link;
           }
         }
-      } catch (_) {}
-    } catch (_) {}
+      } catch (e) {
+        log('Taobao convert fallback failed for ${p.id}: $e', name: 'ProductService');
+      }
+    } catch (e) {
+      log('generatePromotionLink outer error for ${p.id} (${p.platform}): $e', name: 'ProductService');
+    }
 
     return null;
-  }
-
-  Future<bool> _ensureHiveOpen() async {
-    try {
-      if (!Hive.isBoxOpen('settings')) await Hive.openBox('settings');
-      return true;
-    } catch (_) {
-      return false;
-    }
   }
 }
 

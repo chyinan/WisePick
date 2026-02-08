@@ -1,8 +1,8 @@
 import 'dart:convert';
-import 'dart:io';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'dart:developer';
 
 import '../../core/api_client.dart';
+import '../../core/backend_config.dart';
 import '../../core/pdd_client.dart';
 import '../../core/config.dart';
 import 'product_model.dart';
@@ -35,7 +35,8 @@ class PddAdapter {
       }
       if (resp is Map && resp['goods_search_response'] != null) body = Map<String, dynamic>.from(resp['goods_search_response'] as Map);
       else if (resp is Map) body = resp as Map<String, dynamic>;
-    } catch (_) {
+    } catch (e, st) {
+      log('PDD response parsing failed: $e', name: 'PddAdapter', error: e, stackTrace: st);
       return [];
     }
 
@@ -47,20 +48,17 @@ class PddAdapter {
       // attempt to build a promotion link via backend proxy if possible
       String link = '';
       try {
-      String backend = 'http://localhost:9527';
-        try {
-          if (!Hive.isBoxOpen('settings')) await Hive.openBox('settings');
-          final box = Hive.box('settings');
-          final String? b = box.get('backend_base') as String?;
-          if (b != null && b.trim().isNotEmpty) backend = b.trim();
-          else backend = Platform.environment['BACKEND_BASE'] ?? backend;
-        } catch (_) {}
-        // request backend to generate pdd promotion link if backend supports it
+        final backend = BackendConfig.resolveSync();
+        // request backend to generate pdd promotion link
         try {
           final signResp = await _client.post('$backend/sign/pdd', data: {'goods_sign': p.goodsSign});
           if (signResp.data is Map && signResp.data['clickURL'] != null) link = signResp.data['clickURL'] as String;
-        } catch (_) {}
-      } catch (_) {}
+        } catch (e, st) {
+          log('PDD sign request failed: $e', name: 'PddAdapter', error: e, stackTrace: st);
+        }
+      } catch (e, st) {
+        log('PDD promotion link error: $e', name: 'PddAdapter', error: e, stackTrace: st);
+      }
 
       // parse sales from sales_tip like "521" or "28.8万+"
       int sales = 0;
@@ -77,19 +75,25 @@ class PddAdapter {
             if (n != null) sales = int.tryParse(n) ?? 0;
           }
         }
-      } catch (_) {}
+      } catch (e, st) {
+        log('PDD sales parsing failed: $e', name: 'PddAdapter', error: e, stackTrace: st);
+      }
 
       // description fallback: goods_desc / desc_txt
       String desc = '';
       try {
         desc = (m['goods_desc'] ?? m['desc_txt'] ?? m['description'] ?? '')?.toString() ?? '';
-      } catch (_) {}
+      } catch (e, st) {
+        log('PDD description parsing failed: $e', name: 'PddAdapter', error: e, stackTrace: st);
+      }
 
       // shop title: prefer brand_name, then mall_name / opt_name
       String shopTitle = '';
       try {
         shopTitle = (m['brand_name'] ?? m['mall_name'] ?? m['mallName'] ?? m['opt_name'] ?? '')?.toString() ?? '';
-      } catch (_) {}
+      } catch (e, st) {
+        log('PDD shop title parsing failed: $e', name: 'PddAdapter', error: e, stackTrace: st);
+      }
 
       // tags: unified_tags (当前未使用，但保留解析供后续功能)
       // ignore: unused_local_variable
@@ -101,7 +105,9 @@ class PddAdapter {
         } else if (ut is String) {
           tags = [ut];
         }
-      } catch (_) {}
+      } catch (e, st) {
+        log('PDD tags parsing failed: $e', name: 'PddAdapter', error: e, stackTrace: st);
+      }
 
       return ProductModel(
         id: p.goodsSign,

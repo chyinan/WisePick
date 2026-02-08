@@ -1,3 +1,4 @@
+import 'dart:developer';
 import 'chat_message.dart';
 import '../products/product_model.dart';
 
@@ -20,7 +21,7 @@ class ConversationModel {
         String text = m.text;
         try {
           text = text.split('\n').where((line) => !line.startsWith('PARSE_') && !line.startsWith('FIRST_REC_KEYS:') && !line.startsWith('PARSE_KEYS:') && !line.startsWith('解析到 ') && !line.contains('原始请求(JSON)') && !line.contains('原始AI返回(JSON)')).join('\n');
-        } catch (_) {}
+        } catch (e, st) { log('ConversationModel debug filter error: $e', name: 'ConversationModel', error: e, stackTrace: st); }
 
         return {
           'id': m.id,
@@ -108,7 +109,7 @@ class ConversationModel {
         String loadedText = mm['text'] as String;
         try {
           loadedText = loadedText.split('\n').where((line) => !line.startsWith('PARSE_') && !line.startsWith('FIRST_REC_KEYS:') && !line.startsWith('PARSE_KEYS:') && !line.startsWith('解析到 ') && !line.contains('原始请求(JSON)') && !line.contains('原始AI返回(JSON)')).join('\n');
-        } catch (_) {}
+        } catch (e, st) { log('ConversationModel debug filter error: $e', name: 'ConversationModel', error: e, stackTrace: st); }
 
         return ChatMessage(
           id: mm['id'] as String,

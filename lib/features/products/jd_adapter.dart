@@ -1,14 +1,11 @@
 import 'dart:convert';
-import 'dart:io';
+import 'dart:developer';
 
 import 'package:crypto/crypto.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 
 import '../../core/api_client.dart';
-import '../../core/config.dart';
+import '../../core/backend_config.dart';
 import 'product_model.dart';
-
-// ignore_for_file: unused_element
 
 /// JD Adapter：负责调用京东联盟 API 并映射到 ProductModel
 class JdAdapter {
@@ -20,16 +17,8 @@ class JdAdapter {
   /// Builds the required system parameters, signs the request using MD5
   /// and posts form-encoded data to the configured API endpoint.
   Future<List<ProductModel>> search(String keyword, {int pageIndex = 1, int pageSize = 10}) async {
-    // Prefer calling the backend proxy which performs signing and returns the
-    // raw JD response. This avoids keeping JD app secret in the client.
-    String backend = 'http://localhost:9527';
-    try {
-      if (!Hive.isBoxOpen('settings')) await Hive.openBox('settings');
-      final box = Hive.box('settings');
-      final String? b = box.get('backend_base') as String?;
-      if (b != null && b.trim().isNotEmpty) backend = b.trim();
-      else backend = Platform.environment['BACKEND_BASE'] ?? backend;
-    } catch (_) {}
+    // 通过后端代理调用京东联盟 API（后端负责签名和密钥管理）
+    final backend = BackendConfig.resolveSync();
 
     final apiUrl = '$backend/jd/union/goods/query';
     final resp = await _client.get(apiUrl, params: {'keyword': keyword, 'pageIndex': pageIndex, 'pageSize': pageSize});
@@ -83,7 +72,8 @@ class JdAdapter {
       } else if (body is List) {
         items = body;
       }
-    } catch (_) {
+    } catch (e, st) {
+      log('JD response parsing failed: $e', name: 'JdAdapter', error: e, stackTrace: st);
       items = [];
     }
 
@@ -101,24 +91,16 @@ class JdAdapter {
       try {
         final skuId = map['skuId']?.toString() ?? '';
         if (skuId.isNotEmpty) {
-          String backend = 'http://localhost:9527';
-          try {
-            if (!Hive.isBoxOpen('settings')) await Hive.openBox('settings');
-            final box = Hive.box('settings');
-            final String? b = box.get('backend_base') as String?;
-            if (b != null && b.trim().isNotEmpty) backend = b.trim();
-            else backend = Platform.environment['BACKEND_BASE'] ?? backend;
-          } catch (_) {}
-
-          // ask backend to sign and/or generate promotion link using official JD SDK
-          final signResp = await _client.post('$backend/sign/jd', data: {'skuId': skuId});
+          final promoBackend = BackendConfig.resolveSync();
+          final signResp = await _client.post('$promoBackend/sign/jd', data: {'skuId': skuId});
           if (signResp.data is Map && signResp.data['clickURL'] != null) {
             link = signResp.data['clickURL'] as String;
           } else {
             link = await generatePromotionLink(skuId);
           }
         }
-      } catch (_) {
+      } catch (e, st) {
+        log('JD sign/promotion link failed: $e', name: 'JdAdapter', error: e, stackTrace: st);
         link = '';
       }
 
@@ -157,26 +139,18 @@ class JdAdapter {
     return await Future.wait(futures);
   }
 
-  /// 生成京东推广链接（简化）
+  /// 生成京东推广链接 — 通过后端代理完成签名
   Future<String> generatePromotionLink(String skuId) async {
-    // 京东官方接口需要签名；这里示例在客户端做 HMAC 签名（生产应在服务端签名）
-    final apiUrl = 'https://api.example.com/jd/union/open/promotion/common/get';
-    final payload = {'skuId': skuId, 'unionId': Config.jdUnionId};
-    final ts = DateTime.now().toUtc().millisecondsSinceEpoch.toString();
-    final sign = _hmacSign(jsonEncode({...payload, 'ts': ts}), Config.jdAppSecret);
-    final resp = await _client.post(apiUrl, data: {...payload, 'appKey': Config.jdAppKey, 'ts': ts, 'sign': sign});
-    if (resp.data is Map && resp.data['clickURL'] != null) {
-      return resp.data['clickURL'] as String;
+    final backend = BackendConfig.resolveSync();
+    try {
+      final resp = await _client.post('$backend/sign/jd', data: {'skuId': skuId});
+      if (resp.data is Map && resp.data['clickURL'] != null) {
+        return resp.data['clickURL'] as String;
+      }
+    } catch (e, st) {
+      log('JD promotion link generation failed: $e', name: 'JdAdapter', error: e, stackTrace: st);
     }
     return '';
-  }
-
-  String _hmacSign(String data, String secret) {
-    final key = utf8.encode(secret);
-    final bytes = utf8.encode(data);
-    final hmac = Hmac(sha256, key);
-    final digest = hmac.convert(bytes);
-    return digest.toString();
   }
 
   String _formatJdTimestamp() {

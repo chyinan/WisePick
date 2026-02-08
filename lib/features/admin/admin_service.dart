@@ -1,119 +1,195 @@
-import 'dart:math';
+import 'dart:convert';
+import 'dart:developer' as dev;
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:excel/excel.dart';
+import '../../core/api_client.dart';
+import '../../core/backend_config.dart';
 import 'admin_models.dart';
 
 /// 管理员后台服务
-/// 
-/// 提供用户统计、系统监控、搜索热词统计等功能
-/// 当前使用Mock数据，后续可接入后端API
+///
+/// 调用后端 /api/v1/admin/* 接口获取真实数据
 class AdminService {
   // 单例模式
   static final AdminService _instance = AdminService._internal();
   factory AdminService() => _instance;
   AdminService._internal();
 
+  final ApiClient _apiClient = ApiClient();
+
+  /// 动态解析后端基础 URL
+  String get _baseUrl => '${BackendConfig.resolveSync()}/api/v1/admin';
+
   /// 获取用户统计数据
   Future<UserStatistics> getUserStatistics({
     AdminStatsTimeRange timeRange = AdminStatsTimeRange.lastWeek,
   }) async {
-    await Future.delayed(const Duration(milliseconds: 800));
-    
-    final random = Random();
-    final days = timeRange == AdminStatsTimeRange.today ? 1 
-        : timeRange == AdminStatsTimeRange.yesterday ? 1
-        : timeRange == AdminStatsTimeRange.lastWeek ? 7
-        : timeRange == AdminStatsTimeRange.lastMonth ? 30
-        : 90;
+    try {
+      final response = await _apiClient.get('$_baseUrl/users/stats');
+      if (response.statusCode == 200) {
+        final data = response.data is String
+            ? jsonDecode(response.data as String)
+            : response.data;
 
-    // 生成新增用户趋势
-    final newUserTrend = <DailyCount>[];
-    for (int i = days - 1; i >= 0; i--) {
-      newUserTrend.add(DailyCount(
-        date: DateTime.now().subtract(Duration(days: i)),
-        count: 50 + random.nextInt(150),
-      ));
+        final totalUsers = (data['totalUsers'] as num?)?.toInt() ?? 0;
+        final todayNew = (data['todayNewUsers'] as num?)?.toInt() ?? 0;
+        final weekNew = (data['weekNewUsers'] as num?)?.toInt() ?? 0;
+        final monthNew = (data['monthNewUsers'] as num?)?.toInt() ?? 0;
+
+        final activeUsersMap = data['activeUsers'] as Map<String, dynamic>? ?? {};
+        final dailyActive = (activeUsersMap['daily'] as num?)?.toInt() ?? 0;
+        final monthlyActive = (activeUsersMap['monthly'] as num?)?.toInt() ?? 0;
+
+        // 从趋势数据生成 newUserTrend
+        final days = timeRange == AdminStatsTimeRange.today
+            ? 1
+            : timeRange == AdminStatsTimeRange.yesterday
+                ? 1
+                : timeRange == AdminStatsTimeRange.lastWeek
+                    ? 7
+                    : timeRange == AdminStatsTimeRange.lastMonth
+                        ? 30
+                        : 90;
+
+        // 尝试获取活动图表数据来填充趋势
+        List<DailyCount> newUserTrend = [];
+        try {
+          final chartResponse = await _apiClient.get('$_baseUrl/activity-chart');
+          if (chartResponse.statusCode == 200) {
+            final chartData = chartResponse.data is String
+                ? jsonDecode(chartResponse.data as String)
+                : chartResponse.data;
+            final chartList = chartData['chart'] as List?;
+            if (chartList != null) {
+              newUserTrend = chartList.map((item) {
+                return DailyCount(
+                  date: DateTime.tryParse(item['date'] ?? '') ?? DateTime.now(),
+                  count: (item['newUsers'] as num?)?.toInt() ?? 0,
+                );
+              }).toList();
+            }
+          }
+        } catch (e, st) {
+          dev.log('Error fetching chart data: $e', name: 'AdminService', error: e, stackTrace: st);
+          // 图表数据获取失败，使用空列表
+        }
+
+        // 如果没有趋势数据，按总数均匀分配
+        if (newUserTrend.isEmpty && days > 0) {
+          final avgPerDay = weekNew > 0 ? (weekNew / days).ceil() : 0;
+          for (int i = days - 1; i >= 0; i--) {
+            newUserTrend.add(DailyCount(
+              date: DateTime.now().subtract(Duration(days: i)),
+              count: avgPerDay,
+            ));
+          }
+        }
+
+        return UserStatistics(
+          totalUsers: totalUsers,
+          activeUsers: ActiveUserStats(
+            daily: dailyActive,
+            weekly: dailyActive * 5, // 根据日活估算周活
+            monthly: monthlyActive,
+          ),
+          retentionRate: RetentionStats(
+            day1: totalUsers > 0 ? (dailyActive / totalUsers).clamp(0.0, 1.0) : 0,
+            day7: totalUsers > 0 ? (weekNew / totalUsers).clamp(0.0, 1.0) : 0,
+            day30: totalUsers > 0 ? (monthNew / totalUsers).clamp(0.0, 1.0) : 0,
+          ),
+          newUserTrend: newUserTrend,
+          startDate: timeRange.startDate,
+          endDate: timeRange.endDate,
+        );
+      }
+    } catch (e) {
+      dev.log('Error fetching user statistics: $e', name: 'AdminService');
     }
 
-    return UserStatistics(
-      totalUsers: 15000 + random.nextInt(5000),
-      activeUsers: ActiveUserStats(
-        daily: 800 + random.nextInt(400),
-        weekly: 3500 + random.nextInt(1500),
-        monthly: 8000 + random.nextInt(4000),
-      ),
-      retentionRate: RetentionStats(
-        day1: 0.35 + random.nextDouble() * 0.2,
-        day7: 0.25 + random.nextDouble() * 0.15,
-        day30: 0.15 + random.nextDouble() * 0.1,
-      ),
-      newUserTrend: newUserTrend,
-      startDate: timeRange.startDate,
-      endDate: timeRange.endDate,
-    );
+    return UserStatistics.empty();
   }
 
   /// 获取系统统计数据
   Future<SystemStatistics> getSystemStatistics({
     AdminStatsTimeRange timeRange = AdminStatsTimeRange.lastWeek,
   }) async {
-    await Future.delayed(const Duration(milliseconds: 600));
-    
-    final random = Random();
-    final totalCalls = 50000 + random.nextInt(30000);
-    final successCalls = (totalCalls * (0.92 + random.nextDouble() * 0.06)).toInt();
+    try {
+      final response = await _apiClient.get('$_baseUrl/system/stats');
+      if (response.statusCode == 200) {
+        final data = response.data is String
+            ? jsonDecode(response.data as String)
+            : response.data;
 
-    // 生成热门关键词
-    final keywords = ['手机', '耳机', '笔记本电脑', '平板', '充电器', '键盘', '鼠标', '显示器', '路由器', '音响'];
-    final topKeywords = keywords.take(10).map((k) => KeywordCount(
-      keyword: k,
-      count: 1000 + random.nextInt(5000),
-    )).toList()..sort((a, b) => b.count.compareTo(a.count));
+        final cartItems = data['cartItems'] as Map<String, dynamic>? ?? {};
+        final conversations = data['conversations'] as Map<String, dynamic>? ?? {};
+        final messages = data['messages'] as Map<String, dynamic>? ?? {};
+        final devices = data['devices'] as Map<String, dynamic>? ?? {};
+        final dbInfo = data['database'] as Map<String, dynamic>? ?? {};
+        final serverStartTime = data['serverStartTime'] as String? ?? '';
 
-    // 计算百分比
-    final totalKeywordCount = topKeywords.fold<int>(0, (sum, k) => sum + k.count);
-    final keywordsWithPercentage = topKeywords.map((k) => KeywordCount(
-      keyword: k.keyword,
-      count: k.count,
-      percentage: k.count / totalKeywordCount * 100,
-    )).toList();
+        final totalCartItems = (cartItems['total'] as num?)?.toInt() ?? 0;
+        final todayCartItems = (cartItems['today'] as num?)?.toInt() ?? 0;
+        final byPlatform = cartItems['byPlatform'] as Map<String, dynamic>? ?? {};
 
-    // 错误类型
-    final errorTypes = [
-      ErrorTypeCount(type: 'NetworkError', count: 120 + random.nextInt(100), description: '网络连接错误'),
-      ErrorTypeCount(type: 'APIError', count: 80 + random.nextInt(60), description: 'API调用错误'),
-      ErrorTypeCount(type: 'TimeoutError', count: 50 + random.nextInt(40), description: '请求超时'),
-      ErrorTypeCount(type: 'ParseError', count: 30 + random.nextInt(20), description: '数据解析错误'),
-    ];
+        final totalConversations = (conversations['total'] as num?)?.toInt() ?? 0;
+        final totalMessages = (messages['total'] as num?)?.toInt() ?? 0;
+        final activeDevices = (devices['active'] as num?)?.toInt() ?? 0;
+        final dbStatus = dbInfo['status'] as String? ?? 'unknown';
 
-    // 响应时间分布
-    final responseDistribution = [
-      ResponseTimeDistribution(range: '<100ms', count: 15000, percentage: 30),
-      ResponseTimeDistribution(range: '100-500ms', count: 25000, percentage: 50),
-      ResponseTimeDistribution(range: '500-1000ms', count: 7500, percentage: 15),
-      ResponseTimeDistribution(range: '>1000ms', count: 2500, percentage: 5),
-    ];
+        // 将系统级数据映射到现有模型
+        // 用购物车+会话数作为粗略的"API调用"指标
+        final totalOps = totalCartItems + totalConversations + totalMessages;
 
-    return SystemStatistics(
-      apiCalls: ApiCallStats(
-        total: totalCalls,
-        success: successCalls,
-        failed: totalCalls - successCalls,
-        avgResponseTime: 200 + random.nextDouble() * 150,
-      ),
-      searchStats: SearchStats(
-        totalSearches: 30000 + random.nextInt(20000),
-        successfulSearches: 28000 + random.nextInt(18000),
-        successRate: 0.9 + random.nextDouble() * 0.08,
-        topKeywords: keywordsWithPercentage,
-      ),
-      errorStats: ErrorStats(
-        totalErrors: errorTypes.fold<int>(0, (sum, e) => sum + e.count),
-        errorTypes: errorTypes,
-        errorRate: (totalCalls - successCalls) / totalCalls,
-      ),
-      responseTimeDistribution: responseDistribution,
-      startDate: timeRange.startDate,
-      endDate: timeRange.endDate,
-    );
+        // 从平台分布生成关键词统计
+        final platformKeywords = byPlatform.entries.map((entry) {
+          return KeywordCount(
+            keyword: entry.key,
+            count: (entry.value as num?)?.toInt() ?? 0,
+          );
+        }).toList()
+          ..sort((a, b) => b.count.compareTo(a.count));
+
+        final totalPlatformCount =
+            platformKeywords.fold<int>(0, (sum, k) => sum + k.count);
+        final keywordsWithPercentage = platformKeywords
+            .map((k) => KeywordCount(
+                  keyword: k.keyword,
+                  count: k.count,
+                  percentage: totalPlatformCount > 0
+                      ? k.count / totalPlatformCount * 100
+                      : 0,
+                ))
+            .toList();
+
+        return SystemStatistics(
+          apiCalls: ApiCallStats(
+            total: totalOps,
+            success: totalOps, // 数据库中记录的都是成功的
+            failed: 0,
+            avgResponseTime: 0,
+          ),
+          searchStats: SearchStats(
+            totalSearches: totalCartItems,
+            successfulSearches: totalCartItems,
+            successRate: 1.0,
+            topKeywords: keywordsWithPercentage,
+          ),
+          errorStats: ErrorStats(
+            totalErrors: 0,
+            errorTypes: [],
+            errorRate: 0,
+          ),
+          responseTimeDistribution: [],
+          startDate: timeRange.startDate,
+          endDate: timeRange.endDate,
+        );
+      }
+    } catch (e) {
+      dev.log('Error fetching system statistics: $e', name: 'AdminService');
+    }
+
+    return SystemStatistics.empty();
   }
 
   /// 获取搜索热词统计
@@ -121,68 +197,179 @@ class AdminService {
     AdminStatsTimeRange timeRange = AdminStatsTimeRange.lastWeek,
     int limit = 20,
   }) async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    
-    final random = Random();
-    
-    // 热门关键词
-    final keywords = [
-      '手机', '耳机', '笔记本电脑', '平板电脑', '充电器', 
-      '蓝牙键盘', '无线鼠标', '4K显示器', 'WiFi路由器', '智能音响',
-      '机械键盘', '游戏耳机', '移动电源', '手机壳', '数据线',
-      '智能手表', '运动手环', '蓝牙音箱', '投影仪', '摄像头',
-    ];
+    try {
+      final response = await _apiClient.get('$_baseUrl/cart-items/stats');
+      if (response.statusCode == 200) {
+        final data = response.data is String
+            ? jsonDecode(response.data as String)
+            : response.data;
 
-    final topKeywords = keywords.take(limit).map((k) => KeywordCount(
-      keyword: k,
-      count: 500 + random.nextInt(5000),
-    )).toList()..sort((a, b) => b.count.compareTo(a.count));
+        // 从购物车商品标题提取关键词统计
+        final platforms = data['byPlatform'] as Map<String, dynamic>? ?? {};
+        final topKeywords = platforms.entries.map((entry) {
+          return KeywordCount(
+            keyword: entry.key,
+            count: (entry.value as num?)?.toInt() ?? 0,
+          );
+        }).toList()
+          ..sort((a, b) => b.count.compareTo(a.count));
 
-    // 每日趋势
-    final days = timeRange == AdminStatsTimeRange.lastWeek ? 7
-        : timeRange == AdminStatsTimeRange.lastMonth ? 30
-        : 7;
-    
-    final trends = <DailyKeywordTrend>[];
-    for (int i = days - 1; i >= 0; i--) {
-      final dailyKeywords = keywords.take(5).map((k) => KeywordCount(
-        keyword: k,
-        count: 100 + random.nextInt(500),
-      )).toList();
-
-      trends.add(DailyKeywordTrend(
-        date: DateTime.now().subtract(Duration(days: i)),
-        searchCount: 3000 + random.nextInt(2000),
-        topKeywords: dailyKeywords,
-      ));
+        return SearchKeywordStats(
+          topKeywords: topKeywords.take(limit).toList(),
+          trends: [],
+          failedKeywords: [],
+          startDate: timeRange.startDate,
+          endDate: timeRange.endDate,
+        );
+      }
+    } catch (e) {
+      dev.log('Error fetching keyword stats: $e', name: 'AdminService');
     }
 
-    // 搜索失败的关键词
-    final failedKeywords = [
-      KeywordCount(keyword: '特殊商品A', count: 50 + random.nextInt(50)),
-      KeywordCount(keyword: '未知品牌B', count: 30 + random.nextInt(30)),
-      KeywordCount(keyword: '错误拼写C', count: 20 + random.nextInt(20)),
-    ];
-
-    return SearchKeywordStats(
-      topKeywords: topKeywords,
-      trends: trends,
-      failedKeywords: failedKeywords,
-      startDate: timeRange.startDate,
-      endDate: timeRange.endDate,
-    );
+    return SearchKeywordStats.empty();
   }
 
-  /// 导出统计数据
+  /// 导出统计数据为 Excel 文件
+  ///
+  /// [dataType] 数据类型: 'users', 'system', 'keywords'
+  /// [timeRange] 时间范围
+  /// [format] 导出格式（当前仅支持 'xlsx'）
+  /// 返回生成的文件路径
   Future<String> exportData({
     required String dataType,
     required AdminStatsTimeRange timeRange,
     required String format,
   }) async {
-    await Future.delayed(const Duration(seconds: 1));
-    
-    // 模拟导出，返回文件路径
+    final excel = Excel.createExcel();
+
+    switch (dataType) {
+      case 'users':
+        final stats = await getUserStatistics(timeRange: timeRange);
+        final sheet = excel['用户统计'];
+        sheet.appendRow([
+          TextCellValue('指标'),
+          TextCellValue('数值'),
+        ]);
+        sheet.appendRow([
+          TextCellValue('总用户数'),
+          IntCellValue(stats.totalUsers),
+        ]);
+        sheet.appendRow([
+          TextCellValue('日活跃用户'),
+          IntCellValue(stats.activeUsers.daily),
+        ]);
+        sheet.appendRow([
+          TextCellValue('周活跃用户'),
+          IntCellValue(stats.activeUsers.weekly),
+        ]);
+        sheet.appendRow([
+          TextCellValue('月活跃用户'),
+          IntCellValue(stats.activeUsers.monthly),
+        ]);
+        sheet.appendRow([
+          TextCellValue('次日留存率'),
+          DoubleCellValue(stats.retentionRate.day1 * 100),
+        ]);
+        sheet.appendRow([
+          TextCellValue('7日留存率'),
+          DoubleCellValue(stats.retentionRate.day7 * 100),
+        ]);
+        sheet.appendRow([
+          TextCellValue('30日留存率'),
+          DoubleCellValue(stats.retentionRate.day30 * 100),
+        ]);
+
+        // 新增用户趋势
+        if (stats.newUserTrend.isNotEmpty) {
+          final trendSheet = excel['新增用户趋势'];
+          trendSheet.appendRow([
+            TextCellValue('日期'),
+            TextCellValue('新增用户数'),
+          ]);
+          for (final item in stats.newUserTrend) {
+            trendSheet.appendRow([
+              TextCellValue(item.date.toIso8601String().substring(0, 10)),
+              IntCellValue(item.count),
+            ]);
+          }
+        }
+        break;
+
+      case 'system':
+        final stats = await getSystemStatistics(timeRange: timeRange);
+        final sheet = excel['系统统计'];
+        sheet.appendRow([
+          TextCellValue('指标'),
+          TextCellValue('数值'),
+        ]);
+        sheet.appendRow([
+          TextCellValue('API调用总量'),
+          IntCellValue(stats.apiCalls.total),
+        ]);
+        sheet.appendRow([
+          TextCellValue('成功调用'),
+          IntCellValue(stats.apiCalls.success),
+        ]);
+        sheet.appendRow([
+          TextCellValue('失败调用'),
+          IntCellValue(stats.apiCalls.failed),
+        ]);
+        sheet.appendRow([
+          TextCellValue('搜索总量'),
+          IntCellValue(stats.searchStats.totalSearches),
+        ]);
+        sheet.appendRow([
+          TextCellValue('搜索成功率'),
+          DoubleCellValue(stats.searchStats.successRate * 100),
+        ]);
+
+        if (stats.searchStats.topKeywords.isNotEmpty) {
+          final kwSheet = excel['平台分布'];
+          kwSheet.appendRow([
+            TextCellValue('平台'),
+            TextCellValue('数量'),
+            TextCellValue('占比(%)'),
+          ]);
+          for (final kw in stats.searchStats.topKeywords) {
+            kwSheet.appendRow([
+              TextCellValue(kw.keyword),
+              IntCellValue(kw.count),
+              DoubleCellValue(kw.percentage),
+            ]);
+          }
+        }
+        break;
+
+      case 'keywords':
+        final stats = await getSearchKeywordStats(timeRange: timeRange);
+        final sheet = excel['搜索热词'];
+        sheet.appendRow([
+          TextCellValue('关键词'),
+          TextCellValue('搜索次数'),
+        ]);
+        for (final kw in stats.topKeywords) {
+          sheet.appendRow([
+            TextCellValue(kw.keyword),
+            IntCellValue(kw.count),
+          ]);
+        }
+        break;
+    }
+
+    // 删除默认创建的 Sheet1
+    if (excel.sheets.containsKey('Sheet1')) {
+      excel.delete('Sheet1');
+    }
+
+    // 保存到应用文档目录
+    final dir = await getApplicationDocumentsDirectory();
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    return '/exports/${dataType}_${timeRange.name}_$timestamp.$format';
+    final filePath = '${dir.path}/${dataType}_${timeRange.name}_$timestamp.xlsx';
+    final fileBytes = excel.save();
+    if (fileBytes != null) {
+      await File(filePath).writeAsBytes(fileBytes);
+    }
+
+    return filePath;
   }
 }

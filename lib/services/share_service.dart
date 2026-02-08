@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:developer' as dev;
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -29,11 +31,13 @@ class ShareService {
       final productService = ProductService();
       final link = await productService.generatePromotionLink(product);
       if (link != null && link.isNotEmpty) {
-        return link;
-      }
-    } catch (_) {}
+      return link;
+    }
+  } catch (e, st) {
+    dev.log('Error generating promotion link for share: $e', name: 'ShareService', error: e, stackTrace: st);
+  }
 
-    // 根据平台生成默认链接
+  // 根据平台生成默认链接
     switch (product.platform) {
       case 'jd':
         return 'https://item.jd.com/${product.id}.html';
@@ -78,17 +82,29 @@ class ShareService {
   }
 
   /// 下载网络图片并返回字节数据
-  static Future<Uint8List?> downloadImage(String imageUrl) async {
+  /// 
+  /// [imageUrl] 图片 URL
+  /// [timeout] 超时时间，默认 15 秒
+  static Future<Uint8List?> downloadImage(
+    String imageUrl, {
+    Duration timeout = const Duration(seconds: 15),
+  }) async {
     try {
       String normalizedUrl = imageUrl.trim();
+      if (normalizedUrl.isEmpty) return null;
+      
       if (normalizedUrl.startsWith('//')) {
         normalizedUrl = 'https:$normalizedUrl';
       }
       
-      final response = await http.get(Uri.parse(normalizedUrl));
+      final response = await http
+          .get(Uri.parse(normalizedUrl))
+          .timeout(timeout);
       if (response.statusCode == 200) {
         return response.bodyBytes;
       }
+    } on TimeoutException {
+      debugPrint('下载图片超时: $imageUrl');
     } catch (e) {
       debugPrint('下载图片失败: $e');
     }

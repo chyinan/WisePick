@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-
 import '../../core/api_client.dart';
+import '../../core/storage/hive_config.dart';
 import '../../services/sync/sync_manager.dart';
 import '../auth/auth_providers.dart';
 import 'chat_message.dart';
@@ -86,7 +86,7 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
         final repo = _ref.read(conversationRepositoryProvider);
         final conv = ConversationModel(id: id, title: '新对话', messages: []);
         await repo.saveConversation(conv);
-      } catch (_) {}
+      } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
     }
 
     // 添加用户消息结构体
@@ -121,7 +121,7 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
         pendingUpdateTimer = Timer(const Duration(milliseconds: 100), () {
           try {
             state = state.copyWith(messages: latestScheduledMsgs ?? msgs);
-          } catch (_) {}
+          } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
           lastUpdate = DateTime.now();
           pendingUpdateTimer = null;
         });
@@ -150,7 +150,8 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
           }
         }
         return kws;
-      } catch (_) {
+      } catch (e, st) {
+        log('Error extracting keywords from AI: $e', name: 'ChatProviders', error: e, stackTrace: st);
         return <String>[];
       }
     }
@@ -169,7 +170,7 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
             }
           }
         }
-      } catch (_) {}
+      } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
 
       try {
         if (pm.containsKey('recommendations') && pm['recommendations'] is List) {
@@ -190,11 +191,11 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
                 final s = rec.trim();
                 if (s.isNotEmpty && !out.contains(s)) out.add(s);
               }
-            } catch (_) {}
+            } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
             if (out.length >= 6) break;
           }
         }
-      } catch (_) {}
+      } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
 
       return out;
     }
@@ -202,10 +203,10 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
       // Decide whether to include title instruction in the messages: only include on first user message in a conversation
       bool includeTitleInstruction = false;
       try {
-        if (!Hive.isBoxOpen('settings')) await Hive.openBox('settings');
+        await HiveConfig.getBox(HiveConfig.settingsBox);
         // If this is the first user message in current conversation (no previous AI replies), include title instruction
         includeTitleInstruction = state.messages.where((m) => !m.isUser).isEmpty;
-      } catch (_) {}
+      } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
 
       final stream = await service.getAiReplyStream(text /* messages built inside service */, includeTitleInstruction: includeTitleInstruction);
       String pending = '';
@@ -347,12 +348,14 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
                 // otherwise keep the first parsed object as fallback
                 parsedMap ??= parsed;
               }
-            } catch (_) {
+            } catch (e, st) {
               // ignore parse errors for this span and try next start
+              log('JSON span parse error: $e', name: 'ChatProviders', error: e, stackTrace: st);
             }
           }
         }
-      } catch (_) {
+      } catch (e, st) {
+        log('Error parsing AI response JSON: $e', name: 'ChatProviders', error: e, stackTrace: st);
         parsedMap = null;
       }
 
@@ -372,7 +375,7 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
                 try {
                   final metaReg = RegExp(r'(?im)(?:title|标题)\s*[:：]\s*[^\n\{\r]+');
                   buffer = buffer.replaceAll(metaReg, '');
-                } catch (_) {}
+                } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
 
                 final currentId = state.currentConversationId;
                 if (currentId == null) {
@@ -381,25 +384,24 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
                   try {
                     // persist asynchronously to avoid blocking the streaming/parse flow
                     saveCurrentConversation().catchError((_) {});
-                  } catch (_) {}
+                  } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
                 } else {
                   state = state.copyWith(currentConversationTitle: inlineTitle, isTitleLocked: true);
                   try {
                     // persist asynchronously to avoid blocking the streaming/parse flow
                     saveCurrentConversation().catchError((_) {});
-                  } catch (_) {}
+                  } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
                 }
-              } catch (_) {}
+              } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
             }
           }
         }
-      } catch (_) {}
+      } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
 
       // Prepare parse diagnostics (do not mutate buffer). We'll prepend to metaText only when debug is enabled.
       String parseDiagnostic = '';
       try {
-        if (!Hive.isBoxOpen('settings')) await Hive.openBox('settings');
-        final box = Hive.box('settings');
+        final box = await HiveConfig.getBox(HiveConfig.settingsBox);
         final bool debug = box.get('debug_ai_response') as bool? ?? false;
         if (debug) {
           if (parsedMap == null) {
@@ -410,7 +412,7 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
           // Prepend to buffer for UI visibility (only in debug)
           buffer = parseDiagnostic + '\n' + buffer;
         }
-      } catch (_) {}
+      } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
 
       if (parsedMap != null && parsedMap.containsKey('recommendations')) {
         // recommendations 存在，用于提取关键词（不直接作为产品列表使用）
@@ -424,7 +426,7 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
           if (item is Map<String, dynamic>) {
               try {
                 products.add(ProductModel.fromMap(item));
-              } catch (_) {}
+              } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
             }
           }
         }
@@ -437,11 +439,10 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
               metaText = a + '\n\n';
             }
           }
-        } catch (_) {}
+        } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
         // If debug flag enabled, append a short parsed-summary for quick verification
         try {
-          if (!Hive.isBoxOpen('settings')) await Hive.openBox('settings');
-          final box = Hive.box('settings');
+          final box = await HiveConfig.getBox(HiveConfig.settingsBox);
           final bool debug = box.get('debug_ai_response') as bool? ?? false;
         if (debug) {
             final summaries = products.map((p) => '${p.title} (¥${p.price.toStringAsFixed(0)})').toList();
@@ -458,14 +459,13 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
                   metaText = metaText + '\nFIRST_REC_KEYS:' + firstKeys;
                 }
               }
-            } catch (_) {}
+            } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
           }
-        } catch (_) {}
+        } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
 
         // Ensure debug-only lines are removed when debug mode is off
             try {
-              if (!Hive.isBoxOpen('settings')) await Hive.openBox('settings');
-              final box2 = Hive.box('settings');
+              final box2 = await HiveConfig.getBox(HiveConfig.settingsBox);
               final bool debugFlag = box2.get('debug_ai_response') as bool? ?? false;
               // 如果 debugFlag 为 true，我们不移除 debug-only 行，并准备把完整数据通过 state 传给 UI 以便在那里执行剪贴板写入（更可靠）
               if (debugFlag) {
@@ -476,18 +476,17 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
                 metaText = metaText.split('\n').where((line) => !line.startsWith('PARSE_') && !line.startsWith('FIRST_REC_KEYS:') && !line.startsWith('PARSE_KEYS:') && !line.startsWith('解析到 ') && !line.trim().startsWith('{query')).join('\n');
                 buffer = buffer.split('\n').where((line) => !line.startsWith('PARSE_') && !line.contains('原始AI返回(JSON)') && !line.contains('原始请求(JSON)：') && !line.trim().startsWith('{query')).join('\n');
               }
-            } catch (_) {}
+            } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
 
         // If debug flag is enabled, prefer to show only the AI's cleaned buffer as the message
         String finalText = metaText.trim();
         try {
-          if (!Hive.isBoxOpen('settings')) await Hive.openBox('settings');
-          final boxDbg2 = Hive.box('settings');
+          final boxDbg2 = await HiveConfig.getBox(HiveConfig.settingsBox);
           final bool dbg2 = boxDbg2.get('debug_ai_response') as bool? ?? false;
           if (dbg2) {
             finalText = buffer.trim();
           }
-        } catch (_) {}
+        } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
         // Try to extract suggestion keywords from parsedMap (if present)
         List<String>? keywordsList;
         try {
@@ -505,7 +504,7 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
                   if (rec.containsKey('goods') && rec['goods'] is Map && rec['goods']['title'] is String) {
                     candidate = rec['goods']['title'] as String;
                   }
-                } catch (_) {}
+                } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
                 // Fallbacks
                 if (candidate == null) {
                   candidate = (rec['keyword'] ?? rec['title'] ?? rec['name'])?.toString();
@@ -514,7 +513,7 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
                 try {
                   final r = rec['rating'] ?? rec['score'];
                   if (r is num) rating = (r as num).toDouble();
-                } catch (_) {}
+                } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
               } else if (rec is String) {
                 candidate = rec;
               }
@@ -542,7 +541,7 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
                     break;
                   }
                   candidate = s;
-                } catch (_) {}
+                } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
                 if (candidate != null && candidate.isNotEmpty) tmpPairs.add({'kw': candidate, 'rating': rating});
               }
               if (tmpPairs.length >= 12) break; // collect a few more to allow de-dup & sort
@@ -563,7 +562,8 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
               if (tmp.isNotEmpty) keywordsList = tmp;
             }
           }
-        } catch (_) {
+        } catch (e, st) {
+          log('Error extracting keyword list from parsed response: $e', name: 'ChatProviders', error: e, stackTrace: st);
           keywordsList = null;
         }
 
@@ -583,7 +583,7 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
                 } else if (rec is String) {
                   k = rec.trim();
                 }
-              } catch (_) {}
+              } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
               if (k != null && k.isNotEmpty) {
                 // simple cleaning
                 k = k.replaceAll(RegExp(r'^\W+|\W+\$'), '');
@@ -593,7 +593,7 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
             }
             if (cand.isNotEmpty) keywordsList = cand;
           }
-        } catch (_) {}
+        } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
 
         // If parsing produced no keywords, fall back to streaming cache or derive from parsedMap
         if ((keywordsList == null || keywordsList.isEmpty)) {
@@ -604,7 +604,7 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
               final derived = deriveKeywordsFromParsedMap(parsedMap);
               if (derived.isNotEmpty) keywordsList = derived;
             }
-          } catch (_) {}
+          } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
         }
 
         finalMsg = ChatMessage(id: DateTime.now().microsecondsSinceEpoch.toString(), text: finalText, isUser: false, products: products, keywords: keywordsList, aiParsedRaw: jsonEncode(parsedMap), failed: failed, retryForText: failed ? text : null);
@@ -635,8 +635,8 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
                     extracted = (meta['conversationTitle'] as String).trim();
                   }
                 }
-              } catch (_) {}
-          } catch (_) {}
+              } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
+          } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
 
           // 2) 回退到文本正则匹配
           // 先做一个简单直接的查找：如果返回文本中任何位置包含 `title:` 或 `标题：` 字段，优先提取该字段的值并作为标题
@@ -650,7 +650,7 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
                 extracted = last.group(1)!.trim().replaceAll('"', '').replaceAll('\n', ' ');
               }
             }
-          } catch (_) {}
+          } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
 
           if (extracted == null || extracted.trim().isEmpty) {
             try {
@@ -661,7 +661,7 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
                 final last = cleanedMatches.last;
                 extracted = last.group(1)!.trim().replaceAll('"', '').replaceAll('\n', ' ');
               }
-            } catch (_) {}
+            } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
 
             if (extracted == null || extracted.trim().isEmpty) {
               try {
@@ -672,7 +672,7 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
                   final last = rawMatches.last;
                   extracted = last.group(1)!.trim().replaceAll('"', '').replaceAll('\n', ' ');
                 }
-              } catch (_) {}
+              } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
             }
 
             if (extracted == null || extracted.trim().isEmpty) {
@@ -695,7 +695,7 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
               final metaReg = RegExp(r'(?im)(?:title|标题)\s*[:：]\s*.+?\s*(?:\n|\r|$)');
               metaText = metaText.replaceAll(metaReg, '');
               buffer = buffer.replaceAll(metaReg, '');
-            } catch (_) {}
+            } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
 
             try {
               final currentId = state.currentConversationId;
@@ -703,8 +703,7 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
               bool copied = false;
               String? fullDebug;
               try {
-                if (!Hive.isBoxOpen('settings')) await Hive.openBox('settings');
-                final box = Hive.box('settings');
+                final box = await HiveConfig.getBox(HiveConfig.settingsBox);
                 final bool debug = box.get('debug_ai_response') as bool? ?? false;
                 if (debug) {
                   final full = 'PARSED_MAP:\n${jsonEncode(parsedMap)}\n\nCLEANED_BUFFER:\n$buffer\n\nMETA_TEXT:\n$metaText';
@@ -712,7 +711,7 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
                   fullDebug = full;
                   copied = true;
                 }
-              } catch (_) {}
+              } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
 
                 if (currentId == null) {
                 final newId = DateTime.now().microsecondsSinceEpoch.toString();
@@ -720,32 +719,32 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
                 try {
                   // persist asynchronously to avoid blocking the streaming/parse flow
                   saveCurrentConversation().catchError((_) {});
-                } catch (_) {}
+                } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
               } else {
                 state = state.copyWith(currentConversationTitle: finalTitle, debugNotification: copied ? '已复制完整返回信息' : null, debugFullResponse: copied ? fullDebug : null, isTitleLocked: true);
                 try {
                   // persist asynchronously to avoid blocking the streaming/parse flow
                   saveCurrentConversation().catchError((_) {});
-                } catch (_) {}
+                } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
               }
-            } catch (_) {}
+            } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
           }
-        } catch (_) {}
+        } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
       } else {
         finalMsg = ChatMessage(id: DateTime.now().microsecondsSinceEpoch.toString(), text: buffer.trim(), isUser: false, aiParsedRaw: null, failed: failed, retryForText: failed ? text : null);
       }
 
       // 如果开启 debug，避免在消息气泡中渲染超长的原始 JSON 导致 UI 卡顿，截断展示并确保完整内容已通过 debugFullResponse 传给 UI 以便复制
       try {
-        if (!Hive.isBoxOpen('settings')) await Hive.openBox('settings');
-        final boxDbg = Hive.box('settings');
+        final boxDbg = await HiveConfig.getBox(HiveConfig.settingsBox);
         final bool dbg = boxDbg.get('debug_ai_response') as bool? ?? false;
         if (dbg && finalMsg.text.length > 1500) {
           final preview = finalMsg.text.substring(0, 1500) + '\n\n[调试内容已截断，已复制完整返回到剪贴板]';
           finalMsg = ChatMessage(id: finalMsg.id, text: preview, isUser: finalMsg.isUser, product: finalMsg.product, products: finalMsg.products, aiParsedRaw: finalMsg.aiParsedRaw, failed: finalMsg.failed, retryForText: finalMsg.retryForText, timestamp: finalMsg.timestamp);
         }
-      } catch (_) {}
-    } catch (_) {
+      } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
+    } catch (e, st) {
+      log('Error building final chat message: $e', name: 'ChatProviders', error: e, stackTrace: st);
       finalMsg = ChatMessage(id: DateTime.now().microsecondsSinceEpoch.toString(), text: buffer.trim(), isUser: false, failed: failed, retryForText: failed ? text : null);
     }
 
@@ -763,14 +762,14 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
           if (s.trimLeft().startsWith('{query')) return false;
           return true;
         }).join('\n');
-      } catch (_) {
+      } catch (e, st) {
+        log('Error cleaning debug lines from message: $e', name: 'ChatProviders', error: e, stackTrace: st);
         return t;
       }
     }
 
     try {
-      if (!Hive.isBoxOpen('settings')) await Hive.openBox('settings');
-      final box = Hive.box('settings');
+      final box = await HiveConfig.getBox(HiveConfig.settingsBox);
       final bool debugFlag = box.get('debug_ai_response') as bool? ?? false;
       if (!debugFlag) {
         final cleanMsgs = state.messages.map((m) {
@@ -804,7 +803,7 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
             retryForText: finalMsg.retryForText,
             timestamp: finalMsg.timestamp);
       }
-    } catch (_) {}
+    } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
 
     // replace placeholder with final message and stop loading
     final msgs = [...state.messages];
@@ -820,13 +819,13 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
     try {
       // 已禁用自动根据消息首行生成会话标题的逻辑。
       // 如果没有从 parsedMap 或显式字段提取到标题，则保持当前标题不变（通常为 '新对话'）。
-    } catch (_) {}
+    } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
 
     // persist conversation after adding AI message
     try {
       // persist asynchronously to avoid blocking UI after adding AI message
       saveCurrentConversation().catchError((_) {});
-    } catch (_) {}
+    } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
   }
 
   /// Create a new conversation and set as current
@@ -863,7 +862,7 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
         }
         syncManager.scheduleSyncConversations();
       }
-    } catch (_) {}
+    } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
   }
 
   /// Load a conversation
@@ -879,7 +878,7 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
     ConversationModel? convToDelete;
     try {
       convToDelete = await repo.getConversation(id);
-    } catch (_) {}
+    } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
     
     await repo.deleteConversation(id);
     
@@ -896,7 +895,7 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
         await syncManager.addConversationChange(convToDelete, isDeleted: true);
         syncManager.scheduleSyncConversations();
       }
-    } catch (_) {}
+    } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
   }
 }
 

@@ -1,6 +1,9 @@
+import 'dart:developer' as dev;
+
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:dio/dio.dart';
+
+import '../core/storage/hive_config.dart';
 
 class UserSettingsPage extends StatefulWidget {
   const UserSettingsPage({super.key});
@@ -26,7 +29,7 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
 
   Future<void> _load() async {
     try {
-      final box = await Hive.openBox('settings');
+      final box = await HiveConfig.getBox(HiveConfig.settingsBox);
       setState(() {
         _openAiController.text = (box.get('openai_api') as String?) ?? '';
         _baseUrlController.text = (box.get('openai_base') as String?) ?? '';
@@ -34,7 +37,9 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
       });
       // 每次打开时尝试拉取可用模型列表
       _fetchModels();
-    } catch (_) {}
+    } catch (e, st) {
+      dev.log('Error loading user settings: $e', name: 'UserSettings', error: e, stackTrace: st);
+    }
   }
 
   Future<void> _fetchModels() async {
@@ -286,7 +291,7 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
                   onPressed: () async {
                     try {
                       setState(() => _loading = true);
-                      final box = await Hive.openBox('settings');
+                      final box = await HiveConfig.getBox(HiveConfig.settingsBox);
                       await box.put(
                         'openai_api',
                         _openAiController.text.trim(),
@@ -304,7 +309,8 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
                         context,
                       ).showSnackBar(const SnackBar(content: Text('保存成功')));
                       Navigator.of(context).pop();
-                    } catch (_) {
+                    } catch (e, st) {
+                      dev.log('Error saving user settings: $e', name: 'UserSettings', error: e, stackTrace: st);
                       if (!mounted) return;
                       ScaffoldMessenger.of(
                         context,

@@ -14,6 +14,28 @@ class StatsDashboard extends StatelessWidget {
     this.chartData,
   });
 
+  /// 安全获取嵌套 Map，避免类型转换异常
+  Map<String, dynamic>? _safeGetMap(dynamic value) {
+    if (value == null) return null;
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) return Map<String, dynamic>.from(value);
+    return null;
+  }
+
+  /// 安全获取 int 值
+  int _safeGetInt(dynamic value, int defaultValue) {
+    if (value == null) return defaultValue;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return defaultValue;
+  }
+
+  /// 安全获取 String 值
+  String _safeGetString(dynamic value, String defaultValue) {
+    if (value == null) return defaultValue;
+    return value.toString();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -83,8 +105,8 @@ class StatsDashboard extends StatelessWidget {
   }
 
   Widget _buildMainStatsGrid(BuildContext context) {
-    final activeUsers = userStats['activeUsers'] as Map<String, dynamic>?;
-    final cartItems = systemStats['cartItems'] as Map<String, dynamic>?;
+    final activeUsers = _safeGetMap(userStats['activeUsers']);
+    final cartItems = _safeGetMap(systemStats['cartItems']);
     
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -124,7 +146,7 @@ class StatsDashboard extends StatelessWidget {
             _buildGradientStatCard(
               context,
               title: '会话数',
-              value: '${(systemStats['conversations'] as Map?)?['total'] ?? 0}',
+              value: '${_safeGetMap(systemStats['conversations'])?['total'] ?? 0}',
               subtitle: 'AI对话会话',
               icon: Icons.chat_bubble_rounded,
               gradient: const [Color(0xFF10B981), Color(0xFF34D399)],
@@ -211,7 +233,7 @@ class StatsDashboard extends StatelessWidget {
   }
 
   Widget _buildUserStatsGrid(BuildContext context) {
-    final activeUsers = userStats['activeUsers'] as Map<String, dynamic>?;
+    final activeUsers = _safeGetMap(userStats['activeUsers']);
     
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -279,11 +301,11 @@ class StatsDashboard extends StatelessWidget {
   }
 
   Widget _buildSystemStatsGrid(BuildContext context) {
-    final cartItems = systemStats['cartItems'] as Map<String, dynamic>?;
-    final conversations = systemStats['conversations'] as Map<String, dynamic>?;
-    final messages = systemStats['messages'] as Map<String, dynamic>?;
-    final devices = systemStats['devices'] as Map<String, dynamic>?;
-    final platforms = cartItems?['byPlatform'] as Map<String, dynamic>?;
+    final cartItems = _safeGetMap(systemStats['cartItems']);
+    final conversations = _safeGetMap(systemStats['conversations']);
+    final messages = _safeGetMap(systemStats['messages']);
+    final devices = _safeGetMap(systemStats['devices']);
+    final platforms = _safeGetMap(cartItems?['byPlatform']);
     
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -415,9 +437,9 @@ class StatsDashboard extends StatelessWidget {
     // 找出最大值用于计算比例
     int maxValue = 1;
     for (final data in chartData!) {
-      final newUsers = data['newUsers'] as int? ?? 0;
-      final activeUsers = data['activeUsers'] as int? ?? 0;
-      final cartItems = data['cartItems'] as int? ?? 0;
+      final newUsers = _safeGetInt(data['newUsers'], 0);
+      final activeUsers = _safeGetInt(data['activeUsers'], 0);
+      final cartItems = _safeGetInt(data['cartItems'], 0);
       final max = [newUsers, activeUsers, cartItems].reduce((a, b) => a > b ? a : b);
       if (max > maxValue) maxValue = max;
     }
@@ -449,10 +471,10 @@ class StatsDashboard extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: chartData!.map((data) {
-                final newUsers = data['newUsers'] as int? ?? 0;
-                final activeUsers = data['activeUsers'] as int? ?? 0;
-                final cartItems = data['cartItems'] as int? ?? 0;
-                final label = data['label'] as String? ?? '';
+                final newUsers = _safeGetInt(data['newUsers'], 0);
+                final activeUsers = _safeGetInt(data['activeUsers'], 0);
+                final cartItems = _safeGetInt(data['cartItems'], 0);
+                final label = _safeGetString(data['label'], '');
 
                 return Expanded(
                   child: Padding(
@@ -517,7 +539,9 @@ class StatsDashboard extends StatelessWidget {
   }
 
   Widget _buildBar(double ratio, Color color) {
-    final height = ratio * 160;
+    // 边界检查：确保 ratio 在有效范围内，防止 NaN、Infinity 或负数导致布局异常
+    final safeRatio = ratio.isFinite ? ratio.clamp(0.0, 1.0) : 0.0;
+    final height = safeRatio * 160;
     return Container(
       width: 8,
       height: height < 4 ? 4 : height,
@@ -565,16 +589,18 @@ class StatsDashboard extends StatelessWidget {
   }
 
   Widget _buildUserRow(BuildContext context, Map<String, dynamic> user) {
-    final createdAt = user['createdAt'] as String?;
+    final createdAtStr = _safeGetString(user['createdAt'], '');
     String formattedDate = '未知';
-    if (createdAt != null) {
-      final date = DateTime.tryParse(createdAt);
+    if (createdAtStr.isNotEmpty) {
+      final date = DateTime.tryParse(createdAtStr);
       if (date != null) {
         formattedDate = '${date.month}/${date.day} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
       }
     }
 
     final isVerified = user['emailVerified'] == true;
+    final email = _safeGetString(user['email'], '');
+    final nickname = _safeGetString(user['nickname'], '未设置');
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -591,7 +617,7 @@ class StatsDashboard extends StatelessWidget {
                   radius: 16,
                   backgroundColor: const Color(0xFF6366F1).withOpacity(0.1),
                   child: Text(
-                    (user['email'] as String?)?.substring(0, 1).toUpperCase() ?? '?',
+                    email.isNotEmpty ? email.substring(0, 1).toUpperCase() : '?',
                     style: const TextStyle(
                       color: Color(0xFF6366F1),
                       fontWeight: FontWeight.w600,
@@ -601,7 +627,7 @@ class StatsDashboard extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    user['email'] as String? ?? '',
+                    email,
                     style: const TextStyle(color: Color(0xFF1E293B)),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -612,7 +638,7 @@ class StatsDashboard extends StatelessWidget {
           Expanded(
             flex: 2,
             child: Text(
-              user['nickname'] as String? ?? '未设置',
+              nickname,
               style: const TextStyle(color: Color(0xFF64748B)),
             ),
           ),
