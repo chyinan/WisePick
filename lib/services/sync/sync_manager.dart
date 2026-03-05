@@ -14,7 +14,7 @@ import '../../core/logging/app_logger.dart';
 import 'cart_sync_client.dart';
 import 'conversation_sync_client.dart';
 import 'offline_sync_queue.dart';
-import 'conflict_resolver.dart';
+import 'cart_operation_log.dart';
 
 /// Sentinel to distinguish "parameter not passed" from "explicitly set to null"
 /// in [SyncState.copyWith] for nullable [String?] fields.
@@ -447,55 +447,61 @@ class SyncManager extends StateNotifier<SyncState> {
   /// Uses incremental put/delete instead of clear-then-rewrite to avoid a
   /// data-loss window if the process is interrupted mid-operation.
   Future<void> _applyCartSyncResult(CartSyncResponse result) async {
-    // Use HiveConfig.getBox for safe open-if-needed semantics, consistent
-    // with the rest of the codebase.
     final box = await HiveConfig.getBox(CartService.boxName);
     final cartService = CartService();
 
-    // 获取本地所有项目
     final localItems = await cartService.getAllItems();
+    final serverItems = result.items.map(_convertServerItemToLocal).toList();
 
-    // 转换服务器项目为标准格式
-    final serverItems = result.items.map((item) {
-      return _convertServerItemToLocal(item);
-    }).toList();
+    // 获取所有操作日志，用于基于操作的冲突解决
+    final allLogs = await CartOperationLogger.getAllLogs();
 
-    // 使用冲突解决器
-    final resolver = CartConflictResolver();
-    final resolutionResult = resolver.resolveConflicts(
-      localItems: localItems,
-      serverItems: serverItems,
-      defaultStrategy: ConflictResolutionStrategy.merge,
-    );
-
-    // Build the desired final set of IDs
-    final deletedIds = Set<String>.from(result.deletedIds);
-    final desiredIds = <String>{};
-
-    // Upsert resolved items (incremental — no clear())
-    for (final item in resolutionResult.resolvedItems) {
-      final productId = item['id'] as String?;
-      if (productId == null) continue;
-      if (deletedIds.contains(productId)) continue;
-
-      desiredIds.add(productId);
-      await box.put(productId, item);
+    final localMap = <String, Map<String, dynamic>>{};
+    final serverMap = <String, Map<String, dynamic>>{};
+    for (final item in localItems) {
+      final id = item['id'] as String?;
+      if (id != null) localMap[id] = item;
+    }
+    for (final item in serverItems) {
+      final id = item['id'] as String?;
+      if (id != null) serverMap[id] = item;
     }
 
-    // Remove items that should no longer exist locally.
-    // Use .map(toString) instead of .cast<String>() to avoid a runtime
-    // CastError if Hive contains a non-String key (e.g. corrupted data).
+    final deletedIds = Set<String>.from(result.deletedIds);
+    final desiredIds = <String>{};
+    var mergedCount = 0;
+
+    final allIds = {...localMap.keys, ...serverMap.keys};
+    for (final id in allIds) {
+      if (deletedIds.contains(id)) continue;
+
+      final local = localMap[id];
+      final server = serverMap[id];
+      final logs = allLogs[id] ?? [];
+
+      final resolved = CartOperationMerger.mergeWithOperationLog(
+          id, local, server, logs);
+
+      if (resolved != null) {
+        desiredIds.add(id);
+        await box.put(id, resolved);
+        if (logs.isNotEmpty) mergedCount++;
+      }
+      // resolved == null 表示操作日志指示删除，跳过即可
+    }
+
+    // 移除不再需要的本地项
     final existingKeys = box.keys.map((k) => k.toString()).toSet();
-    final toRemove = existingKeys.difference(desiredIds);
-    for (final key in toRemove) {
+    for (final key in existingKeys.difference(desiredIds)) {
       await box.delete(key);
     }
 
-    // 记录冲突解决统计
-    if (resolutionResult.autoResolvedCount > 0) {
-      _logger.debug(
-        'Cart conflicts resolved: ${resolutionResult.autoResolvedCount} auto-resolved',
-      );
+    // 同步成功后清除已处理的操作日志
+    await CartOperationLogger.clearSyncedLogs(
+        before: DateTime.now().add(const Duration(seconds: 1)));
+
+    if (mergedCount > 0) {
+      _logger.debug('Cart sync: $mergedCount items merged via operation log');
     }
   }
 

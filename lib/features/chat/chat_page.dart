@@ -5,18 +5,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../core/storage/hive_config.dart';
+import '../../core/storage/hive_config.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../features/chat/chat_providers.dart';
-import '../features/chat/chat_error_mapper.dart';
-import 'home_drawer.dart';
-import '../features/chat/chat_message.dart';
-import '../widgets/product_card.dart';
-import '../features/products/product_detail_page.dart';
-import '../features/products/keyword_prompt.dart';
-import '../features/products/search_service.dart';
-import '../features/products/product_model.dart';
-import '../features/chat/widgets/streaming_text.dart';
+import 'chat_providers.dart';
+import 'chat_error_mapper.dart';
+import '../home/widgets/home_drawer.dart';
+import 'chat_message.dart';
+import '../../widgets/product_card.dart';
+import '../products/product_detail_page.dart';
+import '../products/keyword_prompt.dart';
+import '../products/search_service.dart';
+import '../products/product_model.dart';
+import 'widgets/streaming_text.dart';
 
 /// 聊天页面组件
 class ChatPage extends ConsumerStatefulWidget {

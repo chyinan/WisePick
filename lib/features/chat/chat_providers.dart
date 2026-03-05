@@ -12,6 +12,8 @@ import 'chat_message.dart';
 import 'chat_service.dart';
 import 'conversation_model.dart';
 import 'conversation_repository.dart';
+import 'streaming_text_filter.dart';
+import 'keyword_extractor.dart';
 import '../products/product_model.dart';
 
 /// 提供 ChatService 的 Provider
@@ -81,54 +83,6 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
   /// Hides raw JSON content (which would flash as protocol noise) and
   /// returns a user-friendly placeholder while the AI structures its
   /// response.  Plain-text responses pass through untouched.
-  /// 流式过程中过滤原始内容，只返回用户可见的正文。
-  /// 规则：JSON 块一律隐藏，仅显示 JSON 前的纯文本或 analysis 字段；title 行也过滤掉。
-  static String _streamingDisplayText(String raw) {
-    var trimmed = raw.trimLeft();
-    if (trimmed.isEmpty) return '';
-
-    // 剥掉 markdown 代码围栏（```json 或 ``` 开头）
-    trimmed = trimmed.replaceAll(RegExp(r'```(?:json)?\s*', caseSensitive: false), '').trimLeft();
-
-    // 找到第一个 JSON 块的起始位置
-    final jsonStart = trimmed.indexOf('{');
-
-    if (jsonStart == -1) {
-      // 没有 JSON，直接过滤 title 行后返回
-      return _stripMetaLines(raw);
-    }
-
-    // JSON 之前的纯文本
-    final textBefore = jsonStart > 0 ? trimmed.substring(0, jsonStart).trim() : '';
-    final jsonPart = trimmed.substring(jsonStart);
-
-    // 尝试从 JSON 中提取 analysis 字段
-    final m = RegExp(r'"analysis"\s*:\s*"((?:[^"\\]|\\.)*)"').firstMatch(jsonPart);
-    if (m != null && m.group(1) != null) {
-      final analysis = m.group(1)!
-          .replaceAll(r'\n', '\n')
-          .replaceAll(r'\"', '"')
-          .replaceAll(r'\\', '\\')
-          .trim();
-      if (analysis.isNotEmpty) {
-        return textBefore.isNotEmpty ? '$textBefore\n\n$analysis' : analysis;
-      }
-    }
-
-    // JSON 还在流式传输中，analysis 尚未完整 —— 优先显示 JSON 前的文本，否则显示占位符
-    if (textBefore.isNotEmpty) return _stripMetaLines(textBefore);
-    return '正在分析推荐结果…';
-  }
-
-  /// 过滤掉 title/标题 行以及调试前缀行
-  static String _stripMetaLines(String text) {
-    return text.split('\n').where((line) {
-      final s = line.trimLeft();
-      if (RegExp(r'^(?:title|标题)\s*[:：]', caseSensitive: false).hasMatch(s)) return false;
-      if (s.startsWith('PARSE_') || s.startsWith('FIRST_REC_KEYS:') || s.startsWith('PARSE_KEYS:')) return false;
-      return true;
-    }).join('\n').trim();
-  }
 
   /// Retry a failed AI message without duplicating the user message.
   Future<void> retryFailedMessage(String messageId) async {
@@ -203,78 +157,6 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
         });
       }
     }
-    // Quick extraction of candidate keywords from partial AI text (streaming)
-    List<String> quickExtractKeywords(String text) {
-      try {
-        final kws = <String>[];
-        // Try nested goods.title first
-        final goodsTitleReg = RegExp(r'"goods"\s*:\s*\{[^}]*"title"\s*:\s*"([^"]+)"', multiLine: true);
-        for (final m in goodsTitleReg.allMatches(text)) {
-          final s = m.group(1)?.trim();
-          if (s != null && s.isNotEmpty && !kws.contains(s)) {
-            kws.add(s);
-            if (kws.length >= 6) return kws;
-          }
-        }
-        // Fallback: generic title fields
-        final titleReg = RegExp(r'"title"\s*:\s*"([^"]{3,120})"', multiLine: true);
-        for (final m in titleReg.allMatches(text)) {
-          final s = m.group(1)?.trim();
-          if (s != null && s.isNotEmpty && !kws.contains(s)) {
-            kws.add(s);
-            if (kws.length >= 6) return kws;
-          }
-        }
-        return kws;
-      } catch (e, st) {
-        log('Error extracting keywords from AI: $e', name: 'ChatProviders', error: e, stackTrace: st);
-        return <String>[];
-      }
-    }
-
-    // Derive concise keywords from a parsedMap recommendations list
-    List<String> deriveKeywordsFromParsedMap(Map<String, dynamic>? pm) {
-      final out = <String>[];
-      if (pm == null) return out;
-      try {
-        if (pm.containsKey('keywords') && pm['keywords'] is List) {
-          for (final k in (pm['keywords'] as List)) {
-            if (k is String) {
-              final s = k.trim();
-              if (s.isNotEmpty && !out.contains(s)) out.add(s);
-              if (out.length >= 6) return out;
-            }
-          }
-        }
-      } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
-
-      try {
-        if (pm.containsKey('recommendations') && pm['recommendations'] is List) {
-          for (final rec in (pm['recommendations'] as List)) {
-            try {
-              if (rec is Map<String, dynamic>) {
-                String? s;
-                if (rec.containsKey('goods') && rec['goods'] is Map && rec['goods']['title'] is String) {
-                  s = (rec['goods']['title'] as String).trim();
-                }
-                if ((s == null || s.isEmpty) && rec.containsKey('title') && rec['title'] is String) {
-                  s = (rec['title'] as String).trim();
-                }
-                if (s != null && s.isNotEmpty) {
-                  if (!out.contains(s)) out.add(s);
-                }
-              } else if (rec is String) {
-                final s = rec.trim();
-                if (s.isNotEmpty && !out.contains(s)) out.add(s);
-              }
-            } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
-            if (out.length >= 6) break;
-          }
-        }
-      } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
-
-      return out;
-    }
     try {
       // Decide whether to include title instruction in the messages: only include on first user message in a conversation
       bool includeTitleInstruction = false;
@@ -312,10 +194,10 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
           pending = pending.substring(flushLen);
           // Compute display text – filter out raw JSON so it never flashes in the UI
           final rawDisplayed = buffer + pending;
-          final displayed = _streamingDisplayText(rawDisplayed);
+          final displayed = StreamingTextFilter.streamingDisplayText(rawDisplayed);
           final msgs = [...state.messages];
           final lastIdx = msgs.length - 1;
-          final kw = quickExtractKeywords(rawDisplayed);
+          final kw = KeywordExtractor.quickExtractKeywords(rawDisplayed);
           if (kw.isNotEmpty) streamingKeywordsCache = kw;
           final updated = ChatMessage(id: msgs[lastIdx].id, text: displayed, isUser: false, keywords: kw, status: MessageStatus.streaming);
           msgs[lastIdx] = updated;
@@ -324,10 +206,10 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
           // if nothing to flush yet, optionally update ephemeral preview every few chars to show typing
           if (pending.length % 20 == 0) {
             final rawDisplayed = buffer + pending;
-            final displayed = _streamingDisplayText(rawDisplayed);
+            final displayed = StreamingTextFilter.streamingDisplayText(rawDisplayed);
             final msgs = [...state.messages];
             final lastIdx = msgs.length - 1;
-            final kw = quickExtractKeywords(rawDisplayed);
+            final kw = KeywordExtractor.quickExtractKeywords(rawDisplayed);
             if (kw.isNotEmpty) streamingKeywordsCache = kw;
             final updated = ChatMessage(id: msgs[lastIdx].id, text: displayed, isUser: false, keywords: kw, status: MessageStatus.streaming);
             msgs[lastIdx] = updated;
@@ -341,7 +223,7 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
         pending = '';
         final msgs = [...state.messages];
         final lastIdx = msgs.length - 1;
-        final finalKw = quickExtractKeywords(buffer);
+      final finalKw = KeywordExtractor.quickExtractKeywords(buffer);
         if (finalKw.isNotEmpty) streamingKeywordsCache = finalKw;
         msgs[lastIdx] = ChatMessage(id: msgs[lastIdx].id, text: buffer, isUser: false, keywords: finalKw);
         // ensure any pending timer is flushed and apply final streaming update
@@ -454,7 +336,7 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
           final afterJsonTitleReg = RegExp(r'(?im)\}\s*(?:title|标题)\s*[:：]\s*([^\n\{\r]+)');
           final m = afterJsonTitleReg.firstMatch(cleaned);
           if (m != null) {
-            String inlineTitle = m.group(1)!.trim().replaceAll('"', '');
+            String inlineTitle = m.group(1)?.trim().replaceAll('"', '') ?? '';
             if (inlineTitle.isNotEmpty) {
               if (inlineTitle.length > 15) inlineTitle = inlineTitle.substring(0, 15);
               try {
@@ -693,7 +575,7 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
             if (streamingKeywordsCache.isNotEmpty) {
               keywordsList = streamingKeywordsCache;
             } else {
-              final derived = deriveKeywordsFromParsedMap(parsedMap);
+              final derived = KeywordExtractor.deriveKeywordsFromParsedMap(parsedMap);
               if (derived.isNotEmpty) keywordsList = derived;
             }
           } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
@@ -739,7 +621,7 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
               final titleMatches = titleFieldReg.allMatches(combinedForTitle).toList();
               if (titleMatches.isNotEmpty) {
                 final last = titleMatches.last;
-                extracted = last.group(1)!.trim().replaceAll('"', '').replaceAll('\n', ' ');
+                extracted = last.group(1)?.trim().replaceAll('"', '').replaceAll('\n', ' ') ?? '';
               }
             }
           } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
@@ -751,7 +633,7 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
               final cleanedMatches = cleanedTitleReg.allMatches(cleaned).toList();
               if (cleanedMatches.isNotEmpty) {
                 final last = cleanedMatches.last;
-                extracted = last.group(1)!.trim().replaceAll('"', '').replaceAll('\n', ' ');
+                extracted = last.group(1)?.trim().replaceAll('"', '').replaceAll('\n', ' ') ?? '';
               }
             } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
 
@@ -762,7 +644,7 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
                 final rawMatches = rawTitleReg.allMatches(buffer).toList();
                 if (rawMatches.isNotEmpty) {
                   final last = rawMatches.last;
-                  extracted = last.group(1)!.trim().replaceAll('"', '').replaceAll('\n', ' ');
+                  extracted = last.group(1)?.trim().replaceAll('"', '').replaceAll('\n', ' ') ?? '';
                 }
               } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
             }
@@ -774,7 +656,7 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
               final matchesTitle = regTitle.allMatches(combined).toList();
               if (matchesTitle.isNotEmpty) {
                 final last = matchesTitle.last;
-                extracted = last.group(1)!.trim().replaceAll('"', '').replaceAll('\n', ' ');
+                extracted = last.group(1)?.trim().replaceAll('"', '').replaceAll('\n', ' ') ?? '';
               }
             }
           }

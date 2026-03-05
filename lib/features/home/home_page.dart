@@ -8,22 +8,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../core/theme/theme_provider.dart';
-import '../features/cart/cart_page.dart';
-import '../features/chat/chat_providers.dart';
-import '../features/chat/conversation_model.dart';
-import '../features/auth/auth_providers.dart';
-import '../features/auth/login_page.dart';
-import '../features/auth/profile_page.dart';
-import '../features/auth/token_manager.dart';
-import '../services/sync/sync_manager.dart';
-import '../widgets/error_snackbar.dart';
-import '../widgets/macos_window_buttons.dart';
-import '../widgets/sync_status_indicator.dart';
-import 'admin_settings_page.dart';
-import 'ai_provider_settings_page.dart';
-import 'chat_page.dart';
-import '../core/storage/hive_config.dart';
+import '../../core/theme/theme_provider.dart';
+import '../cart/cart_page.dart';
+import '../chat/chat_providers.dart';
+import '../chat/conversation_model.dart';
+import '../auth/auth_providers.dart';
+import '../auth/login_page.dart';
+import '../auth/profile_page.dart';
+import '../auth/token_manager.dart';
+import '../../services/sync/sync_manager.dart';
+import '../../widgets/error_snackbar.dart';
+import '../../widgets/macos_window_buttons.dart';
+import '../../widgets/sync_status_indicator.dart';
+import '../admin/admin_settings_page.dart';
+import '../settings/ai_provider_settings_page.dart';
+import '../chat/chat_page.dart';
+import '../../core/storage/hive_config.dart';
 
 const String _defaultAdminPasswordHash =
     'b054968e7426730e9a005f1430e6d5cd70a03b08370a82323f9a9b231cf270be';

@@ -1,19 +1,23 @@
 import 'dart:convert';
 import 'dart:developer';
-import 'package:http/http.dart' as http;
 import 'product_model.dart';
 import '../../core/backend_config.dart';
+import '../../core/api_client.dart';
 
 class SearchService {
   final String baseUrl;
+  final ApiClient _client;
 
-  SearchService({String? baseUrl}) : baseUrl = baseUrl ?? BackendConfig.resolveSync();
+  SearchService({String? baseUrl, ApiClient? client})
+      : baseUrl = baseUrl ?? BackendConfig.resolveSync(),
+        _client = client ?? ApiClient(config: ApiClientConfig(baseUrl: baseUrl ?? BackendConfig.resolveSync()));
 
   Future<List<ProductModel>> search(String query, {int page = 1, int pageSize = 20, String? platform}) async {
-    final uri = Uri.parse('$baseUrl/api/products/search?query=${Uri.encodeComponent(query)}&page_no=$page&page_size=$pageSize' + (platform != null ? '&platform=${Uri.encodeComponent(platform)}' : ''));
-    final resp = await http.get(uri);
+    final path = '/api/products/search?query=${Uri.encodeComponent(query)}&page_no=$page&page_size=$pageSize'
+        + (platform != null ? '&platform=${Uri.encodeComponent(platform)}' : '');
+    final resp = await _client.get(path);
     if (resp.statusCode != 200) throw Exception('search failed ${resp.statusCode}');
-    final Map<String, dynamic> body = Map<String, dynamic>.from(jsonDecode(resp.body) as Map);
+    final Map<String, dynamic> body = Map<String, dynamic>.from(resp.data is Map ? resp.data as Map : jsonDecode(resp.data.toString()) as Map);
     final List items = (body['products'] is List) ? (body['products'] as List) : (body['products'] ?? []);
     return items.map((m) => ProductModel.fromMap(Map<String, dynamic>.from(m))).toList();
   }
@@ -21,15 +25,13 @@ class SearchService {
   /// 返回带元信息的完整响应，包含 products 和 attempts（若后端提供）
   Future<Map<String, dynamic>> searchWithMeta(String query, {int page = 1, int pageSize = 20, String? platform}) async {
     final q = Uri.encodeComponent(query);
-    final p = page.toString();
-    final ps = pageSize.toString();
-    final uri = Uri.parse('$baseUrl/api/products/search?query=$q&page_no=$p&page_size=$ps' + (platform != null ? '&platform=${Uri.encodeComponent(platform)}' : ''));
-    final resp = await http.get(uri);
+    final path = '/api/products/search?query=$q&page_no=$page&page_size=$pageSize'
+        + (platform != null ? '&platform=${Uri.encodeComponent(platform)}' : '');
+    final resp = await _client.get(path);
     if (resp.statusCode != 200) throw Exception('search failed ${resp.statusCode}');
-    final Map body = jsonDecode(resp.body) as Map;
+    final Map body = resp.data is Map ? resp.data as Map : jsonDecode(resp.data.toString()) as Map;
     final List items = body['products'] ?? [];
     final products = items.map((m) => ProductModel.fromMap(Map<String, dynamic>.from(m))).toList();
-    // If backend included raw JD response, attempt to map and merge JD Paragraphs
     try {
       final raw = body['raw_jd'] ?? body['raw'] ?? body;
       if (raw is Map) {
@@ -39,7 +41,6 @@ class SearchService {
           final Map<String, dynamic> jdRoot = Map<String, dynamic>.from(jdRootDynamic as Map);
           final List<ProductModel> jdProducts = _mapJdSearchWare(jdRoot);
           if (jdProducts.isNotEmpty) {
-            // merge avoiding duplicates by id
             final ids = products.map((p) => p.id).toSet();
             for (final jp in jdProducts) {
               if (!ids.contains(jp.id)) {
@@ -57,10 +58,8 @@ class SearchService {
     return {'products': products, 'attempts': attempts, 'raw': body};
   }
 
-  /// 并行请求后端：同时向 taobao 和 jd 发起请求并合并结果（去重）。当某一方不可用时返回另一方结果。
+  /// 并行请求后端：由后端决定如何并行调用各平台并合并
   Future<Map<String, dynamic>> searchParallel(String query, {int page = 1, int pageSize = 20}) async {
-    // 后端负责同时查询多个平台并返回聚合结果。
-    // 直接调用后端的 searchWithMeta 统一接口，由后端决定如何并行调用各平台并合并。
     return await searchWithMeta(query, page: page, pageSize: pageSize);
   }
 

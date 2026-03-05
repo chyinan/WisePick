@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:dio/dio.dart';
 
-import '../core/error/app_error_mapper.dart';
-import '../core/storage/hive_config.dart';
-import '../widgets/error_snackbar.dart';
+import '../../core/error/app_error_mapper.dart';
+import '../../core/storage/hive_config.dart';
+import '../../widgets/error_snackbar.dart';
 
 /// AI服务商API自定义设置页面
 /// 支持：API KEY输入、自定义OpenAI域名、获取模型列表并选择

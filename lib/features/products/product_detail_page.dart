@@ -15,8 +15,11 @@ import 'product_service.dart';
 import 'package:wisepick_dart_version/features/products/pdd_goods_detail_service.dart';
 import 'package:wisepick_dart_version/features/products/taobao_item_detail_service.dart';
 import 'package:wisepick_dart_version/features/chat/chat_service.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:wisepick_dart_version/features/price_history/price_history_page.dart';
+import 'widgets/image_cache_manager.dart';
+import 'widgets/product_image_gallery.dart';
+import 'widgets/ai_introduction_section.dart';
+import 'widgets/price_diff_label.dart';
 import 'package:wisepick_dart_version/features/decision/decision_providers.dart';
 import 'package:wisepick_dart_version/core/error/app_error.dart';
 import 'package:wisepick_dart_version/core/error/app_error_mapper.dart';
@@ -39,14 +42,8 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
   String? _imageError;
   List<String> _galleryImages = const <String>[];
   int _currentImageIndex = 0;
-  late final PageController _pageController;
   late final TaobaoItemDetailService _taobaoDetailService;
   late final PddGoodsDetailService _pddDetailService;
-  Timer? _autoPlayTimer;
-  static final Map<String, List<String>> _taobaoImageMemoryCache = {};
-  static final Map<String, double> _taobaoPriceMemoryCache = {};
-  static final Map<String, List<String>> _pddImageMemoryCache = {};
-  static final Map<String, double> _pddPriceMemoryCache = {};
   double? _taobaoLatestPrice;
   double? _pddLatestPrice;
   double? _initialCartPrice;
@@ -61,7 +58,6 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
   @override
   void initState() {
     super.initState();
-    _pageController = PageController();
     _taobaoDetailService = TaobaoItemDetailService();
     _pddDetailService = PddGoodsDetailService();
     _loadFavoriteState();
@@ -74,7 +70,6 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
   void didUpdateWidget(ProductDetailPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.product.id != widget.product.id) {
-      _stopAutoPlay();
       _loadFavoriteState();
       setState(() {
         _galleryImages = const <String>[];
@@ -97,8 +92,6 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
 
   @override
   void dispose() {
-    _stopAutoPlay();
-    _pageController.dispose();
     super.dispose();
   }
 
@@ -261,276 +254,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
     }
   }
 
-  /// 构建 AI 智能介绍区域
-  Widget _buildAiIntroSection(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
 
-    // 自定义 Markdown 样式
-    final markdownStyleSheet = MarkdownStyleSheet(
-      p: theme.textTheme.bodyMedium?.copyWith(
-        height: 1.7,
-        color: colorScheme.onSurface,
-      ),
-      h1: theme.textTheme.titleLarge?.copyWith(
-        fontWeight: FontWeight.bold,
-        color: colorScheme.onSurface,
-      ),
-      h2: theme.textTheme.titleMedium?.copyWith(
-        fontWeight: FontWeight.bold,
-        color: colorScheme.onSurface,
-        fontSize: 18,
-      ),
-      h3: theme.textTheme.titleSmall?.copyWith(
-        fontWeight: FontWeight.bold,
-        color: colorScheme.onSurface,
-      ),
-      strong: TextStyle(
-        fontWeight: FontWeight.bold,
-        color: colorScheme.primary,
-      ),
-      em: TextStyle(
-        fontStyle: FontStyle.italic,
-        color: colorScheme.onSurfaceVariant,
-      ),
-      listBullet: theme.textTheme.bodyMedium?.copyWith(
-        color: colorScheme.primary,
-      ),
-      blockquote: theme.textTheme.bodyMedium?.copyWith(
-        color: colorScheme.onSurfaceVariant,
-        fontStyle: FontStyle.italic,
-      ),
-      blockquoteDecoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest,
-        border: Border(
-          left: BorderSide(
-            color: colorScheme.primary,
-            width: 4,
-          ),
-        ),
-      ),
-      blockquotePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      code: TextStyle(
-        backgroundColor: colorScheme.surfaceContainerHighest,
-        color: colorScheme.secondary,
-        fontFamily: 'monospace',
-        fontSize: 13,
-      ),
-      codeblockDecoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      codeblockPadding: const EdgeInsets.all(12),
-      horizontalRuleDecoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(
-            color: colorScheme.outlineVariant,
-            width: 1,
-          ),
-        ),
-      ),
-    );
-
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withOpacity(0.5),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // 标题栏和按钮
-          InkWell(
-            onTap: () {
-              if (_aiIntroContent == null && !_isLoadingAiIntro) {
-                _fetchAiIntroduction();
-              } else {
-                setState(() {
-                  _aiIntroExpanded = !_aiIntroExpanded;
-                });
-              }
-            },
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      Icons.auto_awesome,
-                      color: colorScheme.onPrimaryContainer,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'AI 智能介绍',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: colorScheme.onSurface,
-                          ),
-                        ),
-                        if (_aiIntroContent == null && !_isLoadingAiIntro)
-                          Text(
-                            '点击获取 AI 生成的商品详细介绍',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  if (_isLoadingAiIntro)
-                    const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2.5),
-                    )
-                  else if (_aiIntroContent == null)
-                    FilledButton.icon(
-                      onPressed: _fetchAiIntroduction,
-                      icon: const Icon(Icons.auto_awesome, size: 18),
-                      label: const Text('获取介绍'),
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      ),
-                    )
-                  else
-                    IconButton(
-                      onPressed: () {
-                        setState(() {
-                          _aiIntroExpanded = !_aiIntroExpanded;
-                        });
-                      },
-                      icon: Icon(
-                        _aiIntroExpanded
-                            ? Icons.keyboard_arrow_up
-                            : Icons.keyboard_arrow_down,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-          // AI 介绍内容
-          if (_aiIntroExpanded && (_isLoadingAiIntro || _aiIntroContent != null))
-            AnimatedSize(
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeInOut,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Divider(height: 1),
-                  if (_isLoadingAiIntro)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 16),
-                      child: Column(
-                        children: [
-                          const CircularProgressIndicator(),
-                          const SizedBox(height: 16),
-                          Text(
-                            '正在生成 AI 智能介绍...',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '请稍候，AI 正在分析商品信息',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant.withOpacity(0.7),
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  else
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Markdown 渲染区域 - 内容居中，最大宽度限制
-                        Center(
-                          child: Container(
-                            constraints: const BoxConstraints(maxWidth: 800),
-                            width: double.infinity,
-                            padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
-                            child: MarkdownBody(
-                              data: _aiIntroContent ?? '',
-                              styleSheet: markdownStyleSheet,
-                              selectable: true,
-                              onTapLink: (text, href, title) {
-                                if (href != null) {
-                                  launchUrl(Uri.parse(href));
-                                }
-                              },
-                            ),
-                          ),
-                        ),
-                        // 底部操作栏：免责声明 + 重新获取按钮
-                        Center(
-                          child: Container(
-                            constraints: const BoxConstraints(maxWidth: 800),
-                            width: double.infinity,
-                            margin: const EdgeInsets.fromLTRB(24, 8, 24, 20),
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.info_outline,
-                                  size: 14,
-                                  color: colorScheme.onSurfaceVariant.withOpacity(0.8),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    'AI 生成内容不保证真实准确性，请自行仔细核对',
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: colorScheme.onSurfaceVariant.withOpacity(0.8),
-                                      fontSize: 11,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                TextButton.icon(
-                                  onPressed: _isLoadingAiIntro ? null : _fetchAiIntroduction,
-                                  icon: const Icon(Icons.refresh, size: 16),
-                                  label: const Text('重新获取'),
-                                  style: TextButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                                    textStyle: theme.textTheme.labelSmall,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
-  }
 
   void _prepareInitialGallery() {
     final primary = widget.product.imageUrl;
@@ -541,20 +265,13 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
     }
 
     if (widget.product.platform == 'taobao' && widget.product.id.isNotEmpty) {
-      _loadCachedTaobaoPrice(widget.product.id).then((value) {
-        if (value != null && mounted) {
-          setState(() {
-            _taobaoLatestPrice = value;
-          });
-        }
+      ImageCacheManager.loadCachedTaobaoPrice(widget.product.id).then((value) {
+        if (value != null && mounted) setState(() => _taobaoLatestPrice = value);
       });
       _loadTaobaoGallery();
-    } else if (widget.product.platform == 'pdd' &&
-        widget.product.id.isNotEmpty) {
-      _loadCachedPddPrice(widget.product.id).then((value) {
-        if (value != null && mounted) {
-          setState(() => _pddLatestPrice = value);
-        }
+    } else if (widget.product.platform == 'pdd' && widget.product.id.isNotEmpty) {
+      ImageCacheManager.loadCachedPddPrice(widget.product.id).then((value) {
+        if (value != null && mounted) setState(() => _pddLatestPrice = value);
       });
       _loadPddDetail();
     }
@@ -562,37 +279,15 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
 
   void _setGalleryImages(List<String> images, {bool startAutoPlay = true}) {
     final sanitized = images
-        .map(_normalizeImageUrl)
+        .map(ImageCacheManager.normalizeImageUrl)
         .where((url) => url.isNotEmpty)
         .toList();
     setState(() {
       _galleryImages = sanitized;
       _currentImageIndex = 0;
       _isLoadingImages = false;
-      if (sanitized.isNotEmpty) {
-        _imageError = null;
-      }
+      if (sanitized.isNotEmpty) _imageError = null;
     });
-
-    if (_pageController.hasClients) {
-      _pageController.jumpToPage(0);
-    } else {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || !_pageController.hasClients) return;
-        _pageController.jumpToPage(0);
-      });
-    }
-
-    if (!startAutoPlay) {
-      _stopAutoPlay();
-      return;
-    }
-
-    if (sanitized.length > 1) {
-      _startAutoPlay();
-    } else {
-      _stopAutoPlay();
-    }
   }
 
   List<String> _mergeWithPrimaryImage(List<String>? apiImages) {
@@ -612,26 +307,15 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
     return merged;
   }
 
-  String _normalizeImageUrl(String? url) {
-    if (url == null) return '';
-    var normalized = url.trim();
-    if (normalized.isEmpty) return '';
-    if (normalized.startsWith('//')) {
-      normalized = 'https:$normalized';
-    }
-    return normalized;
-  }
+
 
   Future<void> _loadTaobaoGallery({bool forceRefresh = false}) async {
-    if (widget.product.platform != 'taobao' || widget.product.id.isEmpty)
-      return;
+    if (widget.product.platform != 'taobao' || widget.product.id.isEmpty) return;
 
     if (!forceRefresh) {
-      final cached = await _loadCachedTaobaoImages(widget.product.id);
-      final cachedPrice = await _loadCachedTaobaoPrice(widget.product.id);
-      if (cachedPrice != null && mounted) {
-        setState(() => _taobaoLatestPrice = cachedPrice);
-      }
+      final cached = await ImageCacheManager.loadCachedTaobaoImages(widget.product.id);
+      final cachedPrice = await ImageCacheManager.loadCachedTaobaoPrice(widget.product.id);
+      if (cachedPrice != null && mounted) setState(() => _taobaoLatestPrice = cachedPrice);
       if (cached != null && cached.isNotEmpty) {
         if (!mounted) return;
         _setGalleryImages(_mergeWithPrimaryImage(cached));
@@ -640,102 +324,23 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
     }
 
     if (!mounted) return;
-    setState(() {
-      _isLoadingImages = true;
-      _imageError = null;
-    });
+    setState(() { _isLoadingImages = true; _imageError = null; });
 
     try {
       final detail = await _taobaoDetailService.fetchDetail(widget.product.id);
       final fetched = detail.images;
       if (detail.preferredPrice != null && mounted) {
         setState(() => _taobaoLatestPrice = detail.preferredPrice);
-        await _persistTaobaoPrice(widget.product.id, detail.preferredPrice!);
+        await ImageCacheManager.persistTaobaoPrice(widget.product.id, detail.preferredPrice ?? 0.0);
       }
       if (fetched.isNotEmpty) {
-        await _persistTaobaoImages(widget.product.id, fetched);
+        await ImageCacheManager.persistTaobaoImages(widget.product.id, fetched);
       }
       if (!mounted) return;
       _setGalleryImages(_mergeWithPrimaryImage(fetched));
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _imageError = e.toString();
-        _isLoadingImages = false;
-      });
-    }
-  }
-
-  Future<List<String>?> _loadCachedTaobaoImages(String productId) async {
-    final memory = _taobaoImageMemoryCache[productId];
-    if (memory != null && memory.isNotEmpty) {
-      return List<String>.from(memory);
-    }
-    try {
-      final box = await HiveConfig.getBox(HiveConfig.taobaoItemCacheBox);
-      final stored = box.get('${productId}_images');
-      if (stored is List) {
-        final list = stored
-            .map((e) => e.toString())
-            .where((e) => e.trim().isNotEmpty)
-            .toList();
-        if (list.isNotEmpty) {
-          _taobaoImageMemoryCache[productId] = list;
-          return list;
-        }
-      }
-    } catch (e, st) {
-      dev.log('Failed to load cached taobao images: $e', name: 'ProductDetail', error: e, stackTrace: st);
-    }
-    return null;
-  }
-
-  Future<void> _persistTaobaoImages(
-    String productId,
-    List<String> images,
-  ) async {
-    final sanitized = images
-        .map(_normalizeImageUrl)
-        .where((url) => url.isNotEmpty)
-        .toList();
-    if (sanitized.isEmpty) return;
-    _taobaoImageMemoryCache[productId] = sanitized;
-    try {
-      final box = await HiveConfig.getBox(HiveConfig.taobaoItemCacheBox);
-      await box.put('${productId}_images', sanitized);
-    } catch (e, st) {
-      dev.log('Failed to persist taobao images: $e', name: 'ProductDetail', error: e, stackTrace: st);
-    }
-  }
-
-  Future<double?> _loadCachedTaobaoPrice(String productId) async {
-    final memory = _taobaoPriceMemoryCache[productId];
-    if (memory != null) return memory;
-    try {
-      final box = await HiveConfig.getBox(HiveConfig.taobaoItemCacheBox);
-      final cached = box.get('${productId}_price');
-      final value = _parseDouble(cached);
-      if (value != null) {
-        _taobaoPriceMemoryCache[productId] = value;
-        return value;
-      }
-    } catch (e, st) {
-      dev.log('Failed to load cached taobao price: $e', name: 'ProductDetail', error: e, stackTrace: st);
-    }
-    return null;
-  }
-
-  Future<void> _persistTaobaoPrice(String productId, double price) async {
-    _taobaoPriceMemoryCache[productId] = price;
-    try {
-      final box = await HiveConfig.getBox(HiveConfig.taobaoItemCacheBox);
-      await box.put('${productId}_price', price);
-      await box.put(
-        '${productId}_price_updated_at',
-        DateTime.now().millisecondsSinceEpoch,
-      );
-    } catch (e, st) {
-      dev.log('Error persisting taobao price: $e', name: 'ProductDetail', error: e, stackTrace: st);
+      setState(() { _imageError = e.toString(); _isLoadingImages = false; });
     }
   }
 
@@ -743,11 +348,9 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
     if (widget.product.platform != 'pdd' || widget.product.id.isEmpty) return;
 
     if (!forceRefresh) {
-      final cachedImages = await _loadCachedPddImages(widget.product.id);
-      final cachedPrice = await _loadCachedPddPrice(widget.product.id);
-      if (cachedPrice != null && mounted) {
-        setState(() => _pddLatestPrice = cachedPrice);
-      }
+      final cachedImages = await ImageCacheManager.loadCachedPddImages(widget.product.id);
+      final cachedPrice = await ImageCacheManager.loadCachedPddPrice(widget.product.id);
+      if (cachedPrice != null && mounted) setState(() => _pddLatestPrice = cachedPrice);
       if (cachedImages != null && cachedImages.isNotEmpty) {
         if (!mounted) return;
         _setGalleryImages(_mergeWithPrimaryImage(cachedImages));
@@ -756,10 +359,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
     }
 
     if (!mounted) return;
-    setState(() {
-      _isLoadingImages = true;
-      _imageError = null;
-    });
+    setState(() { _isLoadingImages = true; _imageError = null; });
 
     try {
       final detail = await _pddDetailService.fetchDetail(widget.product.id);
@@ -767,92 +367,16 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
       final newPrice = detail?.preferredPrice;
       if (newPrice != null && mounted) {
         setState(() => _pddLatestPrice = newPrice);
-        await _persistPddPrice(widget.product.id, newPrice);
+        await ImageCacheManager.persistPddPrice(widget.product.id, newPrice);
       }
       if (fetched.isNotEmpty) {
-        await _persistPddImages(widget.product.id, fetched);
+        await ImageCacheManager.persistPddImages(widget.product.id, fetched);
       }
       if (!mounted) return;
       _setGalleryImages(_mergeWithPrimaryImage(fetched));
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _imageError = e.toString();
-        _isLoadingImages = false;
-      });
-    }
-  }
-
-  Future<List<String>?> _loadCachedPddImages(String productId) async {
-    final memory = _pddImageMemoryCache[productId];
-    if (memory != null && memory.isNotEmpty) {
-      return List<String>.from(memory);
-    }
-    try {
-      final box = await HiveConfig.getBox(HiveConfig.pddItemCacheBox);
-      final stored = box.get('${productId}_images');
-      if (stored is List) {
-        final list = stored
-            .map((e) => e.toString())
-            .where((e) => e.trim().isNotEmpty)
-            .toList();
-        if (list.isNotEmpty) {
-          _pddImageMemoryCache[productId] = list;
-          return list;
-        }
-      }
-    } catch (e, st) {
-      dev.log('Error loading cached PDD images: $e', name: 'ProductDetail', error: e, stackTrace: st);
-    }
-    return null;
-  }
-
-  Future<void> _persistPddImages(
-    String productId,
-    List<String> images,
-  ) async {
-    final sanitized = images
-        .map(_normalizeImageUrl)
-        .where((url) => url.isNotEmpty)
-        .toList();
-    if (sanitized.isEmpty) return;
-    _pddImageMemoryCache[productId] = sanitized;
-    try {
-      final box = await HiveConfig.getBox(HiveConfig.pddItemCacheBox);
-      await box.put('${productId}_images', sanitized);
-    } catch (e, st) {
-      dev.log('Error persisting PDD images: $e', name: 'ProductDetail', error: e, stackTrace: st);
-    }
-  }
-
-  Future<double?> _loadCachedPddPrice(String productId) async {
-    final memory = _pddPriceMemoryCache[productId];
-    if (memory != null) return memory;
-    try {
-      final box = await HiveConfig.getBox(HiveConfig.pddItemCacheBox);
-      final cached = box.get('${productId}_price');
-      final value = _parseDouble(cached);
-      if (value != null) {
-        _pddPriceMemoryCache[productId] = value;
-        return value;
-      }
-    } catch (e, st) {
-      dev.log('Error loading cached PDD price: $e', name: 'ProductDetail', error: e, stackTrace: st);
-    }
-    return null;
-  }
-
-  Future<void> _persistPddPrice(String productId, double price) async {
-    _pddPriceMemoryCache[productId] = price;
-    try {
-      final box = await HiveConfig.getBox(HiveConfig.pddItemCacheBox);
-      await box.put('${productId}_price', price);
-      await box.put(
-        '${productId}_price_updated_at',
-        DateTime.now().millisecondsSinceEpoch,
-      );
-    } catch (e, st) {
-      dev.log('Error persisting PDD price: $e', name: 'ProductDetail', error: e, stackTrace: st);
+      setState(() { _imageError = e.toString(); _isLoadingImages = false; });
     }
   }
 
@@ -861,384 +385,36 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
     return double.tryParse(value?.toString() ?? '');
   }
 
+  String _normalizeImageUrl(String? url) =>
+      ImageCacheManager.normalizeImageUrl(url);
+
   Widget _buildPriceDiffLabel(BuildContext context, double? currentPrice) {
-    if (!_hasCartRecord || _initialCartPrice == null || currentPrice == null) {
-      return const SizedBox.shrink();
-    }
-    // 如果初始价格为 0 或非常小，视为无效记录（商品加入时价格未获取）
-    if (_initialCartPrice! < 0.01) {
-      return const SizedBox.shrink();
-    }
-    // 如果当前价格为 0 或非常小，也不显示比价
-    if (currentPrice < 0.01) {
-      return const SizedBox.shrink();
-    }
-    final delta = currentPrice - _initialCartPrice!;
-    if (delta.abs() < 0.01) {
-      return Padding(
-        padding: const EdgeInsets.only(top: 4),
-        child: Text(
-          '与加入购物车时价格一致',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-        ),
-      );
-    }
-    final bool cheaper = delta < 0;
-    final text = cheaper
-        ? '该商品比加入购物车时降价¥${delta.abs().toStringAsFixed(2)}'
-        : '该商品比加入购物车时涨价¥${delta.abs().toStringAsFixed(2)}';
-    final color =
-        cheaper ? Colors.green : Theme.of(context).colorScheme.error;
-    return Padding(
-      padding: const EdgeInsets.only(top: 4),
-      child: Text(
-        text,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: color),
-      ),
+    return PriceDiffLabel(
+      hasCartRecord: _hasCartRecord,
+      initialCartPrice: _initialCartPrice,
+      currentPrice: currentPrice,
     );
   }
 
-  void _startAutoPlay() {
-    _autoPlayTimer?.cancel();
-    if (_galleryImages.length <= 1) return;
-    _autoPlayTimer = Timer.periodic(const Duration(seconds: 3), (_) {
-      if (!mounted || _galleryImages.length <= 1 || !_pageController.hasClients)
-        return;
-      final nextIndex = (_currentImageIndex + 1) % _galleryImages.length;
-      _pageController.animateToPage(
-        nextIndex,
-        duration: const Duration(milliseconds: 380),
-        curve: Curves.easeInOut,
-      );
-    });
+  Widget _buildAiIntroSection(BuildContext context) {
+    return AiIntroductionSection(
+      isLoading: _isLoadingAiIntro,
+      content: _aiIntroContent,
+      expanded: _aiIntroExpanded,
+      onFetch: _fetchAiIntroduction,
+      onToggleExpand: () => setState(() => _aiIntroExpanded = !_aiIntroExpanded),
+    );
   }
 
-  void _stopAutoPlay() {
-    _autoPlayTimer?.cancel();
-    _autoPlayTimer = null;
-  }
+  void _startAutoPlay() {}
+  void _stopAutoPlay() {}
 
   Widget _buildImageCarousel(BuildContext context, bool wide) {
-    final double width = wide ? 360 : double.infinity;
-    final double height = wide ? 360 : 240;
-    final borderRadius = BorderRadius.circular(12);
-    Widget content;
-
-    if (_galleryImages.isEmpty) {
-      content = Center(
-        child: _isLoadingImages
-            ? const CircularProgressIndicator()
-            : Icon(
-                Icons.image_not_supported,
-                size: 48,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-      );
-    } else {
-      content = PageView.builder(
-        key: ValueKey(_galleryImages.length),
-        controller: _pageController,
-        onPageChanged: (index) {
-          if (!mounted) return;
-          setState(() => _currentImageIndex = index);
-        },
-        itemCount: _galleryImages.length,
-        itemBuilder: (ctx, index) =>
-            _buildImageSlide(_galleryImages[index], index),
-      );
-    }
-
-    return SizedBox(
-      width: width,
-      height: height,
-      child: Stack(
-        children: [
-          ClipRRect(
-            borderRadius: borderRadius,
-            child: Container(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              child: content,
-            ),
-          ),
-          if (_galleryImages.length > 1)
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 12,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(_galleryImages.length, (idx) {
-                  final active = idx == _currentImageIndex;
-                  return AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    margin: const EdgeInsets.symmetric(horizontal: 3),
-                    height: 6,
-                    width: active ? 16 : 6,
-                    decoration: BoxDecoration(
-                      color: active
-                          ? Theme.of(context).colorScheme.primary
-                          : Colors.white70,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  );
-                }),
-              ),
-            ),
-          if (_isLoadingImages)
-            Positioned(
-              top: 12,
-              right: 12,
-              child: Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.black45,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.2,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-          if (_imageError != null)
-            Positioned(
-              top: 12,
-              left: 12,
-              child: Tooltip(
-                message: _imageError!,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black54,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      Icon(
-                        Icons.error_outline,
-                        color: Colors.orangeAccent,
-                        size: 14,
-                      ),
-                      SizedBox(width: 4),
-                      Text(
-                        '图片加载失败',
-                        style: TextStyle(fontSize: 10, color: Colors.white),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildImageSlide(String url, int index) {
-    final heroTag = _heroTagForIndex(index);
-    return GestureDetector(
-      onTap: () => _openFullScreenGallery(index),
-      child: Hero(
-        tag: heroTag,
-        child: Image.network(
-          url,
-          fit: BoxFit.cover,
-          width: double.infinity,
-          height: double.infinity,
-          loadingBuilder: (context, child, progress) {
-            if (progress == null) return child;
-            return Center(
-              child: CircularProgressIndicator(
-                value: progress.expectedTotalBytes != null
-                    ? progress.cumulativeBytesLoaded /
-                          progress.expectedTotalBytes!
-                    : null,
-              ),
-            );
-          },
-          errorBuilder: (context, error, stackTrace) => Center(
-            child: Icon(
-              Icons.broken_image,
-              size: 42,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  String _heroTagForIndex(int index) =>
-      'product_detail_image_${widget.product.id}_$index';
-
-  Future<void> _openFullScreenGallery(int initialIndex) async {
-    if (!mounted || _galleryImages.isEmpty) return;
-    final controller = PageController(initialPage: initialIndex);
-    int currentIndex = initialIndex;
-
-    await showGeneralDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      barrierColor: Colors.black.withOpacity(0.92),
-      barrierLabel: '关闭预览',
-      transitionDuration: const Duration(milliseconds: 180),
-      pageBuilder: (ctx, animation, secondaryAnimation) {
-        return StatefulBuilder(
-          builder: (ctx, setState) {
-            return Material(
-              color: Colors.black,
-              child: SafeArea(
-                child: Stack(
-                  children: [
-                    PageView.builder(
-                      controller: controller,
-                      itemCount: _galleryImages.length,
-                      onPageChanged: (value) {
-                        setState(() => currentIndex = value);
-                      },
-                      itemBuilder: (context, index) {
-                        final imageUrl = _galleryImages[index];
-                        return InteractiveViewer(
-                          minScale: 0.5,
-                          maxScale: 4.0,
-                          child: Center(
-                            child: Hero(
-                              tag: _heroTagForIndex(index),
-                              child: Image.network(
-                                imageUrl,
-                                fit: BoxFit.contain,
-                                loadingBuilder: (context, child, progress) {
-                                  if (progress == null) return child;
-                                  return Center(
-                                    child: CircularProgressIndicator(
-                                      value: progress.expectedTotalBytes != null
-                                          ? progress.cumulativeBytesLoaded /
-                                                progress.expectedTotalBytes!
-                                          : null,
-                                      color: Colors.white,
-                                    ),
-                                  );
-                                },
-                                errorBuilder: (context, error, stackTrace) =>
-                                    const Icon(
-                                      Icons.broken_image,
-                                      color: Colors.white54,
-                                      size: 56,
-                                    ),
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                    Positioned(
-                      top: 12,
-                      right: 12,
-                      child: IconButton(
-                        onPressed: () => Navigator.of(ctx).maybePop(),
-                        icon: const Icon(
-                          Icons.close,
-                          color: Colors.white,
-                          size: 28,
-                        ),
-                        tooltip: '关闭',
-                      ),
-                    ),
-                    if (_galleryImages.length > 1)
-                      Positioned(
-                        bottom: 20,
-                        left: 0,
-                        right: 0,
-                        child: Center(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.black54,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              '${currentIndex + 1} / ${_galleryImages.length}',
-                              style: const TextStyle(color: Colors.white),
-                            ),
-                          ),
-                        ),
-                      ),
-                    if (_galleryImages.length > 1) ...[
-                      Positioned(
-                        left: 12,
-                        top: 0,
-                        bottom: 0,
-                        child: Center(
-                          child: IconButton(
-                            onPressed: currentIndex > 0
-                                ? () {
-                                    controller.previousPage(
-                                      duration: const Duration(
-                                        milliseconds: 300,
-                                      ),
-                                      curve: Curves.easeInOut,
-                                    );
-                                  }
-                                : null,
-                            icon: Icon(
-                              Icons.chevron_left,
-                              color: currentIndex > 0
-                                  ? Colors.white
-                                  : Colors.white30,
-                              size: 48,
-                            ),
-                            tooltip: '上一张',
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        right: 12,
-                        top: 0,
-                        bottom: 0,
-                        child: Center(
-                          child: IconButton(
-                            onPressed: currentIndex < _galleryImages.length - 1
-                                ? () {
-                                    controller.nextPage(
-                                      duration: const Duration(
-                                        milliseconds: 300,
-                                      ),
-                                      curve: Curves.easeInOut,
-                                    );
-                                  }
-                                : null,
-                            icon: Icon(
-                              Icons.chevron_right,
-                              color: currentIndex < _galleryImages.length - 1
-                                  ? Colors.white
-                                  : Colors.white30,
-                              size: 48,
-                            ),
-                            tooltip: '下一张',
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
+    return ProductImageGallery(
+      images: _galleryImages,
+      isLoading: _isLoadingImages,
+      imageError: _imageError,
+      wide: wide,
     );
   }
 
@@ -1623,6 +799,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                         ),
                           onPressed: () async {
                             setState(() => _isLoadingLink = true);
+                            try {
 
                             String finalUrl;
 
@@ -1877,7 +1054,9 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                               );
                             }
 
-                            setState(() => _isLoadingLink = false);
+                            } finally {
+                              if (mounted) setState(() => _isLoadingLink = false);
+                            }
                           },
                           icon: const Icon(Icons.open_in_new, size: 22),
                           label: const Text('前往购买'),
@@ -1963,7 +1142,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                     onPressed: () {
                       showDialog(
                         context: context,
-                        builder: (ctx) => ShareOptionsDialog(product: widget.product),
+                        builder: (ctx) => ShareOptionsDialog(product: widget.product, parentContext: context),
                       );
                     },
                     icon: const Icon(Icons.share),

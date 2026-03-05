@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
 import 'features/decision/product_comparison_page.dart';
-import 'screens/home_page.dart';
+import 'features/home/home_page.dart';
 
 /// WisePickApp 根组件
 /// 配置 MaterialApp、主题管理和路由

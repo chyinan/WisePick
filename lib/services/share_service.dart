@@ -572,10 +572,13 @@ class _ShareImagePreviewDialogState extends State<ShareImagePreviewDialog> {
 /// 分享选项对话框
 class ShareOptionsDialog extends StatelessWidget {
   final ProductModel product;
+  /// 父页面的 BuildContext，用于在关闭对话框后仍能显示/关闭新对话框
+  final BuildContext? parentContext;
 
   const ShareOptionsDialog({
     super.key,
     required this.product,
+    this.parentContext,
   });
 
   @override
@@ -603,7 +606,8 @@ class ShareOptionsDialog extends StatelessWidget {
             title: const Text('文本链接分享'),
             subtitle: const Text('复制商品标题和推广链接'),
             onTap: () async {
-              await _shareTextLink(context);
+              final ctx = parentContext ?? context;
+              await _shareTextLink(context, ctx);
             },
           ),
         ],
@@ -617,12 +621,14 @@ class ShareOptionsDialog extends StatelessWidget {
     );
   }
 
-  Future<void> _shareTextLink(BuildContext context) async {
-    // 先关闭 ShareOptionsDialog，再显示加载中
-    Navigator.of(context).pop();
-    if (!context.mounted) return;
+  Future<void> _shareTextLink(BuildContext dialogContext, BuildContext rootContext) async {
+    // 先关闭 ShareOptionsDialog
+    Navigator.of(dialogContext).pop();
+    if (!rootContext.mounted) return;
+
+    // 用父页面 context 显示加载对话框
     showDialog(
-      context: context,
+      context: rootContext,
       barrierDismissible: false,
       builder: (ctx) => const AlertDialog(
         content: Row(
@@ -637,16 +643,16 @@ class ShareOptionsDialog extends StatelessWidget {
 
     try {
       final shareText = await ShareService.generateShareText(product);
-      
+
       // 关闭加载对话框
-      if (context.mounted) {
-        Navigator.of(context).pop();
+      if (rootContext.mounted) {
+        Navigator.of(rootContext).pop();
       }
 
       // 显示结果对话框
-      if (context.mounted) {
+      if (rootContext.mounted) {
         showDialog(
-          context: context,
+          context: rootContext,
           builder: (ctx) => AlertDialog(
             title: const Text('分享文本'),
             content: Column(
@@ -676,7 +682,7 @@ class ShareOptionsDialog extends StatelessWidget {
                   await ShareService.copyToClipboard(shareText);
                   if (ctx.mounted) {
                     Navigator.of(ctx).pop();
-                    showInfoSnackBar(context, '已复制到剪贴板');
+                    showInfoSnackBar(rootContext, '已复制到剪贴板');
                   }
                 },
                 icon: const Icon(Icons.copy),
@@ -688,9 +694,9 @@ class ShareOptionsDialog extends StatelessWidget {
       }
     } catch (e) {
       // 关闭加载对话框
-      if (context.mounted) {
-        Navigator.of(context).pop();
-        showErrorSnackBar(context, AppErrorMapper.mapException(e));
+      if (rootContext.mounted) {
+        Navigator.of(rootContext).pop();
+        showErrorSnackBar(rootContext, AppErrorMapper.mapException(e));
       }
     }
   }

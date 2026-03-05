@@ -22,6 +22,7 @@ class HiveConfig {
   static const String authBox = 'auth';
   static const String syncMetaBox = 'sync_meta';
   static const String jdPriceCacheBox = 'jdPriceCache';
+  static const String cartOpsLogBox = 'cart_ops_log';
 
   // ──────────────── 设置项 Key 常量 ────────────────
   static const String themeKey = 'theme_mode';

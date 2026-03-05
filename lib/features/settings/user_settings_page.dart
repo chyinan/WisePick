@@ -3,9 +3,9 @@ import 'dart:developer' as dev;
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 
-import '../core/error/app_error_mapper.dart';
-import '../core/storage/hive_config.dart';
-import '../widgets/error_snackbar.dart';
+import '../../core/error/app_error_mapper.dart';
+import '../../core/storage/hive_config.dart';
+import '../../widgets/error_snackbar.dart';
 
 class UserSettingsPage extends StatefulWidget {
   const UserSettingsPage({super.key});

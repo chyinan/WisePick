@@ -2,12 +2,12 @@ import 'dart:developer' as dev;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../features/chat/chat_providers.dart';
-import '../features/chat/conversation_model.dart';
-import '../features/analytics/analytics_page.dart';
-import '../features/decision/product_comparison_page.dart';
-import '../features/admin/admin_dashboard_page.dart';
-import 'ai_provider_settings_page.dart';
+import '../../chat/chat_providers.dart';
+import '../../chat/conversation_model.dart';
+import '../../analytics/analytics_page.dart';
+import '../../decision/product_comparison_page.dart';
+import '../../admin/admin_dashboard_page.dart';
+import '../../settings/ai_provider_settings_page.dart';
 
 /// 侧边菜单：展示会话列表并支持新建会话
 class HomeDrawer extends ConsumerStatefulWidget {

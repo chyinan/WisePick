@@ -4,10 +4,10 @@ import 'package:flutter/foundation.dart' show kDebugMode, kProfileMode;
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 
-import '../core/backend_config.dart';
-import '../core/error/app_error_mapper.dart';
-import '../core/storage/hive_config.dart';
-import '../widgets/error_snackbar.dart';
+import '../../core/backend_config.dart';
+import '../../core/error/app_error_mapper.dart';
+import '../../core/storage/hive_config.dart';
+import '../../widgets/error_snackbar.dart';
 
 class AdminSettingsPage extends StatefulWidget {
   const AdminSettingsPage({super.key});
