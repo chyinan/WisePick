@@ -164,6 +164,9 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
 
   @override
   Widget build(BuildContext context) {
+    // 在主页 build 里 watch authStateProvider，确保 Provider 在应用启动时就被激活
+    final authStateInMain = ref.watch(authStateProvider);
+
     final Widget body;
     if (_currentIndex == 0) {
       body = const ChatPage();

@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
-import 'features/auth/auth_providers.dart';
 import 'features/decision/product_comparison_page.dart';
 import 'screens/home_page.dart';
 
@@ -20,10 +19,6 @@ class _WisePickAppState extends ConsumerState<WisePickApp> {
   @override
   void initState() {
     super.initState();
-    // 初始化认证状态（检查是否已登录）
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(authStateProvider.notifier).initialize();
-    });
   }
 
   @override

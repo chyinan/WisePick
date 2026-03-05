@@ -30,6 +30,7 @@ class TokenManager {
   DateTime? _cachedTokenExpiry;
   DateTime? _cachedRefreshTokenExpiry;
   DateTime? _cachedLastLoginTime;
+  bool _initialized = false;
 
   TokenManager._() : _secureStorage = const FlutterSecureStorage(
     aOptions: AndroidOptions(
@@ -45,11 +46,13 @@ class TokenManager {
 
   /// 初始化 Token 管理器
   Future<void> init() async {
+    if (_initialized) return;
+    _initialized = true;
     // 预加载缓存
     _cachedAccessToken = await _secureStorage.read(key: _accessTokenKey);
     _cachedRefreshToken = await _secureStorage.read(key: _refreshTokenKey);
     _cachedDeviceId = await _secureStorage.read(key: _deviceIdKey);
-    
+
     final expiryStr = await _secureStorage.read(key: _tokenExpiryKey);
     if (expiryStr != null) {
       _cachedTokenExpiry = DateTime.tryParse(expiryStr);

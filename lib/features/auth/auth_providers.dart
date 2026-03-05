@@ -79,11 +79,18 @@ class AuthStateNotifier extends StateNotifier<AuthState> {
   AuthStateNotifier({
     required AuthService authService,
     required TokenManager tokenManager,
+    AuthState? initialState,
   })  : _authService = authService,
         _tokenManager = tokenManager,
-        super(const AuthState()) {
-    // Provider 创建时自动初始化，确保热重载和重启后都能恢复登录状态
-    initialize();
+        super(initialState ?? const AuthState()) {
+    log('AuthStateNotifier initialized', name: 'AuthProviders');
+    // 如果已有初始认证状态（从 main 预热），只做后台刷新；否则完整初始化
+    if (initialState?.status == AuthStatus.authenticated) {
+      _triggerOnLoginCallback();
+      _refreshUserInBackground();
+    } else {
+      initialize();
+    }
   }
 
   /// 初始化 - 检查是否已登录
@@ -93,6 +100,12 @@ class AuthStateNotifier extends StateNotifier<AuthState> {
   /// 2. 尝试从服务器获取用户信息，失败时使用本地缓存
   /// 3. 只有当 refresh token 过期时才清除登录状态
   Future<void> initialize() async {
+    // 已经认证则只做后台刷新，不重置状态
+    if (state.status == AuthStatus.authenticated && state.user != null) {
+      _refreshUserInBackground();
+      return;
+    }
+
     state = state.copyWith(status: AuthStatus.loading, isLoading: true);
 
     try {
@@ -343,8 +356,8 @@ class AuthStateNotifier extends StateNotifier<AuthState> {
 
 /// 认证状态 Provider
 final authStateProvider = StateNotifierProvider<AuthStateNotifier, AuthState>((ref) {
-  final authService = ref.watch(authServiceProvider);
-  final tokenManager = ref.watch(tokenManagerProvider);
+  final authService = ref.read(authServiceProvider);
+  final tokenManager = ref.read(tokenManagerProvider);
   return AuthStateNotifier(
     authService: authService,
     tokenManager: tokenManager,
