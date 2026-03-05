@@ -28,6 +28,11 @@ class ShareService {
       return product.link;
     }
 
+    // 京东商品直接使用商品页链接，不再调用已废弃的推广接口
+    if (product.platform == 'jd') {
+      return 'https://item.jd.com/${product.id}.html';
+    }
+
     // 尝试通过 ProductService 生成推广链接
     try {
       final productService = ProductService();
