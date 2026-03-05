@@ -29,7 +29,6 @@ class ChatPage extends ConsumerStatefulWidget {
 class _ChatPageState extends ConsumerState<ChatPage> {
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  bool _hasRegisteredListener = false;
   String? _lastShownDebugNotification;
   // store per-message product list page index for pagination controls
   final Map<String, int> _messageProductPage = {};
@@ -669,9 +668,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           Map tbMeta = {};
           Map pddMeta = {};
 
-          try { jdMeta = await fJd as Map<String, dynamic>; } catch (e, st) { dev.log('JD search failed: $e', name: 'ChatPage', error: e, stackTrace: st); jdMeta = {'products': []}; }
-          try { tbMeta = await fTb as Map<String, dynamic>; } catch (e, st) { dev.log('Taobao search failed: $e', name: 'ChatPage', error: e, stackTrace: st); tbMeta = {'products': []}; }
-          try { pddMeta = await fPdd as Map<String, dynamic>; } catch (e, st) { dev.log('PDD search failed: $e', name: 'ChatPage', error: e, stackTrace: st); pddMeta = {'products': []}; }
+          try { jdMeta = await fJd.timeout(const Duration(seconds: 15)) as Map<String, dynamic>; } catch (e, st) { dev.log('JD search failed: $e', name: 'ChatPage', error: e, stackTrace: st); jdMeta = {'products': []}; }
+          try { tbMeta = await fTb.timeout(const Duration(seconds: 15)) as Map<String, dynamic>; } catch (e, st) { dev.log('Taobao search failed: $e', name: 'ChatPage', error: e, stackTrace: st); tbMeta = {'products': []}; }
+          try { pddMeta = await fPdd.timeout(const Duration(seconds: 15)) as Map<String, dynamic>; } catch (e, st) { dev.log('PDD search failed: $e', name: 'ChatPage', error: e, stackTrace: st); pddMeta = {'products': []}; }
 
           final List<ProductModel> jdList = List<ProductModel>.from(jdMeta['products'] ?? []);
           final List<ProductModel> tbList = List<ProductModel>.from(tbMeta['products'] ?? []);
@@ -778,9 +777,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_hasRegisteredListener) {
-      _hasRegisteredListener = true;
-      ref.listen<ChatState>(chatStateNotifierProvider, (previous, next) {
+    ref.listen<ChatState>(chatStateNotifierProvider, (previous, next) {
         // Auto-scroll when streaming updates arrive
         if (next.isStreaming) {
           WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
@@ -789,7 +786,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
            final notif = next.debugNotification!;
            if (notif != _lastShownDebugNotification) {
               _lastShownDebugNotification = notif;
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(notif)));
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(notif)));
+              }
               WidgetsBinding.instance.addPostFrameCallback((_) {
                  ref.read(chatStateNotifierProvider.notifier).clearDebugNotification();
               });
@@ -799,7 +798,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
            }
         }
       });
-    }
 
     // 检测是否为宽屏（桌面端），宽屏时不显示菜单按钮（因为有侧边栏）
     final isWideScreen = MediaQuery.of(context).size.width >= 600;

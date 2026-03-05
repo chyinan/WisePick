@@ -66,7 +66,9 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
   /// 更新消息列表（用于外部更新消息，如重试搜索）
   void updateMessages(List<ChatMessage> messages) {
     state = state.copyWith(messages: messages);
-    saveCurrentConversation().catchError((_) {});
+    saveCurrentConversation().catchError((e, st) {
+      log('saveCurrentConversation failed: $e', name: 'ChatProviders', error: e, stackTrace: st as StackTrace?);
+    });
   }
 
   /// 清除调试通知
@@ -469,13 +471,17 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
                   state = state.copyWith(currentConversationId: newId, currentConversationTitle: inlineTitle, isTitleLocked: true);
                   try {
                     // persist asynchronously to avoid blocking the streaming/parse flow
-                    saveCurrentConversation().catchError((_) {});
+                    saveCurrentConversation().catchError((e, st) {
+      log('saveCurrentConversation failed: $e', name: 'ChatProviders', error: e, stackTrace: st as StackTrace?);
+    });
                   } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
                 } else {
                   state = state.copyWith(currentConversationTitle: inlineTitle, isTitleLocked: true);
                   try {
                     // persist asynchronously to avoid blocking the streaming/parse flow
-                    saveCurrentConversation().catchError((_) {});
+                    saveCurrentConversation().catchError((e, st) {
+      log('saveCurrentConversation failed: $e', name: 'ChatProviders', error: e, stackTrace: st as StackTrace?);
+    });
                   } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
                 }
               } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
@@ -804,13 +810,17 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
                 state = state.copyWith(currentConversationId: newId, currentConversationTitle: finalTitle, debugNotification: copied ? '已复制完整返回信息' : null, debugFullResponse: copied ? fullDebug : null, isTitleLocked: true);
                 try {
                   // persist asynchronously to avoid blocking the streaming/parse flow
-                  saveCurrentConversation().catchError((_) {});
+                  saveCurrentConversation().catchError((e, st) {
+      log('saveCurrentConversation failed: $e', name: 'ChatProviders', error: e, stackTrace: st as StackTrace?);
+    });
                 } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
               } else {
                 state = state.copyWith(currentConversationTitle: finalTitle, debugNotification: copied ? '已复制完整返回信息' : null, debugFullResponse: copied ? fullDebug : null, isTitleLocked: true);
                 try {
                   // persist asynchronously to avoid blocking the streaming/parse flow
-                  saveCurrentConversation().catchError((_) {});
+                  saveCurrentConversation().catchError((e, st) {
+      log('saveCurrentConversation failed: $e', name: 'ChatProviders', error: e, stackTrace: st as StackTrace?);
+    });
                 } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
               }
             } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
@@ -904,26 +914,30 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
     // 则异步启动一次独立的 LLM 调用，根据用户消息生成标题。
     if (!state.isTitleLocked) {
       final userMsgForTitle = text;
-      () async {
+      unawaited(() async {
         try {
           final generated = await service.generateConversationTitle(userMsgForTitle);
           if (generated.trim().isNotEmpty) {
             // 仅在标题仍未被锁定时才更新（防止并发情况下覆盖已有标题）
             if (!state.isTitleLocked) {
               state = state.copyWith(currentConversationTitle: generated, isTitleLocked: true);
-              saveCurrentConversation().catchError((_) {});
+              saveCurrentConversation().catchError((e, st) {
+      log('saveCurrentConversation failed: $e', name: 'ChatProviders', error: e, stackTrace: st as StackTrace?);
+    });
             }
           }
         } catch (e, st) {
           log('Fallback title generation failed: $e', name: 'ChatProviders', error: e, stackTrace: st);
         }
-      }();
+      }());
     }
 
     // persist conversation after adding AI message
     try {
       // persist asynchronously to avoid blocking UI after adding AI message
-      saveCurrentConversation().catchError((_) {});
+      saveCurrentConversation().catchError((e, st) {
+      log('saveCurrentConversation failed: $e', name: 'ChatProviders', error: e, stackTrace: st as StackTrace?);
+    });
     } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
   }
 
