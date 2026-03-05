@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:wisepick_dart_version/features/products/jd_price_provider.dart';
 import '../features/products/product_model.dart';
 import 'cached_product_image.dart';
 
@@ -107,10 +106,8 @@ class _ProductCardState extends ConsumerState<ProductCard>
 
   @override
   Widget build(BuildContext context) {
-    final jdPrices = ref.watch(jdPriceCacheProvider);
-    final cachedPrice = jdPrices[widget.product.id];
     final theme = Theme.of(context);
-    
+
     // Determine platform color
     Color platformColor;
     String platformName;
@@ -136,13 +133,13 @@ class _ProductCardState extends ConsumerState<ProductCard>
     Widget cardContent;
     switch (widget.mode) {
       case ProductCardMode.compact:
-        cardContent = _buildCompactCard(context, ref, theme, platformColor, platformName, cachedPrice);
+        cardContent = _buildCompactCard(context, ref, theme, platformColor, platformName);
         break;
       case ProductCardMode.expanded:
-        cardContent = _buildExpandedCard(context, ref, theme, platformColor, platformName, cachedPrice);
+        cardContent = _buildExpandedCard(context, ref, theme, platformColor, platformName);
         break;
       case ProductCardMode.chat:
-        cardContent = _buildChatCard(context, ref, theme, platformColor, platformName, cachedPrice);
+        cardContent = _buildChatCard(context, ref, theme, platformColor, platformName);
         break;
     }
 
@@ -174,7 +171,6 @@ class _ProductCardState extends ConsumerState<ProductCard>
     ThemeData theme,
     Color platformColor,
     String platformName,
-    double? cachedPrice,
   ) {
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -220,13 +216,13 @@ class _ProductCardState extends ConsumerState<ProductCard>
                         children: [
                           // 价格
                           Text(
-                            _getPriceText(widget.product, cachedPrice),
+                            _getPriceText(widget.product),
                             style: theme.textTheme.titleLarge?.copyWith(
-                              color: _isOffShelf(widget.product, cachedPrice) 
+                              color: _isOffShelf(widget.product) 
                                   ? theme.colorScheme.error 
                                   : theme.colorScheme.primary,
                               fontWeight: FontWeight.bold,
-                              fontSize: _isOffShelf(widget.product, cachedPrice) ? 12 : 18,
+                              fontSize: _isOffShelf(widget.product) ? 12 : 18,
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -288,7 +284,6 @@ class _ProductCardState extends ConsumerState<ProductCard>
     ThemeData theme,
     Color platformColor,
     String platformName,
-    double? cachedPrice,
   ) {
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -338,13 +333,13 @@ class _ProductCardState extends ConsumerState<ProductCard>
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
-                              _getPriceText(widget.product, cachedPrice),
+                              _getPriceText(widget.product),
                               style: theme.textTheme.headlineSmall?.copyWith(
-                                color: _isOffShelf(widget.product, cachedPrice) 
+                                color: _isOffShelf(widget.product) 
                                     ? theme.colorScheme.error 
                                     : theme.colorScheme.primary,
                                 fontWeight: FontWeight.bold,
-                                fontSize: _isOffShelf(widget.product, cachedPrice) ? 14 : null,
+                                fontSize: _isOffShelf(widget.product) ? 14 : null,
                               ),
                             ),
                             if (widget.product.originalPrice > 0 && widget.product.originalPrice > widget.product.price) ...[
@@ -426,7 +421,6 @@ class _ProductCardState extends ConsumerState<ProductCard>
     ThemeData theme,
     Color platformColor,
     String platformName,
-    double? cachedPrice,
   ) {
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -474,13 +468,13 @@ class _ProductCardState extends ConsumerState<ProductCard>
                         children: [
                           // 价格
                           Text(
-                            _getPriceText(widget.product, cachedPrice),
+                            _getPriceText(widget.product),
                             style: theme.textTheme.titleMedium?.copyWith(
-                              color: _isOffShelf(widget.product, cachedPrice) 
+                              color: _isOffShelf(widget.product) 
                                   ? theme.colorScheme.error 
                                   : theme.colorScheme.primary,
                               fontWeight: FontWeight.bold,
-                              fontSize: _isOffShelf(widget.product, cachedPrice) ? 11 : 16,
+                              fontSize: _isOffShelf(widget.product) ? 11 : 16,
                             ),
                           ),
                           const SizedBox(width: 6),
@@ -517,35 +511,20 @@ class _ProductCardState extends ConsumerState<ProductCard>
 }
 
 /// 判断商品是否下架/无货
-/// 注意：只有当价格已爬取（cachedPrice != null）且为 0 时才视为下架
-/// 未爬取时（cachedPrice == null）应显示"¥--.--"而不是下架状态
-bool _isOffShelf(ProductModel product, num? cachedPrice) {
-  if (product.platform == 'jd') {
-    // 京东商品：只有在已获取价格且价格为 0 时才视为下架
-    // cachedPrice == null 表示还未爬取，不应判断为下架
-    if (cachedPrice != null && cachedPrice < 0.01) return true;
-  } else {
-    // 其他平台：价格为 0 视为下架
-    if (product.price < 0.01) return true;
-  }
-  return false;
+bool _isOffShelf(ProductModel product) {
+  return product.price < 0.01 && product.finalPrice < 0.01;
 }
 
 /// 获取价格显示文本
-String _getPriceText(ProductModel product, num? cachedPrice) {
-  if (_isOffShelf(product, cachedPrice)) {
-    return '下架/无货';
+String _getPriceText(ProductModel product) {
+  if (_isOffShelf(product)) {
+    return '￥--.--';
   }
-  
-  if (product.platform == 'jd') {
-    if (cachedPrice != null) {
-      return '¥${cachedPrice.toStringAsFixed(2)}';
-    }
-    return '¥--.--';
-  }
-  
   if (product.price > 0) {
     return '¥${product.price.toStringAsFixed(2)}';
+  }
+  if (product.finalPrice > 0) {
+    return '¥${product.finalPrice.toStringAsFixed(2)}';
   }
   return '询价';
 }

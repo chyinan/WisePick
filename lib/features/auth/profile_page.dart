@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:wisepick_dart_version/core/error/app_error.dart';
+import 'package:wisepick_dart_version/widgets/error_snackbar.dart';
 import 'auth_providers.dart';
 import 'user_model.dart';
 
@@ -216,9 +218,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   );
               if (success && mounted) {
                 Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('资料更新成功')),
-                );
+                showSuccessSnackBar(context, '资料更新成功');
               }
             },
             child: const Text('保存'),
@@ -277,8 +277,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           FilledButton(
             onPressed: () async {
               if (newPasswordController.text != confirmPasswordController.text) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('两次输入的密码不一致')),
+                showErrorSnackBar(
+                  context,
+                  const AppError(type: AppErrorType.validation, userMessage: '两次输入的密码不一致', canRetry: false),
                 );
                 return;
               }
@@ -290,9 +291,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
               if (success && mounted) {
                 Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('密码修改成功')),
-                );
+                showSuccessSnackBar(context, '密码修改成功');
               }
             },
             child: const Text('确认'),

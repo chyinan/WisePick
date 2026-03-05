@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/error/app_error_mapper.dart';
 import '../../services/sync/sync_manager.dart';
 import '../../features/auth/auth_providers.dart';
+import '../../widgets/error_snackbar.dart';
 
 /// 同步状态指示器组件
 class SyncStatusIndicator extends ConsumerWidget {
@@ -207,19 +209,11 @@ class SyncStatusIndicator extends ConsumerWidget {
         if (context.mounted) {
           final newState = ref.read(syncManagerProvider);
           if (newState.cartError != null || newState.conversationError != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('同步失败: ${newState.cartError ?? newState.conversationError}'),
-                backgroundColor: Colors.red,
-              ),
-            );
+            showErrorSnackBar(context, AppErrorMapper.mapException(
+              Exception(newState.cartError ?? newState.conversationError ?? '同步失败'),
+            ));
           } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('同步完成'),
-                duration: Duration(seconds: 2),
-              ),
-            );
+            showSuccessSnackBar(context, '同步完成');
           }
         }
       },

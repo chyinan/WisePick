@@ -85,6 +85,7 @@ server/.env
 bmad-core*/
 **/bmad-core*/
 .cursor
+CLAUDE.md
 .bmad-infrastructure-devops
 
 # Chrome related folders

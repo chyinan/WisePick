@@ -7,6 +7,7 @@ import '../../core/api_client.dart';
 import '../../core/storage/hive_config.dart';
 import '../../services/sync/sync_manager.dart';
 import '../auth/auth_providers.dart';
+import 'chat_error_mapper.dart';
 import 'chat_message.dart';
 import 'chat_service.dart';
 import 'conversation_model.dart';
@@ -65,6 +66,7 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
   /// 更新消息列表（用于外部更新消息，如重试搜索）
   void updateMessages(List<ChatMessage> messages) {
     state = state.copyWith(messages: messages);
+    saveCurrentConversation().catchError((_) {});
   }
 
   /// 清除调试通知
@@ -72,8 +74,78 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
     state = state.copyWith(debugNotification: null);
   }
 
+  /// Filter raw streaming buffer for UI display.
+  ///
+  /// Hides raw JSON content (which would flash as protocol noise) and
+  /// returns a user-friendly placeholder while the AI structures its
+  /// response.  Plain-text responses pass through untouched.
+  /// 流式过程中过滤原始内容，只返回用户可见的正文。
+  /// 规则：JSON 块一律隐藏，仅显示 JSON 前的纯文本或 analysis 字段；title 行也过滤掉。
+  static String _streamingDisplayText(String raw) {
+    var trimmed = raw.trimLeft();
+    if (trimmed.isEmpty) return '';
+
+    // 剥掉 markdown 代码围栏（```json 或 ``` 开头）
+    trimmed = trimmed.replaceAll(RegExp(r'```(?:json)?\s*', caseSensitive: false), '').trimLeft();
+
+    // 找到第一个 JSON 块的起始位置
+    final jsonStart = trimmed.indexOf('{');
+
+    if (jsonStart == -1) {
+      // 没有 JSON，直接过滤 title 行后返回
+      return _stripMetaLines(raw);
+    }
+
+    // JSON 之前的纯文本
+    final textBefore = jsonStart > 0 ? trimmed.substring(0, jsonStart).trim() : '';
+    final jsonPart = trimmed.substring(jsonStart);
+
+    // 尝试从 JSON 中提取 analysis 字段
+    final m = RegExp(r'"analysis"\s*:\s*"((?:[^"\\]|\\.)*)"').firstMatch(jsonPart);
+    if (m != null && m.group(1) != null) {
+      final analysis = m.group(1)!
+          .replaceAll(r'\n', '\n')
+          .replaceAll(r'\"', '"')
+          .replaceAll(r'\\', '\\')
+          .trim();
+      if (analysis.isNotEmpty) {
+        return textBefore.isNotEmpty ? '$textBefore\n\n$analysis' : analysis;
+      }
+    }
+
+    // JSON 还在流式传输中，analysis 尚未完整 —— 优先显示 JSON 前的文本，否则显示占位符
+    if (textBefore.isNotEmpty) return _stripMetaLines(textBefore);
+    return '正在分析推荐结果…';
+  }
+
+  /// 过滤掉 title/标题 行以及调试前缀行
+  static String _stripMetaLines(String text) {
+    return text.split('\n').where((line) {
+      final s = line.trimLeft();
+      if (RegExp(r'^(?:title|标题)\s*[:：]', caseSensitive: false).hasMatch(s)) return false;
+      if (s.startsWith('PARSE_') || s.startsWith('FIRST_REC_KEYS:') || s.startsWith('PARSE_KEYS:')) return false;
+      return true;
+    }).join('\n').trim();
+  }
+
+  /// Retry a failed AI message without duplicating the user message.
+  Future<void> retryFailedMessage(String messageId) async {
+    final msgs = [...state.messages];
+    final idx = msgs.indexWhere((m) => m.id == messageId);
+    if (idx < 0) return;
+    final failedMsg = msgs[idx];
+    if (failedMsg.retryForText == null) return;
+
+    final retryText = failedMsg.retryForText!;
+
+    // Remove the failed AI message, then resend.
+    msgs.removeAt(idx);
+    state = state.copyWith(messages: msgs);
+    await sendMessage(retryText, isRetry: true);
+  }
+
   /// 发送用户消息并请求 AI 推荐（AI 回复可能包含 ProductModel 信息）
-  Future<void> sendMessage(String text) async {
+  Future<void> sendMessage(String text, {bool isRetry = false}) async {
     if (text.trim().isEmpty) return;
 
     // Ensure there is a conversation id so the conversation is persisted
@@ -89,14 +161,16 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
       } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
     }
 
-    // 添加用户消息结构体
-    final userMsg = ChatMessage(id: DateTime.now().microsecondsSinceEpoch.toString(), text: text, isUser: true);
-    state = state.copyWith(messages: [...state.messages, userMsg]);
+    // 添加用户消息结构体 (skip for retries – user message already present)
+    if (!isRetry) {
+      final userMsg = ChatMessage(id: DateTime.now().microsecondsSinceEpoch.toString(), text: text, isUser: true);
+      state = state.copyWith(messages: [...state.messages, userMsg]);
+    }
 
-    // 发起 AI 请求：使用流式时设置 isStreaming 并保持 isLoading=true（显示“正在思考中...”动效）
+    // 发起 AI 请求：使用流式时设置 isStreaming 并保持 isLoading=true（显示"正在思考中..."动效）
     state = state.copyWith(isStreaming: true, isLoading: true);
-    // We'll try to stream the AI reply (incremental updates). If streaming, replace the loading bubble with a placeholder message
-    ChatMessage placeholder = ChatMessage(id: DateTime.now().microsecondsSinceEpoch.toString(), text: '', isUser: false);
+    // Create a streaming placeholder with explicit status
+    ChatMessage placeholder = ChatMessage(id: DateTime.now().microsecondsSinceEpoch.toString(), text: '', isUser: false, status: MessageStatus.streaming);
     // keep the generic loading bubble visible while adding the placeholder for incremental updates
     state = state.copyWith(isLoading: true, isStreaming: true, messages: [...state.messages, placeholder]);
 
@@ -234,24 +308,26 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
           final toFlush = pending.substring(0, flushLen);
           buffer += toFlush;
           pending = pending.substring(flushLen);
-          // update last message with flushed buffer plus remaining pending as ephemeral
-          final displayed = buffer + pending;
+          // Compute display text – filter out raw JSON so it never flashes in the UI
+          final rawDisplayed = buffer + pending;
+          final displayed = _streamingDisplayText(rawDisplayed);
           final msgs = [...state.messages];
           final lastIdx = msgs.length - 1;
-          final kw = quickExtractKeywords(displayed);
+          final kw = quickExtractKeywords(rawDisplayed);
           if (kw.isNotEmpty) streamingKeywordsCache = kw;
-          final updated = ChatMessage(id: msgs[lastIdx].id, text: displayed, isUser: false, keywords: kw);
+          final updated = ChatMessage(id: msgs[lastIdx].id, text: displayed, isUser: false, keywords: kw, status: MessageStatus.streaming);
           msgs[lastIdx] = updated;
           scheduleMessagesUpdate(msgs);
         } else {
           // if nothing to flush yet, optionally update ephemeral preview every few chars to show typing
           if (pending.length % 20 == 0) {
-            final displayed = buffer + pending;
+            final rawDisplayed = buffer + pending;
+            final displayed = _streamingDisplayText(rawDisplayed);
             final msgs = [...state.messages];
             final lastIdx = msgs.length - 1;
-            final kw = quickExtractKeywords(displayed);
+            final kw = quickExtractKeywords(rawDisplayed);
             if (kw.isNotEmpty) streamingKeywordsCache = kw;
-            final updated = ChatMessage(id: msgs[lastIdx].id, text: displayed, isUser: false, keywords: kw);
+            final updated = ChatMessage(id: msgs[lastIdx].id, text: displayed, isUser: false, keywords: kw, status: MessageStatus.streaming);
             msgs[lastIdx] = updated;
             scheduleMessagesUpdate(msgs);
           }
@@ -279,15 +355,25 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
       // streaming completed; if buffer empty treat as failure
       if (buffer.trim().isEmpty) {
         failed = true;
-        buffer = 'AI 未返回内容，请重试。';
+        buffer = 'AI 未返回有效内容，请稍后重试';
       }
     } catch (e) {
       failed = true;
-      buffer = 'AI 服务调用失败：${e.toString()}';
-      // update last message with error text and clear streaming flag
+      // Map technical error to user-friendly message via ChatErrorMapper
+      final chatError = ChatErrorMapper.mapException(e);
+      buffer = chatError.userMessage;
+      // update last message with friendly error text and explicit error status
       final msgs = [...state.messages];
       final lastIdx = msgs.length - 1;
-      msgs[lastIdx] = ChatMessage(id: msgs[lastIdx].id, text: buffer, isUser: false, failed: true, retryForText: text);
+      msgs[lastIdx] = ChatMessage(
+        id: msgs[lastIdx].id,
+        text: buffer,
+        isUser: false,
+        failed: true,
+        retryForText: text,
+        status: MessageStatus.error,
+        errorType: chatError.type.name,
+      );
       state = state.copyWith(isStreaming: false, messages: msgs);
     }
 
@@ -607,7 +693,7 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
           } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
         }
 
-        finalMsg = ChatMessage(id: DateTime.now().microsecondsSinceEpoch.toString(), text: finalText, isUser: false, products: products, keywords: keywordsList, aiParsedRaw: jsonEncode(parsedMap), failed: failed, retryForText: failed ? text : null);
+        finalMsg = ChatMessage(id: DateTime.now().microsecondsSinceEpoch.toString(), text: finalText, isUser: false, products: products, keywords: keywordsList, aiParsedRaw: jsonEncode(parsedMap), failed: failed, retryForText: failed ? text : null, status: failed ? MessageStatus.error : MessageStatus.completed);
         // 尝试优先从 parsedMap 中读取显式标题（如果 AI 以结构化字段返回 title），否则回退到在 metaText 与 buffer 中匹配 'title/标题:' 形式
         try {
           String? extracted;
@@ -731,7 +817,7 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
           }
         } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
       } else {
-        finalMsg = ChatMessage(id: DateTime.now().microsecondsSinceEpoch.toString(), text: buffer.trim(), isUser: false, aiParsedRaw: null, failed: failed, retryForText: failed ? text : null);
+        finalMsg = ChatMessage(id: DateTime.now().microsecondsSinceEpoch.toString(), text: buffer.trim(), isUser: false, aiParsedRaw: null, failed: failed, retryForText: failed ? text : null, status: failed ? MessageStatus.error : MessageStatus.completed);
       }
 
       // 如果开启 debug，避免在消息气泡中渲染超长的原始 JSON 导致 UI 卡顿，截断展示并确保完整内容已通过 debugFullResponse 传给 UI 以便复制
@@ -745,7 +831,7 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
       } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
     } catch (e, st) {
       log('Error building final chat message: $e', name: 'ChatProviders', error: e, stackTrace: st);
-      finalMsg = ChatMessage(id: DateTime.now().microsecondsSinceEpoch.toString(), text: buffer.trim(), isUser: false, failed: failed, retryForText: failed ? text : null);
+      finalMsg = ChatMessage(id: DateTime.now().microsecondsSinceEpoch.toString(), text: buffer.trim(), isUser: false, failed: failed, retryForText: failed ? text : null, status: failed ? MessageStatus.error : MessageStatus.completed);
     }
 
     // Before replacing placeholder, ensure we strip debug-only lines from all messages in memory
@@ -814,12 +900,25 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
       state = state.copyWith(isLoading: false, isStreaming: false, messages: [finalMsg]);
     }
 
-    // If conversation title is still the default placeholder, try to auto-generate
-    // a title from analysis or first product and persist it.
-    try {
-      // 已禁用自动根据消息首行生成会话标题的逻辑。
-      // 如果没有从 parsedMap 或显式字段提取到标题，则保持当前标题不变（通常为 '新对话'）。
-    } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
+    // 如果 AI 回复中没有携带有效标题（isTitleLocked 仍为 false），
+    // 则异步启动一次独立的 LLM 调用，根据用户消息生成标题。
+    if (!state.isTitleLocked) {
+      final userMsgForTitle = text;
+      () async {
+        try {
+          final generated = await service.generateConversationTitle(userMsgForTitle);
+          if (generated.trim().isNotEmpty) {
+            // 仅在标题仍未被锁定时才更新（防止并发情况下覆盖已有标题）
+            if (!state.isTitleLocked) {
+              state = state.copyWith(currentConversationTitle: generated, isTitleLocked: true);
+              saveCurrentConversation().catchError((_) {});
+            }
+          }
+        } catch (e, st) {
+          log('Fallback title generation failed: $e', name: 'ChatProviders', error: e, stackTrace: st);
+        }
+      }();
+    }
 
     // persist conversation after adding AI message
     try {
@@ -867,8 +966,24 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
 
   /// Load a conversation
   /// 加载一个会话的消息到当前聊天状态（用于在 UI 中切换会话）
-  void loadConversation(ConversationModel conv) {
-    state = state.copyWith(messages: [...conv.messages], isLoading: false, currentConversationId: conv.id, currentConversationTitle: conv.title);
+  /// 始终从仓库读取最新数据，避免使用内存中的旧快照
+  Future<void> loadConversation(ConversationModel conv) async {
+    try {
+      final repo = _ref.read(conversationRepositoryProvider);
+      final fresh = await repo.getConversation(conv.id);
+      final target = fresh ?? conv;
+      state = state.copyWith(
+        messages: [...target.messages],
+        isLoading: false,
+        isStreaming: false,
+        currentConversationId: target.id,
+        currentConversationTitle: target.title,
+        isTitleLocked: target.title != '新对话',
+      );
+    } catch (e, st) {
+      log('Error loading conversation from repo: $e', name: 'ChatProviders', error: e, stackTrace: st);
+      state = state.copyWith(messages: [...conv.messages], isLoading: false, isStreaming: false, currentConversationId: conv.id, currentConversationTitle: conv.title);
+    }
   }
 
   Future<void> deleteConversationById(String id) async {

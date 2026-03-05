@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/sync/conflict_resolver.dart';
+import '../widgets/error_snackbar.dart';
 
 /// 冲突解决对话框
 /// 当自动解决失败时，让用户选择如何处理冲突
@@ -249,19 +250,7 @@ class ConflictResolutionSnackBar {
       message = '已解决 $total 个冲突（自动 $autoResolvedCount，手动 $userResolvedCount）';
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.check_circle, color: Colors.white),
-            const SizedBox(width: 8),
-            Text(message),
-          ],
-        ),
-        backgroundColor: Colors.green,
-        duration: const Duration(seconds: 3),
-      ),
-    );
+    showSuccessSnackBar(context, message);
   }
 }
 

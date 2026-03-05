@@ -77,7 +77,6 @@
 | HTTP 客户端 | http | latest | 外部 API 调用 |
 | 数据库 | PostgreSQL | 12.0+ | 关系型数据库 |
 | 数据库驱动 | postgres | latest | PostgreSQL 驱动 |
-| 浏览器自动化 | Playwright | latest | 网页抓取（京东爬虫） |
 
 ### 2.3 现有架构模式
 
@@ -138,7 +137,6 @@ wisepick_dart_version/
 │   │   ├── database/              # 数据库模块
 │   │   │   └── migrations/        # 数据库迁移脚本
 │   │   ├── analytics/              # 数据分析模块（新增）
-│   │   └── jd_scraper/            # 京东爬虫模块
 │   │   └── admin/                 # 管理员后台服务模块（后端API，新增）
 │   └── pubspec.yaml
 ├── test/                          # 测试文件

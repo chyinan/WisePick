@@ -5,15 +5,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wisepick_dart_version/features/products/product_model.dart';
 import 'package:wisepick_dart_version/features/products/product_detail_page.dart';
-import 'package:wisepick_dart_version/features/products/jd_price_provider.dart';
 import 'package:wisepick_dart_version/features/cart/cart_providers.dart';
 import 'package:wisepick_dart_version/features/auth/auth_providers.dart';
 import 'package:wisepick_dart_version/services/sync/sync_manager.dart';
 import 'package:wisepick_dart_version/widgets/product_card.dart';
 import 'package:wisepick_dart_version/widgets/cached_product_image.dart';
+import 'package:wisepick_dart_version/widgets/error_view.dart';
+import 'package:wisepick_dart_version/widgets/error_snackbar.dart';
 import 'package:wisepick_dart_version/services/price_refresh_service.dart';
-import 'package:wisepick_dart_version/services/jd_scraper_client.dart';
-
 /// 桌面端宽度阈值
 const double _kDesktopBreakpoint = 800.0;
 
@@ -64,7 +63,6 @@ class CartPage extends ConsumerWidget {
                         // 刷新价格
                         await PriceRefreshService().refreshCartPrices();
                         ref.invalidate(cartItemsProvider);
-                        ref.invalidate(jdPriceCacheProvider); // 刷新京东价格缓存
                         
                         // 如果已登录，同步云端数据
                         final isLoggedIn = ref.read(isLoggedInProvider);
@@ -91,7 +89,10 @@ class CartPage extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, st) => Center(child: Text('加载错误: $e')),
+        error: (e, st) => ErrorView(
+          error: e,
+          onRetry: () => ref.invalidate(cartItemsProvider),
+        ),
       ),
     );
   }
@@ -173,7 +174,6 @@ class _DesktopCartHeader extends ConsumerWidget {
             onPressed: () async {
               await PriceRefreshService().refreshCartPrices();
               ref.invalidate(cartItemsProvider);
-              ref.invalidate(jdPriceCacheProvider); // 刷新京东价格缓存
             },
             icon: const Icon(Icons.refresh),
             label: const Text('刷新价格'),
@@ -182,7 +182,7 @@ class _DesktopCartHeader extends ConsumerWidget {
       ),
     );
   }
-  
+
   void _showBatchDeleteDialog(BuildContext context, WidgetRef ref, List<Map<String, dynamic>> list, Map<String, bool> sel) {
     final selectedItems = list.where((m) => sel[m['id']] == true).toList();
     showDialog(
@@ -317,32 +317,8 @@ class _DesktopCartItem extends ConsumerStatefulWidget {
 class _DesktopCartItemState extends ConsumerState<_DesktopCartItem> {
   bool _isHovered = false;
 
-  /// 获取京东商品的缓存价格（如果有）
-  double? _getJdCachedPrice(ProductModel p, WidgetRef ref) {
-    if (p.platform == 'jd') {
-      final jdPrices = ref.watch(jdPriceCacheProvider);
-      return jdPrices[p.id];
-    }
-    return null;
-  }
-
-  /// 获取商品的有效价格：京东商品优先从 jdPriceCacheProvider 获取最新爬取价格
-  double _getEffectivePrice(ProductModel p, double? jdCachedPrice) {
-    if (p.platform == 'jd' && jdCachedPrice != null) {
-      return jdCachedPrice;
-    }
-    // 对于非京东商品或没有缓存价格的情况，使用原价格
+  double _getEffectivePrice(ProductModel p) {
     return p.price > 0 ? p.price : p.finalPrice > 0 ? p.finalPrice : p.originalPrice;
-  }
-
-  /// 判断京东商品是否下架（只有已爬取且价格为 0 才是下架）
-  bool _isJdOffShelf(ProductModel p, double? jdCachedPrice) {
-    return p.platform == 'jd' && jdCachedPrice != null && jdCachedPrice < 0.01;
-  }
-
-  /// 判断京东商品是否未爬取价格
-  bool _isJdPriceNotFetched(ProductModel p, double? jdCachedPrice) {
-    return p.platform == 'jd' && jdCachedPrice == null;
   }
 
   @override
@@ -353,11 +329,8 @@ class _DesktopCartItemState extends ConsumerState<_DesktopCartItem> {
     final qty = int.tryParse(m['qty']?.toString() ?? '1') ?? 1;
     final sel = ref.watch(cartSelectionProvider);
     final isSelected = sel[p.id] ?? false;
-    final jdCachedPrice = _getJdCachedPrice(p, ref);
-    final effectivePrice = _getEffectivePrice(p, jdCachedPrice);
+    final effectivePrice = _getEffectivePrice(p);
     final subtotal = effectivePrice * qty;
-    final isOffShelf = _isJdOffShelf(p, jdCachedPrice);
-    final isPriceNotFetched = _isJdPriceNotFetched(p, jdCachedPrice);
     
     // 获取平台颜色
     Color platformColor;
@@ -467,37 +440,11 @@ class _DesktopCartItemState extends ConsumerState<_DesktopCartItem> {
                   width: 100,
                   child: Column(
                     children: [
-                      // 京东商品：区分未爬取、下架、正常价格三种状态
-                      if (isOffShelf)
-                        // 已爬取且价格为 0：下架/无货
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.errorContainer,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            '下架/无货',
-                            style: TextStyle(
-                              color: theme.colorScheme.error,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        )
-                      else if (isPriceNotFetched)
-                        // 京东商品未爬取：显示 ¥--.--
-                        Text(
-                          '¥--.--',
-                          style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
-                        )
-                      else
-                        // 正常价格
-                        Text(
-                          '¥${effectivePrice.toStringAsFixed(2)}',
-                          style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
-                        ),
-                      if (!isOffShelf && !isPriceNotFetched && p.originalPrice > 0 && p.originalPrice > effectivePrice)
+                      Text(
+                        '¥${effectivePrice.toStringAsFixed(2)}',
+                        style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
+                      ),
+                      if (p.originalPrice > 0 && p.originalPrice > effectivePrice)
                         Text(
                           '¥${p.originalPrice.toStringAsFixed(2)}',
                           style: theme.textTheme.bodySmall?.copyWith(
@@ -548,17 +495,11 @@ class _DesktopCartItemState extends ConsumerState<_DesktopCartItem> {
                 // 小计
                 SizedBox(
                   width: 100,
-                  child: (isOffShelf || isPriceNotFetched)
-                    ? Text(
-                        '--',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                      )
-                    : Text(
-                        '¥${subtotal.toStringAsFixed(2)}',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.error, fontWeight: FontWeight.bold),
-                      ),
+                  child: Text(
+                    '¥${subtotal.toStringAsFixed(2)}',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.error, fontWeight: FontWeight.bold),
+                  ),
                 ),
                 // 操作按钮
                 SizedBox(
@@ -778,16 +719,8 @@ class _CartBottomBar extends ConsumerWidget {
   final bool isDesktop;
   const _CartBottomBar({required this.list, this.isDesktop = false});
 
-  /// 获取商品的有效价格：京东商品优先从 jdPriceCacheProvider 获取最新爬取价格
-  double _getEffectivePrice(ProductModel p, Map<String, double> jdPrices) {
-    if (p.platform == 'jd') {
-      final cachedPrice = jdPrices[p.id];
-      // 有缓存价格时使用缓存价格（包括 0，表示下架）
-      if (cachedPrice != null) {
-        return cachedPrice;
-      }
-    }
-    // 对于非京东商品或没有缓存价格的情况，使用原价格
+  /// 获取商品的有效价格
+  double _getEffectivePrice(ProductModel p) {
     return p.price > 0 ? p.price : p.finalPrice > 0 ? p.finalPrice : p.originalPrice;
   }
 
@@ -795,7 +728,6 @@ class _CartBottomBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final sel = ref.watch(cartSelectionProvider);
-    final jdPrices = ref.watch(jdPriceCacheProvider);
     double total = 0;
     int count = 0;
     double totalOriginal = 0;
@@ -803,7 +735,7 @@ class _CartBottomBar extends ConsumerWidget {
        if (sel[m['id']] == true) {
           final p = ProductModel.fromMap(m);
           final qty = int.tryParse(m['qty']?.toString() ?? '1') ?? 1;
-          final effectivePrice = _getEffectivePrice(p, jdPrices);
+          final effectivePrice = _getEffectivePrice(p);
           total += effectivePrice * qty;
           totalOriginal += (p.originalPrice > 0 ? p.originalPrice : effectivePrice) * qty;
           count += qty;
@@ -971,57 +903,32 @@ class _CheckoutLinkDialog extends StatefulWidget {
 class _CheckoutLinkDialogState extends State<_CheckoutLinkDialog> {
   final Map<String, String> _promotionLinks = {};
   final Map<String, bool> _loadingStates = {};
-  final JdScraperClient _jdScraperClient = JdScraperClient();
 
   Future<void> _fetchAndCopyLink(ProductModel p) async {
     setState(() => _loadingStates[p.id] = true);
-    
+
     try {
-      String? link = p.link;
-      
-      // 如果是京东商品且没有有效链接，使用新的双源爬取 API 获取推广链接
-      if (p.platform == 'jd' && (link.isEmpty || !link.contains('u.jd.com'))) {
-        try {
-          final result = await _jdScraperClient.getProductEnhanced(p.id);
-          
-          if (result.isSuccess && result.data != null) {
-            final info = result.data!;
-            // 获取推广链接（优先短链接）
-            link = info.effectivePromotionLink ?? '';
-          } else if (result.errorMessage != null && mounted) {
-            // 显示用户友好的错误消息
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(result.errorMessage!)),
-            );
-          }
-        } catch (e) {
-          debugPrint('获取京东推广链接失败: $e');
-        }
+      String link = p.link;
+
+      // 京东商品使用标准商品页链接
+      if (link.isEmpty && p.platform == 'jd') {
+        link = 'https://item.jd.com/${p.id}.html';
       }
-      
-      // 如果仍然没有链接，使用原始商品链接作为备用
-      if (link == null || link.isEmpty) {
-        if (p.platform == 'jd') {
-          link = 'https://item.jd.com/${p.id}.html';
-        } else {
-          link = p.link;
-        }
+
+      if (link.isEmpty) {
+        link = p.link;
       }
-      
+
       _promotionLinks[p.id] = link;
       
       // 复制到剪贴板
       await Clipboard.setData(ClipboardData(text: link));
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('已复制: $link')),
-        );
+        showInfoSnackBar(context, '已复制: $link');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('获取链接失败: $e')),
-        );
+        showErrorSnackBar(context, e);
       }
     } finally {
       if (mounted) {

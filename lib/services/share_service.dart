@@ -11,8 +11,10 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:http/http.dart' as http;
 
+import '../core/error/app_error_mapper.dart';
 import '../features/products/product_model.dart';
 import '../features/products/product_service.dart';
+import '../widgets/error_snackbar.dart';
 
 /// 分享服务：生成分享图片和文本
 class ShareService {
@@ -398,13 +400,9 @@ class _ShareImagePreviewDialogState extends State<ShareImagePreviewDialog> {
       if (!mounted) return;
 
       if (filePath != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('图片已保存到: $filePath')),
-        );
+        showSuccessSnackBar(context, '图片已保存到: $filePath');
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('保存图片失败')),
-        );
+        showErrorSnackBar(context, AppErrorMapper.mapException(Exception('保存图片失败')));
       }
     } finally {
       if (mounted) {
@@ -672,9 +670,7 @@ class ShareOptionsDialog extends StatelessWidget {
                   await ShareService.copyToClipboard(shareText);
                   if (ctx.mounted) {
                     Navigator.of(ctx).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('已复制到剪贴板')),
-                    );
+                    showInfoSnackBar(context, '已复制到剪贴板');
                   }
                 },
                 icon: const Icon(Icons.copy),
@@ -688,9 +684,7 @@ class ShareOptionsDialog extends StatelessWidget {
       // 关闭加载对话框
       if (context.mounted) {
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('生成分享链接失败: $e')),
-        );
+        showErrorSnackBar(context, AppErrorMapper.mapException(e));
       }
     }
   }

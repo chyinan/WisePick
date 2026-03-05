@@ -8,9 +8,6 @@ import 'package:http/http.dart' as http;
 import 'package:crypto/crypto.dart';
 import 'dart:async';
 
-// 导入京东爬虫服务
-import '../lib/jd_scraper/jd_scraper.dart';
-
 // 导入认证模块
 import '../lib/database/database.dart';
 import '../lib/auth/auth_handler.dart';
@@ -3903,100 +3900,6 @@ Future<void> runServer(List<String> args) async {
       return Response.internalServerError(
           body: jsonEncode({'error': e.toString()}),
           headers: {'content-type': 'application/json'});
-    }
-  });
-
-  // ==================== 京东爬虫服务 (新 Dart 版本) ====================
-  // 挂载新的京东爬虫服务路由
-  final jdScraperRoutes = JdScraperRoutes();
-  router.mount('/', jdScraperRoutes.router.call);
-
-  // 京东爬虫 API 路由 (Dart 版本) - 兼容旧接口格式
-  router.get('/api/get-jd-promotion', (Request r) async {
-    final sku = r.url.queryParameters['sku'];
-    if (sku == null || sku.isEmpty) {
-      return Response.badRequest(
-          body: jsonEncode(
-              {'status': 'error', 'message': 'Missing sku parameter'}),
-          headers: {'Content-Type': 'application/json'});
-    }
-
-    try {
-      final service = JdScraperService.instance;
-      await service.initialize();
-      
-      final info = await service.getProductInfo(sku);
-      
-      // 返回兼容旧格式的响应
-      final data = {
-        'promotionUrl': info.shortLink ?? info.promotionLink,
-        'price': info.price,
-        'title': info.title,
-        'skuId': info.skuId,
-        'commission': info.commission,
-        'commissionRate': info.commissionRate,
-        'cached': info.cached,
-      };
-      
-      return Response.ok(jsonEncode({'status': 'success', 'data': data}),
-          headers: {'Content-Type': 'application/json'});
-    } on ScraperException catch (e) {
-      // 根据错误类型返回适当的状态码和用户友好消息
-      int statusCode;
-      String userMessage;
-      bool isServiceError = false;
-      
-      switch (e.type) {
-        case ScraperErrorType.cookieExpired:
-        case ScraperErrorType.loginRequired:
-          statusCode = 401;
-          userMessage = '服务器出了一点小问题，请稍后再试~';
-          isServiceError = true;
-          break;
-        case ScraperErrorType.antiBotDetected:
-          statusCode = 403;
-          userMessage = '当前访问频率过高，请稍后再试~';
-          isServiceError = true;
-          break;
-        case ScraperErrorType.productNotFound:
-          statusCode = 404;
-          userMessage = '未找到该商品信息';
-          break;
-        case ScraperErrorType.timeout:
-          statusCode = 504;
-          userMessage = '服务器响应超时，请稍后再试~';
-          isServiceError = true;
-          break;
-        case ScraperErrorType.networkError:
-          statusCode = 503;
-          userMessage = '网络连接异常，请稍后再试~';
-          isServiceError = true;
-          break;
-        default:
-          statusCode = 500;
-          userMessage = '服务器出了一点小问题，请稍后再试~';
-          isServiceError = true;
-      }
-      
-      return Response(statusCode,
-          body: jsonEncode({
-            'status': 'error',
-            'errorType': e.type.name,
-            'message': e.message,
-            'userMessage': userMessage,
-            'isServiceError': isServiceError,
-          }),
-          headers: {'Content-Type': 'application/json'});
-    } catch (e) {
-      return Response.internalServerError(
-          body: jsonEncode({
-            'status': 'error',
-            'errorType': 'unknown',
-            'message': 'Scraper error: $e',
-            'userMessage': '服务器出了一点小问题，请稍后再试~',
-            'isServiceError': true,
-          }),
-          headers: {'Content-Type': 'application/json'});
     }
   });
 

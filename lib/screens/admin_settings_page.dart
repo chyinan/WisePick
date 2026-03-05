@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 
 import '../core/backend_config.dart';
+import '../core/error/app_error_mapper.dart';
 import '../core/storage/hive_config.dart';
+import '../widgets/error_snackbar.dart';
 
 class AdminSettingsPage extends StatefulWidget {
   const AdminSettingsPage({super.key});
@@ -215,11 +217,11 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                         // 使 BackendConfig 缓存失效，以便新地址立即生效
                         BackendConfig.invalidateCache();
                         if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('保存成功')));
+                        showSuccessSnackBar(context, '保存成功');
                         Navigator.of(context).pop();
                       } catch (e) {
                         if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('保存失败')));
+                        showErrorSnackBar(context, AppErrorMapper.mapException(e));
                       }
                     },
                     child: Text('保存', style: Theme.of(context).textTheme.labelLarge),

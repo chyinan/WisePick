@@ -967,7 +967,6 @@ class ReliabilityDataCollector {
       ['api_gateway', 'user_service'],
       ['api_gateway', 'product_service'],
       ['api_gateway', 'cart_service'],
-      ['api_gateway', 'jd_scraper'],
       ['api_gateway', 'ai_service'],
     ];
 
@@ -1429,7 +1428,6 @@ void initializeReliabilityCollector() {
     'user_service',
     'product_service',
     'cart_service',
-    'jd_scraper',
     'ai_service',
   ];
 
@@ -1565,7 +1563,6 @@ String _classifyRequestService(String path) {
   if (path.contains('/auth')) return 'auth_service';
   if (path.contains('/users') || path.contains('/admin/users')) return 'user_service';
   if (path.contains('/cart')) return 'cart_service';
-  if (path.contains('/jd') || path.contains('/scraper')) return 'jd_scraper';
   if (path.contains('/ai') || path.contains('/proxy') || path.contains('/chat')) return 'ai_service';
   if (path.contains('/product') || path.contains('/price')) return 'product_service';
   return 'api_gateway';

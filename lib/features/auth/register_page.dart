@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:wisepick_dart_version/core/error/app_error.dart';
+import 'package:wisepick_dart_version/widgets/error_snackbar.dart';
 import 'auth_providers.dart';
 import 'login_page.dart';
 
@@ -175,8 +177,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     if (!_formKey.currentState!.validate()) return;
 
     if (!_agreedToTerms) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请阅读并同意用户协议')),
+      showErrorSnackBar(
+        context,
+        const AppError(type: AppErrorType.validation, userMessage: '请阅读并同意用户协议', canRetry: false),
       );
       return;
     }
@@ -184,8 +187,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     // 验证安全问题
     final question = _finalSecurityQuestion;
     if (question == null || question.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请选择或输入安全问题')),
+      showErrorSnackBar(
+        context,
+        const AppError(type: AppErrorType.validation, userMessage: '请选择或输入安全问题', canRetry: false),
       );
       return;
     }
@@ -209,15 +213,14 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       );
 
       if (!securityResult.success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('安全问题设置失败: ${securityResult.message}')),
+        showErrorSnackBar(
+          context,
+          AppError(type: AppErrorType.serverError, userMessage: '安全问题设置失败：${securityResult.message}'),
         );
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('注册成功')),
-        );
+        showSuccessSnackBar(context, '注册成功');
         Navigator.of(context).pop(true); // 返回 true 表示注册成功
       }
     }
@@ -816,9 +819,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
               ),
               GestureDetector(
                 onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('用户协议页面开发中')),
-                  );
+                  showInfoSnackBar(context, '用户协议页面开发中');
                 },
                 child: Text(
                   '《用户协议》',
@@ -834,9 +835,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
               ),
               GestureDetector(
                 onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('隐私政策页面开发中')),
-                  );
+                  showInfoSnackBar(context, '隐私政策页面开发中');
                 },
                 child: Text(
                   '《隐私政策》',

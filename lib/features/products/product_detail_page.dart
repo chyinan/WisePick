@@ -10,16 +10,17 @@ import 'package:wisepick_dart_version/features/cart/cart_providers.dart';
 import 'package:wisepick_dart_version/features/cart/cart_service.dart';
 import 'package:flutter/services.dart';
 import 'package:wisepick_dart_version/services/share_service.dart';
-import 'package:wisepick_dart_version/services/jd_scraper_client.dart';
 import 'product_model.dart';
 import 'product_service.dart';
-import 'package:wisepick_dart_version/features/products/jd_price_provider.dart';
 import 'package:wisepick_dart_version/features/products/pdd_goods_detail_service.dart';
 import 'package:wisepick_dart_version/features/products/taobao_item_detail_service.dart';
 import 'package:wisepick_dart_version/features/chat/chat_service.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:wisepick_dart_version/features/price_history/price_history_page.dart';
 import 'package:wisepick_dart_version/features/decision/decision_providers.dart';
+import 'package:wisepick_dart_version/core/error/app_error.dart';
+import 'package:wisepick_dart_version/core/error/app_error_mapper.dart';
+import 'package:wisepick_dart_version/widgets/error_snackbar.dart';
 
 /// 商品详情页，展示商品完整信息（响应式布局：窄屏竖排，宽屏左右并列）
 class ProductDetailPage extends ConsumerStatefulWidget {
@@ -34,10 +35,6 @@ class ProductDetailPage extends ConsumerStatefulWidget {
 class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
   bool _isLoadingLink = false;
   bool _isFavorited = false;
-  // New states for JD promotion data
-  bool _isFetchingPromotion = false;
-  bool _fetchFailed = false;
-  Map<String, dynamic>? _promotionData;
   bool _isLoadingImages = false;
   String? _imageError;
   List<String> _galleryImages = const <String>[];
@@ -105,87 +102,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
     super.dispose();
   }
 
-  // 京东爬虫客户端
-  final JdScraperClient _jdScraperClient = JdScraperClient();
-
-  // 使用新的双源爬取 API 获取京东商品推广数据
-  Future<void> _fetchPromotionData() async {
-    if (widget.product.platform != 'jd' || widget.product.id.isEmpty) return;
-
-    setState(() {
-      _isFetchingPromotion = true;
-      _fetchFailed = false;
-    });
-
-    try {
-      // 使用新的双源爬取 API（推荐）
-      final result = await _jdScraperClient.getProductEnhanced(widget.product.id);
-
-      if (!mounted) return;
-
-      if (result.isSuccess && result.data != null) {
-        final info = result.data!;
-        setState(() {
-          // 转换为旧的 _promotionData 格式以保持兼容性
-          _promotionData = {
-            'price': info.price,
-            'originalPrice': info.originalPrice,
-            'promotionUrl': info.effectivePromotionLink,
-            'promotionLink': info.promotionLink,
-            'shortLink': info.shortLink,
-            'shopName': info.shopName,
-            'imageUrl': info.imageUrl,
-            'title': info.title,
-            'commission': info.commission,
-            'commissionRate': info.commissionRate,
-            'isOffShelf': info.isOffShelf,
-            'cached': info.cached,
-          };
-          // 如果没有推广链接，标记为失败
-          if (info.effectivePromotionLink == null || info.effectivePromotionLink!.trim().isEmpty) {
-            _fetchFailed = true;
-          }
-        });
-        // 更新价格缓存
-        if (info.price > 0) {
-          ref
-              .read(jdPriceCacheProvider.notifier)
-              .updatePrice(widget.product.id, info.price);
-        }
-      } else {
-        setState(() {
-          _fetchFailed = true;
-        });
-        // 显示错误消息
-        if (result.errorMessage != null && result.errorMessage!.isNotEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(result.errorMessage!)),
-          );
-        }
-      }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _fetchFailed = true;
-      });
-      
-      // 显示错误消息
-      String errorMessage = e.toString();
-      // 清理 "Exception: " 前缀
-      if (errorMessage.startsWith('Exception: ')) {
-        errorMessage = errorMessage.substring('Exception: '.length);
-      }
-      
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(errorMessage)));
-    } finally {
-      if (!mounted) return;
-      setState(() {
-        _isFetchingPromotion = false;
-      });
-    }
-  }
+  // 使用新的双源爬取 API 获取京东商品推广数据（已移除）
 
   Future<void> _loadFavoriteState() async {
     try {
@@ -1465,16 +1382,11 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
               Builder(
                 builder: (context) {
                   if (widget.product.platform == 'jd') {
-                    final cachedPrices = ref.watch(jdPriceCacheProvider);
-                    final cachedPrice = cachedPrices[widget.product.id];
-                    final num? effectivePrice =
-                        _promotionData?['price'] as num? ?? cachedPrice;
-                    final bool hasPrice =
-                        (_promotionData?['price'] != null) ||
-                        (cachedPrice != null);
-                    // 检查是否下架（后端返回 isOffShelf 或价格为 0）
-                    final bool isOffShelf = _promotionData?['isOffShelf'] == true ||
-                        (effectivePrice != null && effectivePrice < 0.01);
+                    final effectivePrice = widget.product.price > 0
+                        ? widget.product.price
+                        : widget.product.finalPrice > 0
+                            ? widget.product.finalPrice
+                            : widget.product.originalPrice;
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -1489,53 +1401,21 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                                     .onSurfaceVariant,
                               ),
                             ),
-                            if (isOffShelf)
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).colorScheme.errorContainer,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  '商品处于下架/无货状态',
-                                  style: TextStyle(
-                                    color: Theme.of(context).colorScheme.error,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              )
-                            else
-                              Text(
-                                effectivePrice != null
-                                    ? '\u00a5${effectivePrice.toStringAsFixed(2)}'
-                                    : '\u00a5--.--',
-                                style: TextStyle(
-                                  color:
-                                      Theme.of(context).colorScheme.primary,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                            Text(
+                              effectivePrice > 0
+                                  ? '\u00a5${effectivePrice.toStringAsFixed(2)}'
+                                  : '\u00a5--.--',
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.primary,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
                               ),
-                            const SizedBox(width: 12),
-                            if (!hasPrice && !isOffShelf)
-                              _isFetchingPromotion
-                                  ? const SizedBox(
-                                      width: 24,
-                                      height: 24,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2.5,
-                                      ),
-                                    )
-                                  : TextButton(
-                                      onPressed: _fetchPromotionData,
-                                      child: const Text('\u83b7\u53d6\u4f18\u60e0'),
-                                    ),
+                            ),
                           ],
                         ),
-                        if (!isOffShelf)
+                        if (effectivePrice > 0)
                           _buildPriceDiffLabel(
-                              context, effectivePrice?.toDouble()),
+                              context, effectivePrice),
                       ],
                     );
                   } else if (widget.product.platform == 'taobao') {
@@ -1748,31 +1628,9 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
 
                             // JD Product Logic
                             if (product.platform == 'jd') {
-                              // If we already have a promotion url, use it
-                              if (_promotionData?['promotionUrl'] != null &&
-                                  (_promotionData!['promotionUrl'] as String)
-                                      .isNotEmpty) {
-                                finalUrl = _promotionData!['promotionUrl'];
-                              }
-                              // If fetching failed, fallback to original URL
-                              else if (_fetchFailed) {
-                                finalUrl =
-                                    'https://item.jd.com/${product.id}.html';
-                              }
-                              // If we haven't tried fetching, fetch now
-                              else {
-                                await _fetchPromotionData();
-                                // After fetching, check again
-                                if (_promotionData?['promotionUrl'] != null &&
-                                    (_promotionData!['promotionUrl'] as String)
-                                        .isNotEmpty) {
-                                  finalUrl = _promotionData!['promotionUrl'];
-                                } else {
-                                  // If it still fails, fallback to original
-                                  finalUrl =
-                                      'https://item.jd.com/${product.id}.html';
-                                }
-                              }
+                              finalUrl = product.link.isNotEmpty
+                                  ? product.link
+                                  : 'https://item.jd.com/${product.id}.html';
                             }
                             // Non-JD Product Logic
                             else {
@@ -1857,33 +1715,17 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                                                         ),
                                                       );
                                                       if (!mounted) return;
-                                                      ScaffoldMessenger.of(
-                                                        context,
-                                                      ).showSnackBar(
-                                                        const SnackBar(
-                                                          content: Text(
-                                                            '已复制链接到剪贴板',
-                                                          ),
-                                                        ),
-                                                      );
+                                                      showInfoSnackBar(context, '已复制链接到剪贴板');
                                                     }
                                                   } catch (e, st) {
-                                                    dev.log('Error launching URL (JD/PDD dialog): $e', name: 'ProductDetail', error: e, stackTrace: st);
+                                                    dev.log('Error launching URL (JD/PDD dialog): ${AppErrorMapper.mapException(e).technicalDetail}', name: 'ProductDetail', error: e, stackTrace: st);
                                                     await Clipboard.setData(
                                                       ClipboardData(
                                                         text: normalized,
                                                       ),
                                                     );
                                                     if (!mounted) return;
-                                                    ScaffoldMessenger.of(
-                                                      context,
-                                                    ).showSnackBar(
-                                                      const SnackBar(
-                                                        content: Text(
-                                                          '已复制链接到剪贴板',
-                                                        ),
-                                                      ),
-                                                    );
+                                                    showInfoSnackBar(context, '已复制链接到剪贴板');
                                                   }
                                                 },
                                                 icon: const Icon(
@@ -1901,13 +1743,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                                                   );
                                                   Navigator.of(ctx).pop();
                                                   if (!mounted) return;
-                                                  ScaffoldMessenger.of(
-                                                    context,
-                                                  ).showSnackBar(
-                                                    const SnackBar(
-                                                      content: Text('已复制到剪贴板'),
-                                                    ),
-                                                  );
+                                                  showInfoSnackBar(context, '已复制到剪贴板');
                                                 },
                                                 child: const Text('复制'),
                                               ),
@@ -1935,17 +1771,16 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                                       uri,
                                       mode: LaunchMode.externalApplication,
                                     );
-                                    if (!launched)
-                                      ScaffoldMessenger.of(
+                                    if (!launched) {
+                                      showErrorSnackBar(
                                         context,
-                                      ).showSnackBar(
-                                        const SnackBar(content: Text('无法打开链接')),
+                                        const AppError(type: AppErrorType.unknown, userMessage: '无法打开链接', canRetry: false),
                                       );
+                                    }
                                   } catch (e, st) {
-                                    dev.log('Error launching URL: $e', name: 'ProductDetail', error: e, stackTrace: st);
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('打开链接出错')),
-                                    );
+                                    final appError = AppErrorMapper.mapException(e);
+                                    dev.log('Error launching URL: ${appError.technicalDetail}', name: 'ProductDetail', error: e, stackTrace: st);
+                                    showErrorSnackBar(context, appError);
                                   }
                                 } else {
                                   await showDialog<void>(
@@ -1987,33 +1822,17 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                                                           ),
                                                         );
                                                         if (!mounted) return;
-                                                        ScaffoldMessenger.of(
-                                                          context,
-                                                        ).showSnackBar(
-                                                          const SnackBar(
-                                                            content: Text(
-                                                              '已复制链接到剪贴板',
-                                                            ),
-                                                          ),
-                                                        );
+                                                        showInfoSnackBar(context, '已复制链接到剪贴板');
                                                       }
                                                     } catch (e, st) {
-                                                      dev.log('Error launching URL (non-JD dialog): $e', name: 'ProductDetail', error: e, stackTrace: st);
+                                                      dev.log('Error launching URL (non-JD dialog): ${AppErrorMapper.mapException(e).technicalDetail}', name: 'ProductDetail', error: e, stackTrace: st);
                                                       await Clipboard.setData(
                                                         ClipboardData(
                                                           text: normalized,
                                                         ),
                                                       );
                                                       if (!mounted) return;
-                                                      ScaffoldMessenger.of(
-                                                        context,
-                                                      ).showSnackBar(
-                                                        const SnackBar(
-                                                          content: Text(
-                                                            '已复制链接到剪贴板',
-                                                          ),
-                                                        ),
-                                                      );
+                                                      showInfoSnackBar(context, '已复制链接到剪贴板');
                                                     }
                                                   },
                                                   icon: const Icon(
@@ -2031,15 +1850,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                                                     );
                                                     Navigator.of(ctx).pop();
                                                     if (!mounted) return;
-                                                    ScaffoldMessenger.of(
-                                                      context,
-                                                    ).showSnackBar(
-                                                      const SnackBar(
-                                                        content: Text(
-                                                          '已复制到剪贴板',
-                                                        ),
-                                                      ),
-                                                    );
+                                                    showInfoSnackBar(context, '已复制到剪贴板');
                                                   },
                                                   child: const Text('复制'),
                                                 ),
@@ -2060,8 +1871,9 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                                 }
                               }
                             } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('未能获取推广链接')),
+                              showErrorSnackBar(
+                                context,
+                                const AppError(type: AppErrorType.serverError, userMessage: '未能获取推广链接'),
                               );
                             }
 
@@ -2123,17 +1935,12 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                         setState(() {
                           _isFavorited = !currentlyFavorited;
                         });
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(_isFavorited ? '已加入收藏' : '已取消收藏'),
-                          ),
-                        );
+                        showInfoSnackBar(context, _isFavorited ? '已加入收藏' : '已取消收藏');
                       } catch (e, st) {
-                        dev.log('Favorite toggle failed: $e', name: 'ProductDetail', error: e, stackTrace: st);
+                        final appError = AppErrorMapper.mapException(e);
+                        dev.log('Favorite toggle failed: ${appError.technicalDetail}', name: 'ProductDetail', error: e, stackTrace: st);
                         if (!mounted) return;
-                        ScaffoldMessenger.of(
-                          context,
-                        ).showSnackBar(const SnackBar(content: Text('收藏操作失败')));
+                        showErrorSnackBar(context, appError);
                       }
                     },
                     icon: AnimatedScale(
@@ -2193,12 +2000,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                       
                       // 确保传入当前显示的最新价格
                       double currentPrice = product.price;
-                      if (product.platform == 'jd') {
-                        final cachedPrices = ref.read(jdPriceCacheProvider);
-                        final cachedPrice = cachedPrices[product.id];
-                        final num? p = _promotionData?['price'] as num? ?? cachedPrice;
-                        if (p != null) currentPrice = p.toDouble();
-                      } else if (product.platform == 'taobao') {
+                      if (product.platform == 'taobao') {
                         if (_taobaoLatestPrice != null) currentPrice = _taobaoLatestPrice!;
                       } else if (product.platform == 'pdd') {
                         if (_pddLatestPrice != null) currentPrice = _pddLatestPrice!;
@@ -2214,16 +2016,15 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                       }
 
                       addToComparisonList(ref, productMap);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('已添加 "${product.title}" 到对比列表'),
-                          action: SnackBarAction(
-                            label: '查看对比',
-                            onPressed: () {
-                              if (!mounted) return;
-                              Navigator.pushNamed(context, '/comparison');
-                            },
-                          ),
+                      showInfoSnackBar(
+                        context,
+                        '已添加 "${product.title}" 到对比列表',
+                        action: SnackBarAction(
+                          label: '查看对比',
+                          onPressed: () {
+                            if (!mounted) return;
+                            Navigator.pushNamed(context, '/comparison');
+                          },
                         ),
                       );
                     },

@@ -17,6 +17,7 @@ import '../features/auth/login_page.dart';
 import '../features/auth/profile_page.dart';
 import '../features/auth/token_manager.dart';
 import '../services/sync/sync_manager.dart';
+import '../widgets/error_snackbar.dart';
 import '../widgets/macos_window_buttons.dart';
 import '../widgets/sync_status_indicator.dart';
 import 'admin_settings_page.dart';
@@ -153,13 +154,7 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
           .push(MaterialPageRoute(builder: (_) => const AdminSettingsPage()));
     } catch (e) {
       if (!mounted) return;
-      final msg = e.toString().replaceFirst('Exception: ', '').trim();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(msg),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
+      showErrorSnackBar(context, e);
     }
   }
 
@@ -375,9 +370,7 @@ class _SettingsPage extends ConsumerWidget {
     final Uri uri = Uri.parse(url);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('无法打开链接')),
-        );
+        showErrorSnackBar(context, Exception('无法打开链接'));
       }
     }
   }

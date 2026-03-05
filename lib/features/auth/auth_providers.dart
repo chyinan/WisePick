@@ -81,7 +81,10 @@ class AuthStateNotifier extends StateNotifier<AuthState> {
     required TokenManager tokenManager,
   })  : _authService = authService,
         _tokenManager = tokenManager,
-        super(const AuthState());
+        super(const AuthState()) {
+    // Provider 创建时自动初始化，确保热重载和重启后都能恢复登录状态
+    initialize();
+  }
 
   /// 初始化 - 检查是否已登录
   /// 

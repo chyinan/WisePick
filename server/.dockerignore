@@ -38,13 +38,6 @@ Dockerfile
 docker-compose*.yml
 .dockerignore
 
-# Python (jd_scraper)
-*.py
-*.pyc
-__pycache__/
-requirements.txt
-venv/
-
 # 调试文件
 debug_page.html
 

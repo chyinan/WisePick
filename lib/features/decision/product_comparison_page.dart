@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../widgets/error_view.dart';
 import 'decision_models.dart';
 import 'decision_providers.dart';
 
@@ -30,7 +31,10 @@ class ProductComparisonPage extends ConsumerWidget {
           ? _buildEmptyState(context)
           : comparisonAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => _buildErrorState(context, error.toString()),
+              error: (error, stack) => ErrorView(
+                error: error,
+                onRetry: () => ref.invalidate(productComparisonProvider),
+              ),
               data: (data) => data == null
                   ? _buildEmptyState(context)
                   : _buildComparisonContent(context, ref, data),
@@ -60,23 +64,6 @@ class ProductComparisonPage extends ConsumerWidget {
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildErrorState(BuildContext context, String message) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.error_outline,
-            size: 48,
-            color: Theme.of(context).colorScheme.error,
-          ),
-          const SizedBox(height: 16),
-          Text('加载失败: $message'),
         ],
       ),
     );

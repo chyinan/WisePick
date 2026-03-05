@@ -3,7 +3,9 @@ import 'dart:developer' as dev;
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 
+import '../core/error/app_error_mapper.dart';
 import '../core/storage/hive_config.dart';
+import '../widgets/error_snackbar.dart';
 
 class UserSettingsPage extends StatefulWidget {
   const UserSettingsPage({super.key});
@@ -90,27 +92,13 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
       } else {
         _modelError = 'HTTP ${resp.statusCode}';
         if (mounted) {
-          // Show a transient snackbar instead of exposing the full error inline
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('获取模型列表失败'),
-              behavior: SnackBarBehavior.floating,
-              duration: Duration(seconds: 2),
-            ),
-          );
+          showErrorSnackBar(context, AppErrorMapper.mapException(Exception('获取模型列表失败: HTTP ${resp.statusCode}')));
         }
       }
     } catch (e) {
       _modelError = e.toString();
       if (mounted) {
-        // Show a transient snackbar instead of exposing the full error inline
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('获取模型列表失败'),
-            behavior: SnackBarBehavior.floating,
-            duration: Duration(seconds: 2),
-          ),
-        );
+        showErrorSnackBar(context, AppErrorMapper.mapException(e));
       }
     } finally {
       if (mounted) setState(() => _loadingModels = false);
@@ -305,16 +293,12 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
                         _modelController.text.trim(),
                       );
                       if (!mounted) return;
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(const SnackBar(content: Text('保存成功')));
+                      showSuccessSnackBar(context, '保存成功');
                       Navigator.of(context).pop();
                     } catch (e, st) {
                       dev.log('Error saving user settings: $e', name: 'UserSettings', error: e, stackTrace: st);
                       if (!mounted) return;
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(const SnackBar(content: Text('保存失败')));
+                      showErrorSnackBar(context, AppErrorMapper.mapException(e));
                     } finally {
                       if (mounted) setState(() => _loading = false);
                     }

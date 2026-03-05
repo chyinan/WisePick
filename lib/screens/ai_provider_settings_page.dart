@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:dio/dio.dart';
 
+import '../core/error/app_error_mapper.dart';
 import '../core/storage/hive_config.dart';
+import '../widgets/error_snackbar.dart';
 
 /// AI服务商API自定义设置页面
 /// 支持：API KEY输入、自定义OpenAI域名、获取模型列表并选择
@@ -279,35 +281,11 @@ class _AiProviderSettingsPageState extends State<AiProviderSettingsPage> {
       await box.put('openai_model', _modelController.text.trim());
       
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.check_circle, color: Theme.of(context).colorScheme.onPrimary),
-              const SizedBox(width: 8),
-              const Text('保存成功'),
-            ],
-          ),
-          backgroundColor: Theme.of(context).colorScheme.primary,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      showSuccessSnackBar(context, '保存成功');
       Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.error_outline, color: Theme.of(context).colorScheme.onError),
-              const SizedBox(width: 8),
-              const Text('保存失败'),
-            ],
-          ),
-          backgroundColor: Theme.of(context).colorScheme.error,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      showErrorSnackBar(context, AppErrorMapper.mapException(e));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -444,13 +422,7 @@ class _AiProviderSettingsPageState extends State<AiProviderSettingsPage> {
                               Clipboard.setData(
                                 ClipboardData(text: _apiKeyController.text),
                               );
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('已复制到剪贴板'),
-                                  behavior: SnackBarBehavior.floating,
-                                  duration: Duration(seconds: 1),
-                                ),
-                              );
+                              showInfoSnackBar(context, '已复制到剪贴板');
                             },
                             tooltip: '复制',
                           ),

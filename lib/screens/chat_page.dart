@@ -6,16 +6,17 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/storage/hive_config.dart';
-import 'package:flutter_animate/flutter_animate.dart'; // Import flutter_animate
-import '../../features/chat/chat_providers.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import '../features/chat/chat_providers.dart';
+import '../features/chat/chat_error_mapper.dart';
 import 'home_drawer.dart';
-import '../../features/chat/chat_message.dart';
-import '../../widgets/product_card.dart';
-import '../../features/products/product_detail_page.dart';
-import '../../features/products/keyword_prompt.dart';
-import '../../features/products/search_service.dart';
-import '../../features/products/product_model.dart';
-import '../../features/chat/widgets/streaming_text.dart';
+import '../features/chat/chat_message.dart';
+import '../widgets/product_card.dart';
+import '../features/products/product_detail_page.dart';
+import '../features/products/keyword_prompt.dart';
+import '../features/products/search_service.dart';
+import '../features/products/product_model.dart';
+import '../features/chat/widgets/streaming_text.dart';
 
 /// 聊天页面组件
 class ChatPage extends ConsumerStatefulWidget {
@@ -170,7 +171,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 ]
                 .animate(interval: 100.ms)
                 .fadeIn(duration: 400.ms)
-                .slideX(begin: 0.1, end: 0), // Staggered animation for cards
+                .slideX(begin: 0.1, end: 0),
               ),
             ),
           ],
@@ -196,7 +197,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             final String title = g != null ? (g['title'] as String? ?? '') : (r['title'] as String? ?? '');
             final String desc = g != null ? (g['description'] as String? ?? '') : (r['description'] as String? ?? '');
             if (title.isNotEmpty) {
-              buf.writeln('${title}：${desc}');
+              buf.writeln('$title：$desc');
             }
           } catch (e, st) {
             dev.log('Error parsing product item in context: $e', name: 'ChatPage', error: e, stackTrace: st);
@@ -256,6 +257,127 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.1, end: 0);
   }
 
+  // ──────────────────────────── Error Bubble ────────────────────────────
+
+  /// Build a polished error bubble with categorised icon, friendly message,
+  /// and a retry action button.
+  Widget _buildErrorBubble(ChatMessage message) {
+    final theme = Theme.of(context);
+    final errorColor = theme.colorScheme.error;
+    final errorBg = theme.colorScheme.errorContainer;
+    final onErrorBg = theme.colorScheme.onErrorContainer;
+
+    // Resolve error type for icon
+    ChatErrorType errType = ChatErrorType.unknown;
+    if (message.errorType != null) {
+      try {
+        errType = ChatErrorType.values.firstWhere(
+          (t) => t.name == message.errorType,
+          orElse: () => ChatErrorType.unknown,
+        );
+      } catch (_) {}
+    }
+
+    IconData errorIcon;
+    switch (errType) {
+      case ChatErrorType.network:
+        errorIcon = Icons.wifi_off_rounded;
+        break;
+      case ChatErrorType.timeout:
+        errorIcon = Icons.timer_off_rounded;
+        break;
+      case ChatErrorType.auth:
+        errorIcon = Icons.key_off_rounded;
+        break;
+      case ChatErrorType.rateLimit:
+        errorIcon = Icons.hourglass_top_rounded;
+        break;
+      case ChatErrorType.serverError:
+        errorIcon = Icons.cloud_off_rounded;
+        break;
+      case ChatErrorType.cancelled:
+        errorIcon = Icons.cancel_outlined;
+        break;
+      case ChatErrorType.unknown:
+        errorIcon = Icons.error_outline_rounded;
+        break;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 16,
+            backgroundColor: errorBg,
+            child: Icon(Icons.smart_toy, size: 18, color: onErrorBg),
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 600),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: errorBg.withOpacity(0.5),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(4),
+                  topRight: Radius.circular(16),
+                  bottomLeft: Radius.circular(16),
+                  bottomRight: Radius.circular(16),
+                ),
+                border: Border.all(color: errorColor.withOpacity(0.2)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Icon(errorIcon, size: 20, color: errorColor),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          message.text.isNotEmpty ? message.text : 'AI 服务暂时不可用',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: onErrorBg,
+                            height: 1.4,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (message.retryForText != null) ...[
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 36,
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          ref.read(chatStateNotifierProvider.notifier)
+                              .retryFailedMessage(message.id);
+                          WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+                        },
+                        icon: Icon(Icons.refresh_rounded, size: 16, color: errorColor),
+                        label: Text('重试', style: TextStyle(color: errorColor, fontSize: 13)),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: errorColor.withOpacity(0.4)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.05, end: 0);
+  }
+
+  // ────────────────────────────────────────────────────────────────────
+
   void _handleSendPressed() {
     final String rawText = _textController.text.trim();
     if (rawText.isEmpty) return;
@@ -277,6 +399,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   Widget _buildChatBubble(ChatMessage message, {bool isStreaming = false}) {
     final bool isUser = message.isUser;
     final String content = message.text;
+
+    // ─── Error state: delegate to dedicated error bubble ───
+    if (!isUser && (message.failed || message.status == MessageStatus.error)) {
+      return _buildErrorBubble(message);
+    }
 
     final CrossAxisAlignment alignment = isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start;
     final Color bubbleColor = isUser
@@ -359,7 +486,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                             MaterialPageRoute(builder: (_) => ProductDetailPage(product: p, aiParsedRaw: message.aiParsedRaw ?? message.text)),
                           ),
                           onFavorite: (product) async {
-                             // ... favorite logic (same as before)
                              final box = await HiveConfig.getBox(HiveConfig.favoritesBox);
                              final exists = box.containsKey(product.id);
                              if (exists) {
@@ -372,7 +498,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                           },
                           expandToFullWidth: true,
                         ),
-                      ).animate().fadeIn(duration: 400.ms).slideX(begin: 0.1, end: 0)), // Animate product cards
+                      ).animate().fadeIn(duration: 400.ms).slideX(begin: 0.1, end: 0)),
                   if (totalPages > 1)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
@@ -416,25 +542,46 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         ],
       );
     } else {
-       // Normal Text Message
+       // ─── Normal Text Message ───
        final String? firstUrl = _extractFirstUrl(content);
        
-       // Logic for long text truncation or special display
        Widget textContent;
-       // 对于正在流式输出的 AI 消息，使用 StreamingText
+       // Streaming AI messages: use StreamingText (no per-character delay,
+       // just natural chunk growth + blinking cursor)
        if (!isUser && isStreaming && content.isNotEmpty) {
           textContent = StreamingText(
             text: content,
             style: textStyle,
-            charDelay: const Duration(milliseconds: 25),
-            showCursor: true,
+            isStreaming: true,
+          );
+       } else if (!isUser && isStreaming && content.isEmpty) {
+          // Streaming has started but no text yet – show inline thinking indicator
+          textContent = Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 14, height: 14,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.6),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                '正在思考…',
+                style: textStyle.copyWith(
+                  color: textStyle.color?.withOpacity(0.6),
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
           );
        } else if (firstUrl == null) {
           const int previewLen = 800;
           if (content.length <= previewLen) {
              textContent = SelectableText(content, style: textStyle);
           } else {
-             final preview = content.substring(0, previewLen) + '...';
+             final preview = '${content.substring(0, previewLen)}...';
              textContent = Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -483,10 +630,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
               hint: '长按可复制消息',
               child: GestureDetector(
                 onLongPress: () {
-                  // 长按显示复制菜单
                   _showCopyMenu(context, content);
                 },
-                child: Container(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOut,
                   constraints: const BoxConstraints(maxWidth: 600),
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
@@ -494,7 +642,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                     borderRadius: bubbleRadius,
                     boxShadow: shadows,
                   ),
-                  child: bubbleContent,
+                  child: AnimatedSize(
+                    duration: const Duration(milliseconds: 150),
+                    alignment: Alignment.topLeft,
+                    curve: Curves.easeOut,
+                    child: bubbleContent,
+                  ),
                 ),
               ),
             ),
@@ -502,14 +655,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           if (isUser) ...[const SizedBox(width: 8), avatar],
         ],
       ),
-    ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.1, end: 0); // Animate bubble entry
+    ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.1, end: 0);
   }
 
-  // ... _handleKeywordSearch, _extractFirstUrl, build, _FullDebugPage ...
-  // Need to ensure the rest of the file is preserved correctly.
-  // Since I'm using `write` tool with full content, I will paste the rest of the methods as they were
-  // but with the necessary imports and structure already defined in the beginning of the `write` content.
-  
   Future<void> _handleKeywordSearch(String kw, ChatMessage originalMessage) async {
        final svc = SearchService();
        try {
@@ -633,6 +781,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     if (!_hasRegisteredListener) {
       _hasRegisteredListener = true;
       ref.listen<ChatState>(chatStateNotifierProvider, (previous, next) {
+        // Auto-scroll when streaming updates arrive
+        if (next.isStreaming) {
+          WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+        }
         if (next.debugNotification != null && next.debugNotification!.isNotEmpty) {
            final notif = next.debugNotification!;
            if (notif != _lastShownDebugNotification) {
@@ -658,7 +810,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
            title: const Text('AI 导购助手'),
            centerTitle: false,
            leading: isWideScreen 
-               ? null  // 桌面端不显示菜单按钮
+               ? null
                : Builder(
                    builder: (context) => Semantics(
                      label: '打开对话列表',
@@ -670,7 +822,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                      ),
                    ),
                  ),
-           automaticallyImplyLeading: false,  // 禁止自动添加返回按钮
+           automaticallyImplyLeading: false,
            actions: [
              Semantics(
                label: '新建对话',

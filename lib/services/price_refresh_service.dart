@@ -8,24 +8,20 @@ import '../features/cart/cart_service.dart';
 import '../features/products/taobao_item_detail_service.dart';
 import 'notification_service.dart';
 import '../core/storage/hive_config.dart';
-import 'jd_scraper_client.dart';
 
 class PriceRefreshService {
   PriceRefreshService({
     TaobaoItemDetailService? taobaoService,
     NotificationService? notificationService,
     PriceHistoryService? priceHistoryService,
-    JdScraperClient? jdScraperClient,
   })  : _taobaoService = taobaoService ?? TaobaoItemDetailService(),
         _notificationService =
             notificationService ?? NotificationService.instance,
-        _priceHistoryService = priceHistoryService ?? PriceHistoryService(),
-        _jdScraperClient = jdScraperClient ?? JdScraperClient();
+        _priceHistoryService = priceHistoryService ?? PriceHistoryService();
 
   final TaobaoItemDetailService _taobaoService;
   final NotificationService _notificationService;
   final PriceHistoryService _priceHistoryService;
-  final JdScraperClient _jdScraperClient;
 
   /// Global mutex — intentionally `static` so that multiple [PriceRefreshService]
   /// instances (e.g. from different call-sites) share the same guard and cannot
@@ -57,18 +53,13 @@ class PriceRefreshService {
         });
 
         final platform = (item['platform'] ?? '').toString();
-        if (platform == 'taobao' || platform == 'jd') {
+        if (platform == 'taobao') {
           // Rate-limit: pause between items to avoid bursting upstream APIs
           if (!isFirstItem) {
             await Future.delayed(_interItemDelay);
           }
           isFirstItem = false;
-
-          if (platform == 'taobao') {
-            await _handleTaobaoItem(box, key.toString(), item);
-          } else {
-            await _handleJdItem(box, key.toString(), item);
-          }
+          await _handleTaobaoItem(box, key.toString(), item);
         }
         // 未来可在此扩展其他平台的价格刷新（如拼多多）
       }
@@ -145,112 +136,6 @@ class PriceRefreshService {
       }
     } catch (e) {
       log('刷新淘宝商品 $productId 价格失败: $e');
-    }
-  }
-
-  /// 处理京东商品价格刷新（使用新的双源爬取 API）
-  Future<void> _handleJdItem(
-    Box box,
-    String productId,
-    Map<String, dynamic> item,
-  ) async {
-    try {
-      // 使用新的双源爬取 API
-      final result = await _jdScraperClient.getProductEnhanced(productId);
-      
-      if (!result.isSuccess || result.data == null) {
-        log('获取京东商品 $productId 价格失败: ${result.errorMessage ?? 'Unknown error'}');
-        return;
-      }
-
-      final info = result.data!;
-      final latestPrice = info.price;
-      
-      if (latestPrice <= 0 || info.isOffShelf) {
-        log('京东商品 $productId 价格无效或已下架');
-        return;
-      }
-
-      // Re-read from box after the await to avoid overwriting concurrent
-      // changes (e.g. quantity updates by the user during the network call).
-      final dynamic freshRaw = box.get(productId);
-      if (freshRaw == null) {
-        // Item was deleted while we were fetching — don't resurrect it.
-        log('京东商品 $productId 在刷新期间被删除，跳过更新');
-        return;
-      }
-      final Map<String, dynamic> freshItem = freshRaw is Map
-          ? freshRaw.map((dynamic k, dynamic v) => MapEntry(k.toString(), v))
-          : item;
-
-      final double initialPrice = _extractInitialPrice(freshItem) ?? latestPrice;
-      final double? lastKnownPrice = _extractCurrentPrice(freshItem);
-      final double dropAmount = initialPrice - latestPrice;
-      // 使用 epsilon 比较避免浮点精度问题
-      final bool priceDropped = dropAmount >= _priceComparisonEpsilon;
-
-      // 更新购物车数据（只merge price-related fields into fresh data）
-      freshItem['initial_price'] ??= initialPrice;
-      freshItem['current_price'] = latestPrice;
-      freshItem['price'] = latestPrice;
-      freshItem['final_price'] = latestPrice;
-      freshItem['last_price_refresh'] = DateTime.now().millisecondsSinceEpoch;
-      
-      // 如果返回了店铺名和图片，也更新到购物车
-      if (info.shopName != null && info.shopName!.isNotEmpty) {
-        freshItem['shop_title'] = info.shopName;
-      }
-      if (info.imageUrl != null && info.imageUrl!.isNotEmpty) {
-        freshItem['image'] = info.imageUrl;
-      }
-      
-      await box.put(productId, freshItem);
-
-      // 更新 jdPriceCache Hive box（供 jdPriceCacheProvider 使用）
-      await _persistJdPriceCache(productId, latestPrice);
-
-      // 记录价格历史
-      await _priceHistoryService.recordPriceHistory(
-        productId: productId,
-        price: latestPrice,
-        finalPrice: latestPrice,
-        originalPrice: info.originalPrice,
-      );
-
-      if (priceDropped && dropAmount >= _minDropAmountForNotification) {
-        // 检查通知开关设置 — use pre-opened settings box from HiveConfig
-        final settingsBox = await HiveConfig.getBox(HiveConfig.settingsBox);
-        final notificationEnabled = settingsBox.get(
-          HiveConfig.priceNotificationEnabledKey,
-          defaultValue: true,
-        ) as bool;
-        
-        if (notificationEnabled) {
-          await _notificationService.showPriceDropNotification(
-            title: (freshItem['title'] ?? info.title).toString(),
-            dropAmount: dropAmount,
-            latestPrice: latestPrice,
-          );
-        }
-      } else if (lastKnownPrice == null || (latestPrice - lastKnownPrice).abs() >= _priceComparisonEpsilon) {
-        log('更新京东商品 $productId 价格: $lastKnownPrice -> $latestPrice');
-      }
-    } catch (e) {
-      log('刷新京东商品 $productId 价格失败: $e');
-    }
-  }
-
-  /// Box name for JD price cache — must stay in sync with
-  /// [JdPriceCacheNotifier._boxName] to share the same Hive box.
-  static const String _jdPriceCacheBoxName = 'jdPriceCache';
-
-  /// 持久化京东价格到缓存（供 jdPriceCacheProvider 读取）
-  Future<void> _persistJdPriceCache(String productId, double price) async {
-    try {
-      final cacheBox = await HiveConfig.getTypedBox<double>(HiveConfig.jdPriceCacheBox);
-      await cacheBox.put(productId, price);
-    } catch (e) {
-      log('写入京东价格缓存失败: $e');
     }
   }
 

@@ -321,7 +321,6 @@ features/products/
 
 **JdAdapter**:
 - 调用京东联盟 API
-- **Scraper 支持**: 当官方 API 不可用时，通过 `JdProductServiceExtension` 调用后端爬虫
 - **OAuth 认证**: 集成 `JdOAuthService` 处理授权流程
 
 **PddAdapter**:

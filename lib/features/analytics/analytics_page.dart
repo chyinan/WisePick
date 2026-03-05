@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../widgets/error_view.dart';
+import '../../widgets/error_snackbar.dart';
 import 'analytics_models.dart';
 import 'analytics_providers.dart';
 import 'widgets/consumption_structure_chart.dart';
@@ -129,7 +131,10 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage>
 
     return consumptionAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => _buildErrorWidget(error.toString()),
+      error: (error, stack) => ErrorView(
+        error: error,
+        onRetry: () => refreshAnalyticsData(ref),
+      ),
       data: (data) => _buildConsumptionContent(data),
     );
   }
@@ -434,7 +439,10 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage>
 
     return preferencesAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => _buildErrorWidget(error.toString()),
+      error: (error, stack) => ErrorView(
+        error: error,
+        onRetry: () => refreshAnalyticsData(ref),
+      ),
       data: (data) => SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Card(
@@ -481,7 +489,10 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage>
 
     return timeAnalysisAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => _buildErrorWidget(error.toString()),
+      error: (error, stack) => ErrorView(
+        error: error,
+        onRetry: () => refreshAnalyticsData(ref),
+      ),
       data: (data) => SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -507,39 +518,6 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage>
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildErrorWidget(String message) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.error_outline,
-            size: 48,
-            color: Theme.of(context).colorScheme.error,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            '加载失败',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            message,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 16),
-          FilledButton.icon(
-            onPressed: () => refreshAnalyticsData(ref),
-            icon: const Icon(Icons.refresh),
-            label: const Text('重试'),
-          ),
-        ],
       ),
     );
   }
@@ -571,9 +549,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage>
     final timeRange = ref.read(selectedTimeRangeProvider);
     
     // 显示加载提示
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('正在生成报告...')),
-    );
+    showInfoSnackBar(context, '正在生成报告...');
 
     try {
       final report = await ref.read(shoppingReportProvider(timeRange).future);
@@ -584,49 +560,39 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage>
       final filePath = exportState.exportedFilePath;
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(filePath != null ? '报告已保存: $filePath' : '报告已生成'),
-            duration: const Duration(seconds: 5),
-            action: filePath != null
-                ? SnackBarAction(
-                    label: '打开',
-                    onPressed: () async {
-                      try {
-                        final file = File(filePath);
-                        if (await file.exists()) {
-                          // 使用系统默认应用打开 PDF
-                          final uri = Uri.file(filePath);
-                          if (await canLaunchUrl(uri)) {
-                            await launchUrl(uri);
-                          } else {
-                            // 回退：打开文件所在目录
-                            final dir = file.parent.path;
-                            final dirUri = Uri.file(dir);
-                            await launchUrl(dirUri);
-                          }
-                        }
-                      } catch (e) {
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('无法打开文件: $e')),
-                          );
+        showInfoSnackBar(
+          context,
+          filePath != null ? '报告已保存: $filePath' : '报告已生成',
+          duration: const Duration(seconds: 5),
+          action: filePath != null
+              ? SnackBarAction(
+                  label: '打开',
+                  onPressed: () async {
+                    try {
+                      final file = File(filePath);
+                      if (await file.exists()) {
+                        final uri = Uri.file(filePath);
+                        if (await canLaunchUrl(uri)) {
+                          await launchUrl(uri);
+                        } else {
+                          final dir = file.parent.path;
+                          final dirUri = Uri.file(dir);
+                          await launchUrl(dirUri);
                         }
                       }
-                    },
-                  )
-                : null,
-          ),
+                    } catch (e) {
+                      if (mounted) {
+                        showErrorSnackBar(context, e);
+                      }
+                    }
+                  },
+                )
+              : null,
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('导出失败: $e'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
+        showErrorSnackBar(context, e);
       }
     }
   }

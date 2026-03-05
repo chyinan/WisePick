@@ -9,6 +9,7 @@ import '../../core/backend_config.dart';
 import '../../core/config.dart';
 import '../../core/storage/hive_config.dart';
 import '../../services/ai_prompt_service.dart';
+import 'chat_error_mapper.dart';
 
 /// ChatService 负责与 OpenAI 兼容接口交互，返回聊天回复文本或结构化推荐。
 ///
@@ -197,8 +198,9 @@ class ChatService {
 
       return result;
     } catch (e) {
-      // 在错误情况下回退为简单提示
-      return 'AI 服务调用失败：${e.toString()}';
+      // Map technical error to user-friendly message
+      final chatError = ChatErrorMapper.mapException(e);
+      return chatError.userMessage;
     }
   }
 
@@ -300,11 +302,8 @@ class ChatService {
         // Close the outer controller to prevent resource leak before returning error stream.
         controller.close();
         final controllerErr = StreamController<String>();
-        if (e.response?.statusCode == 429) {
-          controllerErr.add('AI streaming error: 请求过多 (429)，请稍后重试。');
-        } else {
-          controllerErr.add('AI streaming error: ${e.toString()}');
-        }
+        // Emit a typed ChatError so the provider can map it to a friendly message.
+        controllerErr.addError(ChatErrorMapper.mapDioException(e));
         controllerErr.close();
         return controllerErr.stream;
       }
@@ -362,11 +361,12 @@ class ChatService {
             }
           }
         } catch (e) {
-          // not JSON, fallthrough to emit raw line
+          // Not valid JSON or no extractable content – skip silently.
+          // Never emit raw protocol data to the UI stream.
         }
-        controller.add(l);
+        // If we reach here, the line was not parseable content – drop it.
       }, onError: (e) {
-        controller.add('AI streaming error: ${e.toString()}');
+        controller.addError(ChatErrorMapper.mapException(e));
         controller.close();
       }, onDone: () {
         controller.close();
@@ -374,7 +374,7 @@ class ChatService {
 
       return controller.stream;
     } catch (e) {
-      controller.add('AI streaming error: ${e.toString()}');
+      controller.addError(ChatErrorMapper.mapException(e));
       controller.close();
       return controller.stream;
     }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../widgets/error_view.dart';
+import '../../widgets/error_snackbar.dart';
 import 'price_history_model.dart';
 import 'price_history_providers.dart';
 import 'price_history_service.dart';
@@ -81,9 +83,7 @@ class PriceHistoryPage extends ConsumerWidget {
                   ref.invalidate(priceTrendAnalysisProvider(productInfo));
                   ref.invalidate(buyingTimeSuggestionProvider(productId));
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('价格历史已清除')),
-                    );
+                    showSuccessSnackBar(context, '价格历史已清除');
                   }
                 }
               }
@@ -116,7 +116,13 @@ class PriceHistoryPage extends ConsumerWidget {
             // 价格趋势分析
             trendAnalysis.when(
               loading: () => _buildLoadingCard(context),
-              error: (error, stack) => _buildErrorCard(context, error.toString()),
+              error: (error, stack) => ErrorCard(
+                error: error,
+                height: 200,
+                onRetry: () {
+                  ref.invalidate(priceTrendAnalysisProvider(productInfo));
+                },
+              ),
               data: (data) => _buildTrendAnalysisSection(context, data),
             ),
 
@@ -213,38 +219,6 @@ class PriceHistoryPage extends ConsumerWidget {
         padding: const EdgeInsets.all(16),
         child: const Center(
           child: CircularProgressIndicator(),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildErrorCard(BuildContext context, String message) {
-    return Card(
-      child: Container(
-        height: 200,
-        padding: const EdgeInsets.all(16),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.error_outline,
-                size: 48,
-                color: Theme.of(context).colorScheme.error,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '加载失败',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                message,
-                style: Theme.of(context).textTheme.bodySmall,
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
         ),
       ),
     );

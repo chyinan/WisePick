@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:wisepick_dart_version/widgets/error_snackbar.dart';
 import 'admin_models.dart';
 import 'admin_providers.dart';
 
@@ -668,9 +669,7 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage>
           FilledButton(
             onPressed: () {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('导出功能开发中...')),
-              );
+              showInfoSnackBar(context, '导出功能开发中...');
             },
             child: const Text('导出CSV'),
           ),
