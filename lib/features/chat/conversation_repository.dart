@@ -1,4 +1,4 @@
-import 'dart:developer';
+﻿import 'dart:developer';
 
 import 'package:hive_flutter/hive_flutter.dart';
 
@@ -6,7 +6,6 @@ import '../../core/storage/hive_config.dart';
 import 'conversation_model.dart';
 
 class ConversationRepository {
-  static const _boxName = 'conversations';
 
   Future<Box> _openBox() async {
     return HiveConfig.getBox(HiveConfig.conversationsBox);

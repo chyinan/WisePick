@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:developer' as dev;
 
 import 'package:flutter/material.dart';
@@ -133,7 +133,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.auto_awesome, size: 48, color: Theme.of(context).colorScheme.primary.withOpacity(0.5))
+            Icon(Icons.auto_awesome, size: 48, color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5))
                 .animate().scale(duration: 500.ms, curve: Curves.easeOutBack),
             const SizedBox(height: 16),
             Text(
@@ -232,7 +232,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 5,
                   offset: const Offset(0, 2),
                 ),
@@ -318,14 +318,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
               constraints: const BoxConstraints(maxWidth: 600),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: errorBg.withOpacity(0.5),
+                color: errorBg.withValues(alpha: 0.5),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(4),
                   topRight: Radius.circular(16),
                   bottomLeft: Radius.circular(16),
                   bottomRight: Radius.circular(16),
                 ),
-                border: Border.all(color: errorColor.withOpacity(0.2)),
+                border: Border.all(color: errorColor.withValues(alpha: 0.2)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -359,7 +359,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                         icon: Icon(Icons.refresh_rounded, size: 16, color: errorColor),
                         label: Text('重试', style: TextStyle(color: errorColor, fontSize: 13)),
                         style: OutlinedButton.styleFrom(
-                          side: BorderSide(color: errorColor.withOpacity(0.4)),
+                          side: BorderSide(color: errorColor.withValues(alpha: 0.4)),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                         ),
@@ -431,7 +431,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     
     final List<BoxShadow> shadows = isUser ? [] : [
       BoxShadow(
-        color: Colors.black.withOpacity(0.05),
+        color: Colors.black.withValues(alpha: 0.05),
         blurRadius: 4,
         offset: const Offset(0, 2),
       )
@@ -562,14 +562,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 width: 14, height: 14,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.6),
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
                 ),
               ),
               const SizedBox(width: 10),
               Text(
                 '正在思考…',
                 style: textStyle.copyWith(
-                  color: textStyle.color?.withOpacity(0.6),
+                  color: textStyle.color?.withValues(alpha: 0.6),
                   fontStyle: FontStyle.italic,
                 ),
               ),
@@ -606,7 +606,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                    icon: const Icon(Icons.link),
                    label: const Text('复制链接'),
                    style: FilledButton.styleFrom(
-                      backgroundColor: isUser ? Colors.white.withOpacity(0.2) : Theme.of(context).colorScheme.primaryContainer,
+                      backgroundColor: isUser ? Colors.white.withValues(alpha: 0.2) : Theme.of(context).colorScheme.primaryContainer,
                       foregroundColor: isUser ? Colors.white : Theme.of(context).colorScheme.onPrimaryContainer,
                    ),
                 )
@@ -891,7 +891,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                   color: Theme.of(context).colorScheme.surface,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       blurRadius: 10,
                       offset: const Offset(0, -2),
                     ),

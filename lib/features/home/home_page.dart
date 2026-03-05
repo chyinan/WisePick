@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:developer' as dev;
 import 'dart:io' show Platform;
 
@@ -24,9 +24,6 @@ import '../admin/admin_settings_page.dart';
 import '../settings/ai_provider_settings_page.dart';
 import '../chat/chat_page.dart';
 import '../../core/storage/hive_config.dart';
-
-const String _defaultAdminPasswordHash =
-    'b054968e7426730e9a005f1430e6d5cd70a03b08370a82323f9a9b231cf270be';
 
 /// 应用主页 - 包含响应式导航框架
 class HomePage extends ConsumerStatefulWidget {
@@ -80,7 +77,9 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
       throw Exception('密码不能为空');
     }
     final inputHash = sha256.convert(utf8.encode(trimmed)).toString();
-    if (inputHash == _defaultAdminPasswordHash) {
+    final box = await HiveConfig.getBox(HiveConfig.settingsBox);
+    final storedHash = box.get(HiveConfig.adminPasswordHashKey) as String?;
+    if (storedHash != null && inputHash == storedHash) {
       return true;
     }
     throw Exception('密码错误');
@@ -749,7 +748,7 @@ class _DesktopConversationPanelState extends ConsumerState<_DesktopConversationP
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               border: Border(
-                bottom: BorderSide(color: theme.dividerColor.withOpacity(0.5)),
+                bottom: BorderSide(color: theme.dividerColor.withValues(alpha: 0.5)),
               ),
             ),
             child: Row(
@@ -783,7 +782,7 @@ class _DesktopConversationPanelState extends ConsumerState<_DesktopConversationP
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: theme.dividerColor.withOpacity(0.5)),
+                  borderSide: BorderSide(color: theme.dividerColor.withValues(alpha: 0.5)),
                 ),
               ),
               style: theme.textTheme.bodyMedium,
@@ -821,7 +820,7 @@ class _DesktopConversationPanelState extends ConsumerState<_DesktopConversationP
                             padding: const EdgeInsets.only(bottom: 4),
                             child: Material(
                               color: isSelected 
-                                  ? theme.colorScheme.primaryContainer.withOpacity(0.5)
+                                  ? theme.colorScheme.primaryContainer.withValues(alpha: 0.5)
                                   : Colors.transparent,
                               borderRadius: BorderRadius.circular(8),
                               child: InkWell(

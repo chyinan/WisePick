@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wisepick_dart_version/features/products/product_model.dart';
@@ -43,13 +43,13 @@ class CartSummaryBar extends ConsumerWidget {
         color: theme.colorScheme.surface,
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha: 0.08),
               blurRadius: 10,
               offset: const Offset(0, -2))
         ],
         border: Border(
             top: BorderSide(
-                color: theme.colorScheme.outlineVariant.withOpacity(0.5))),
+                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5))),
       ),
       child: isDesktop
           ? _buildDesktopLayout(context, ref, theme, total, count, savings)
@@ -122,7 +122,7 @@ class CartSummaryBar extends ConsumerWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primaryContainer.withOpacity(0.3),
+                  color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(

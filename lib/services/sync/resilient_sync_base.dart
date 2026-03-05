@@ -1,7 +1,6 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:uuid/uuid.dart';
 
 import '../../core/resilience/resilience.dart';
 import '../../core/logging/app_logger.dart';
@@ -168,7 +167,6 @@ abstract class ResilientSyncBase {
 
   final String serviceName;
   final ModuleLogger _logger;
-  final Uuid _uuid = const Uuid();
   final RetryExecutor _retryExecutor;
 
   Box? _pendingOpsBox;

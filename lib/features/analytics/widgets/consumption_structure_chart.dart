@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../analytics_models.dart';
 
@@ -202,7 +202,7 @@ class _ConsumptionStructureChartState extends State<ConsumptionStructureChart> {
                 drawVerticalLine: false,
                 horizontalInterval: 10,
                 getDrawingHorizontalLine: (value) => FlLine(
-                  color: colorScheme.outlineVariant.withOpacity(0.3),
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.3),
                   strokeWidth: 1,
                 ),
               ),

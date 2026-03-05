@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -66,7 +66,7 @@ class AiIntroductionSection extends StatelessWidget {
       decoration: BoxDecoration(
         color: cs.surfaceContainerLow,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: cs.outlineVariant.withOpacity(0.5)),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -154,7 +154,7 @@ class AiIntroductionSection extends StatelessWidget {
                           const SizedBox(height: 4),
                           Text('请稍候，AI 正在分析商品信息',
                               style: theme.textTheme.bodySmall?.copyWith(
-                                  color: cs.onSurfaceVariant.withOpacity(0.7))),
+                                  color: cs.onSurfaceVariant.withValues(alpha: 0.7))),
                         ],
                       ),
                     )
@@ -184,20 +184,20 @@ class AiIntroductionSection extends StatelessWidget {
                             margin: const EdgeInsets.fromLTRB(24, 8, 24, 20),
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: cs.surfaceContainerHighest.withOpacity(0.5),
+                              color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(
                               children: [
                                 Icon(Icons.info_outline,
                                     size: 14,
-                                    color: cs.onSurfaceVariant.withOpacity(0.8)),
+                                    color: cs.onSurfaceVariant.withValues(alpha: 0.8)),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
                                     'AI 生成内容不保证真实准确性，请自行仔细核对',
                                     style: theme.textTheme.bodySmall?.copyWith(
-                                        color: cs.onSurfaceVariant.withOpacity(0.8),
+                                        color: cs.onSurfaceVariant.withValues(alpha: 0.8),
                                         fontSize: 11),
                                   ),
                                 ),

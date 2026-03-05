@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:flutter/material.dart';
 
@@ -81,7 +81,7 @@ class _ProductImageGalleryState extends State<ProductImageGallery> {
     await showGeneralDialog<void>(
       context: context,
       barrierDismissible: true,
-      barrierColor: Colors.black.withOpacity(0.92),
+      barrierColor: Colors.black.withValues(alpha: 0.92),
       barrierLabel: '关闭预览',
       transitionDuration: const Duration(milliseconds: 180),
       pageBuilder: (ctx, _, __) {

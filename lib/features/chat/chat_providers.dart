@@ -16,9 +16,12 @@ import 'streaming_text_filter.dart';
 import 'keyword_extractor.dart';
 import '../products/product_model.dart';
 
+/// 单例 ApiClient Provider，确保断路器状态跨请求保持
+final apiClientProvider = Provider<ApiClient>((ref) => ApiClient());
+
 /// 提供 ChatService 的 Provider
 final chatServiceProvider = Provider<ChatService>((ref) {
-  return ChatService(client: ApiClient());
+  return ChatService(client: ref.watch(apiClientProvider));
 });
 
 /// 聊天状态（结构化消息列表）

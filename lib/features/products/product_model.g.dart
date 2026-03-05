@@ -26,10 +26,10 @@ class ProductModelAdapter extends TypeAdapter<ProductModel> {
       imageUrl: (fields[7] as String?) ?? '',
       sales: (fields[8] as int?) ?? 0,
       rating: (fields[9] as double?) ?? 0.0,
-      link: (fields[10] as String?) ?? '',
-      commission: (fields[11] as double?) ?? 0.0,
-      description: (fields[12] as String?) ?? '',
-      shopTitle: (fields[13] as String?) ?? '',
+      shopTitle: (fields[10] as String?) ?? '',
+      link: (fields[11] as String?) ?? '',
+      commission: (fields[12] as double?) ?? 0.0,
+      description: (fields[13] as String?) ?? '',
     );
   }
 
@@ -58,13 +58,13 @@ class ProductModelAdapter extends TypeAdapter<ProductModel> {
       ..writeByte(9)
       ..write(obj.rating)
       ..writeByte(10)
-      ..write(obj.link)
+      ..write(obj.shopTitle)
       ..writeByte(11)
-      ..write(obj.commission)
+      ..write(obj.link)
       ..writeByte(12)
-      ..write(obj.description)
+      ..write(obj.commission)
       ..writeByte(13)
-      ..write(obj.shopTitle);
+      ..write(obj.description);
   }
 
   @override

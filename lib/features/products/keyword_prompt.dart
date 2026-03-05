@@ -1,4 +1,4 @@
-import 'dart:developer' as dev;
+﻿import 'dart:developer' as dev;
 
 import 'package:flutter/material.dart';
 
@@ -48,7 +48,7 @@ class _KeywordPromptState extends State<KeywordPrompt> {
             if (isLoading)
               Positioned.fill(
                 child: Container(
-                  decoration: BoxDecoration(color: Colors.black.withOpacity(0.18), borderRadius: BorderRadius.circular(6)),
+                  decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(6)),
                   child: const Center(
                     child: SizedBox(
                       width: 18,

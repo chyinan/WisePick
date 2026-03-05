@@ -30,10 +30,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  http: ^1.2.1 # Add http package for API calls
   cupertino_icons: ^1.0.2
   flutter_riverpod: ^2.5.1
-  riverpod_annotation: ^2.3.5
   dio: ^5.1.2
   crypto: ^3.0.7
   hive: ^2.2.3

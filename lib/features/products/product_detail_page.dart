@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as dev;
 
@@ -748,9 +748,9 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                       return Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: color.withOpacity(0.1),
+                          color: color.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: color.withOpacity(0.3)),
+                          border: Border.all(color: color.withValues(alpha: 0.3)),
                         ),
                         child: Text(
                           '来自 $text',

@@ -81,6 +81,7 @@ server/.env
 
 # BMAD related folders
 .bmad-core/
+_bmad
 **/bmad-core/
 bmad-core*/
 **/bmad-core*/
@@ -93,4 +94,4 @@ server/.local-chrome/
 server/verify_db.bat
 /.local-chrome
 .claude
-_bmad
+_bmadscripts/

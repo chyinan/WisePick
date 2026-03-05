@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 /// Production-grade streaming text widget.
 ///
@@ -104,11 +104,11 @@ class _StreamingTextState extends State<StreamingText>
                 ' ▍',
                 style: style?.copyWith(
                   fontWeight: FontWeight.w300,
-                  color: style.color?.withOpacity(0.6) ??
+                  color: style.color?.withValues(alpha: 0.6) ??
                       Theme.of(context)
                           .colorScheme
                           .onSurface
-                          .withOpacity(0.6),
+                          .withValues(alpha: 0.6),
                 ),
               ),
             );

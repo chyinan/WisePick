@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import '../products/product_model.dart';
 import '../price_history/price_history_service.dart';
 import '../../core/storage/hive_config.dart';
@@ -76,16 +74,6 @@ class CartService {
   Future<void> removeItem(String productId) async {
     final box = await HiveConfig.getBox(boxName);
     await box.delete(productId);
-    // 同步删除 favorites 中的收藏（若购物车删除时希望取消收藏）
-    try {
-      final favBox = await HiveConfig.getBox(HiveConfig.favoritesBox);
-      if (favBox.containsKey(productId)) {
-        await favBox.delete(productId);
-      }
-    } catch (e) {
-      log('Failed to remove favorite for $productId: $e',
-          name: 'CartService');
-    }
   }
 
   Future<void> clear() async {

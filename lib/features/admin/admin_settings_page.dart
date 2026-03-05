@@ -1,4 +1,4 @@
-import 'dart:developer' as dev;
+﻿import 'dart:developer' as dev;
 
 import 'package:flutter/foundation.dart' show kDebugMode, kProfileMode;
 import 'package:flutter/material.dart';
@@ -22,15 +22,15 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
   final TextEditingController _baseUrlController = TextEditingController();
   final TextEditingController _backendBaseController = TextEditingController();
   final TextEditingController _modelController = TextEditingController();
-  List<String> _models = [];
-  bool _loadingModels = false;
-  String? _modelError;
   bool _embedPrompts = true;
   bool _debugAiResponse = false;
   bool _copyFullReturn = false;
   bool _useMockAi = false;
   bool _showProductJson = false;
   String _maxTokens = 'unlimited';
+  List<String> _models = [];
+  bool _loadingModels = false;
+  String? _modelError;
 
   @override
   void initState() {
@@ -116,7 +116,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                         controller: _backendBaseController,
                         decoration: InputDecoration(
                           filled: true,
-                          fillColor: colorScheme.surfaceVariant,
+                          fillColor: colorScheme.surfaceContainerHighest,
                           hintText: 'http://localhost:9527 或 https://api.yourdomain.com',
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
@@ -127,7 +127,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                       const SizedBox(height: 8),
                       DropdownButtonFormField<String>(
                         isExpanded: true,
-                        value: _maxTokens,
+                        initialValue: _maxTokens,
                         items: ['unlimited', '300', '800', '1000', '2000']
                             .map((v) => DropdownMenuItem(value: v, child: Text(v == 'unlimited' ? '不限 (unlimited)' : v)))
                             .toList(),
@@ -136,7 +136,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                         },
                         decoration: InputDecoration(
                           filled: true,
-                          fillColor: colorScheme.surfaceVariant,
+                          fillColor: colorScheme.surfaceContainerHighest,
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         ),

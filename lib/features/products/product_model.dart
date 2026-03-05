@@ -27,13 +27,13 @@ class ProductModel {
   final int sales;
   @HiveField(9)
   final double rating; // 0.0 - 1.0
-  @HiveField(13)
-  final String shopTitle; // 商店/店铺名（来自淘宝的 shop_title 或 item_basic_info.shop_title）
   @HiveField(10)
-  final String link; // 推广链接或口令
+  final String shopTitle; // 商店/店铺名（来自淘宝的 shop_title 或 item_basic_info.shop_title）
   @HiveField(11)
-  final double commission;
+  final String link; // 推广链接或口令
   @HiveField(12)
+  final double commission;
+  @HiveField(13)
   final String description;
   /// 构造函数兼容新/旧字段：你可以传入新模型字段或者旧的 `description/sourceUrl/reviewCount`，都会尽量映射
   ProductModel({
@@ -66,6 +66,40 @@ class ProductModel {
         commission = commission ?? 0.0,
         shopTitle = shopTitle ?? '',
         description = description ?? '';
+
+  ProductModel copyWith({
+    String? id,
+    String? platform,
+    String? title,
+    double? price,
+    double? originalPrice,
+    double? coupon,
+    double? finalPrice,
+    String? imageUrl,
+    int? sales,
+    double? rating,
+    String? shopTitle,
+    String? link,
+    double? commission,
+    String? description,
+  }) {
+    return ProductModel(
+      id: id ?? this.id,
+      platform: platform ?? this.platform,
+      title: title ?? this.title,
+      price: price ?? this.price,
+      originalPrice: originalPrice ?? this.originalPrice,
+      coupon: coupon ?? this.coupon,
+      finalPrice: finalPrice ?? this.finalPrice,
+      imageUrl: imageUrl ?? this.imageUrl,
+      sales: sales ?? this.sales,
+      rating: rating ?? this.rating,
+      shopTitle: shopTitle ?? this.shopTitle,
+      link: link ?? this.link,
+      commission: commission ?? this.commission,
+      description: description ?? this.description,
+    );
+  }
 
   /// 从 Map 解析（便于 Hive / JSON）
   factory ProductModel.fromMap(Map<String, dynamic> m) {

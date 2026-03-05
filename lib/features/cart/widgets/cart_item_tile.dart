@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wisepick_dart_version/features/products/product_model.dart';
 import 'package:wisepick_dart_version/features/products/product_detail_page.dart';
@@ -58,13 +58,13 @@ class _CartItemTileState extends ConsumerState<CartItemTile> {
         duration: const Duration(milliseconds: 150),
         decoration: BoxDecoration(
           color: _isHovered
-              ? theme.colorScheme.surfaceContainerHighest.withOpacity(0.5)
+              ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5)
               : (isSelected
-                  ? theme.colorScheme.primaryContainer.withOpacity(0.1)
+                  ? theme.colorScheme.primaryContainer.withValues(alpha: 0.1)
                   : null),
           border: Border(
               bottom: BorderSide(
-                  color: theme.colorScheme.outlineVariant.withOpacity(0.3))),
+                  color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3))),
         ),
         child: InkWell(
           onTap: () => Navigator.push(context,
@@ -112,10 +112,10 @@ class _CartItemTileState extends ConsumerState<CartItemTile> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: platformColor.withOpacity(0.1),
+                              color: platformColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(4),
                               border: Border.all(
-                                  color: platformColor.withOpacity(0.5),
+                                  color: platformColor.withValues(alpha: 0.5),
                                   width: 0.5),
                             ),
                             child: Text(platformName,
@@ -278,7 +278,7 @@ class CartQuantityButton extends StatelessWidget {
               size: 16,
               color: onPressed != null
                   ? theme.colorScheme.onSurface
-                  : theme.colorScheme.onSurface.withOpacity(0.3)),
+                  : theme.colorScheme.onSurface.withValues(alpha: 0.3)),
         ),
       ),
     );

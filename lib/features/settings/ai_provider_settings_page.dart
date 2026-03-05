@@ -1,4 +1,4 @@
-import 'dart:developer' as dev;
+﻿import 'dart:developer' as dev;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -351,7 +351,7 @@ class _AiProviderSettingsPageState extends State<AiProviderSettingsPage> {
           children: [
             // 提示信息卡片
             Card(
-              color: colorScheme.primaryContainer.withOpacity(0.3),
+              color: colorScheme.primaryContainer.withValues(alpha: 0.3),
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -533,7 +533,7 @@ class _AiProviderSettingsPageState extends State<AiProviderSettingsPage> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: colorScheme.errorContainer.withOpacity(0.3),
+                        color: colorScheme.errorContainer.withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
@@ -559,7 +559,7 @@ class _AiProviderSettingsPageState extends State<AiProviderSettingsPage> {
                   if (_models.isNotEmpty)
                     DropdownButtonFormField<String>(
                       isExpanded: true,
-                      value: _models.contains(_modelController.text)
+                      initialValue: _models.contains(_modelController.text)
                           ? _modelController.text
                           : null,
                       items: _models
@@ -669,8 +669,8 @@ class _AiProviderSettingsPageState extends State<AiProviderSettingsPage> {
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: _connectionTestSuccess == true
-                            ? Colors.green.withOpacity(0.1)
-                            : colorScheme.errorContainer.withOpacity(0.3),
+                            ? Colors.green.withValues(alpha: 0.1)
+                            : colorScheme.errorContainer.withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(

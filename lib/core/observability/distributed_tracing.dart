@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:developer' as dev;
 import 'dart:math';
 
@@ -229,8 +229,6 @@ class Tracer {
   final List<Span> _pendingSpans = [];
   Timer? _exportTimer;
   bool enabled = true;
-
-  static final _currentContext = Zone.current[#traceContext] as TraceContext?;
 
   /// Get current trace context from zone
   TraceContext? get currentContext => Zone.current[#traceContext] as TraceContext?;

@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:developer' as dev;
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
@@ -324,7 +324,7 @@ class AnalyticsService {
           pw.SizedBox(height: 8),
           if (report.consumptionStructure.categoryDistribution.isNotEmpty) ...[
             pw.Text('品类分布:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-            pw.Table.fromTextArray(
+            pw.TableHelper.fromTextArray(
               headers: ['品类', '数量', '金额', '占比'],
               data: report.consumptionStructure.categoryDistribution.map((c) => [
                 c.category,
@@ -337,7 +337,7 @@ class AnalyticsService {
           ],
           if (report.consumptionStructure.priceRangeDistribution.isNotEmpty) ...[
             pw.Text('价格区间分布:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-            pw.Table.fromTextArray(
+            pw.TableHelper.fromTextArray(
               headers: ['价格区间', '数量', '占比'],
               data: report.consumptionStructure.priceRangeDistribution.map((p) => [
                 p.range,
@@ -349,7 +349,7 @@ class AnalyticsService {
           ],
           if (report.consumptionStructure.platformPreference.isNotEmpty) ...[
             pw.Text('平台分布:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-            pw.Table.fromTextArray(
+            pw.TableHelper.fromTextArray(
               headers: ['平台', '数量', '金额', '占比'],
               data: report.consumptionStructure.platformPreference.map((p) => [
                 p.displayName,

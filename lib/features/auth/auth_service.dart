@@ -619,7 +619,7 @@ class _AuthInterceptor extends Interceptor {
         opts.headers['Authorization'] =
             'Bearer ${TokenManager.instance.accessToken}';
 
-        final response = await Dio().fetch(opts);
+        final response = await _authService._dio.fetch(opts);
         return handler.resolve(response);
       }
     } catch (e, st) {

@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import '../logging/app_logger.dart';
 import '../observability/metrics_collector.dart';
@@ -232,7 +232,6 @@ class DashboardSnapshot {
 class ReliabilityDashboard {
   final ModuleLogger _logger;
   final List<ReliabilityAlert> _alerts = [];
-  final Map<String, Set<String>> _acknowledgedAlerts = {};
 
   Timer? _refreshTimer;
   DashboardSnapshot? _latestSnapshot;

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wisepick_dart_version/core/error/app_error.dart';
 import 'package:wisepick_dart_version/widgets/error_snackbar.dart';
@@ -722,7 +722,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
   Widget _buildSecurityQuestionDropdown(ThemeData theme, AuthState authState) {
     return DropdownButtonFormField<String>(
-      value: _selectedQuestion,
+      initialValue: _selectedQuestion,
       isExpanded: true,
       decoration: InputDecoration(
         labelText: '安全问题 *',

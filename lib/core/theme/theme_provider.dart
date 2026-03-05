@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../storage/hive_config.dart';
 
@@ -7,7 +7,6 @@ import '../storage/hive_config.dart';
 /// 支持 light/dark/system 三种模式
 /// 状态持久化到 Hive
 class ThemeNotifier extends StateNotifier<ThemeMode> {
-  static const String _boxName = 'settings';
   static const String _key = 'theme_mode';
 
   ThemeNotifier() : super(ThemeMode.system) {

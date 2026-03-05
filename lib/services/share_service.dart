@@ -9,7 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
 
 import '../core/error/app_error_mapper.dart';
 import '../features/products/product_model.dart';
@@ -104,11 +104,15 @@ class ShareService {
         normalizedUrl = 'https:$normalizedUrl';
       }
       
-      final response = await http
-          .get(Uri.parse(normalizedUrl))
-          .timeout(timeout);
-      if (response.statusCode == 200) {
-        return response.bodyBytes;
+      final response = await Dio().get<List<int>>(
+        normalizedUrl,
+        options: Options(
+          responseType: ResponseType.bytes,
+          receiveTimeout: timeout,
+        ),
+      );
+      if (response.statusCode == 200 && response.data != null) {
+        return Uint8List.fromList(response.data!);
       }
     } on TimeoutException {
       debugPrint('下载图片超时: $imageUrl');

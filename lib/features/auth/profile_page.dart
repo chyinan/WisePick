@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wisepick_dart_version/core/error/app_error.dart';
 import 'package:wisepick_dart_version/widgets/error_snackbar.dart';
@@ -150,7 +150,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 Divider(
                   height: 1,
                   indent: 56,
-                  color: theme.colorScheme.outlineVariant.withOpacity(0.5),
+                  color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
                 ),
             ],
           );

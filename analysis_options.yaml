@@ -31,20 +31,13 @@ analyzer:
     use_super_parameters: ignore
     unnecessary_const: ignore
     avoid_relative_lib_imports: ignore
-    # 忽略已弃用 API 的警告（withOpacity 等）
-    deprecated_member_use: ignore
-    # 降级一些 warnings 为 info（这些不影响功能）
-    unused_field: ignore
-    unused_element: ignore
     unused_local_variable: ignore
     unnecessary_cast: ignore
     unnecessary_null_comparison: ignore
     dead_code: ignore
-    # 忽略一些额外的 warnings（误报或可接受的代码模式）
     unnecessary_type_check: ignore
     dead_null_aware_expression: ignore
     unused_catch_clause: ignore
-    # 忽略 TODO 注释的警告（这些是计划中的功能，不是错误）
     todo: ignore
   exclude:
     # 排除测试文件（暂时）

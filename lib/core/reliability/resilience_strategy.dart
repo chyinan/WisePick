@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import '../logging/app_logger.dart';
 import '../observability/metrics_collector.dart';
@@ -682,7 +682,7 @@ class RetryStrategy extends ResilienceStrategy {
 class StrategyPipeline {
   final String name;
   final List<ResilienceStrategy> _strategies = [];
-  final ModuleLogger _logger;
+  late final dynamic _logger;
 
   StrategyPipeline({required this.name})
       : _logger = AppLogger.instance.module('StrategyPipeline:$name');

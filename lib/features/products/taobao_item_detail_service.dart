@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
 
 import '../../core/config.dart';
 
@@ -47,6 +47,7 @@ class TaobaoItemDetail {
 class TaobaoItemDetailService {
   static const _host = 'gw.api.taobao.com';
   static const _path = '/router/rest';
+  final Dio _dio = Dio();
 
   Future<TaobaoItemDetail> fetchDetail(String itemId) async {
     if (Config.taobaoAppKey.startsWith('YOUR_') ||
@@ -65,16 +66,18 @@ class TaobaoItemDetailService {
       'timestamp': _formatTimestamp(DateTime.now()),
       'v': '2.0',
     };
-    final uri =
-        Uri.https(_host, _path, {...params, 'sign': _generateSign(params)});
+    final uri = Uri.https(_host, _path, {...params, 'sign': _generateSign(params)});
 
-    final response = await http.get(uri).timeout(const Duration(seconds: 20));
+    final response = await _dio.getUri<String>(
+      uri,
+      options: Options(receiveTimeout: const Duration(seconds: 20)),
+    );
     if (response.statusCode != 200) {
       throw Exception('淘宝接口返回错误 ${response.statusCode}');
     }
 
     final payload =
-        jsonDecode(response.body) as Map<String, dynamic>? ?? const {};
+        jsonDecode(response.data ?? '{}') as Map<String, dynamic>? ?? const {};
 
     if (payload.containsKey('error_response')) {
       final err = payload['error_response'] as Map<String, dynamic>;

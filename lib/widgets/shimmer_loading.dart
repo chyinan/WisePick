@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 /// Shimmer 闪烁效果组件
 /// 
@@ -50,7 +50,7 @@ class _ShimmerEffectState extends State<ShimmerEffect>
   @override
   Widget build(BuildContext context) {
     final baseColor = widget.baseColor ??
-        Theme.of(context).colorScheme.surfaceVariant;
+        Theme.of(context).colorScheme.surfaceContainerHighest;
     final highlightColor = widget.highlightColor ??
         Theme.of(context).colorScheme.surface;
 
@@ -103,7 +103,7 @@ class SkeletonBox extends StatelessWidget {
         width: width,
         height: height,
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceVariant,
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(borderRadius),
         ),
       ),
@@ -128,7 +128,7 @@ class SkeletonCircle extends StatelessWidget {
         width: diameter,
         height: diameter,
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceVariant,
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
           shape: BoxShape.circle,
         ),
       ),
@@ -247,7 +247,7 @@ class MessageBubbleSkeleton extends StatelessWidget {
               constraints: const BoxConstraints(maxWidth: 600),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceVariant,
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 borderRadius: isUser
                     ? const BorderRadius.only(
                         topLeft: Radius.circular(16),

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../features/products/product_model.dart';
 import 'cached_product_image.dart';
@@ -176,7 +176,7 @@ class _ProductCardState extends ConsumerState<ProductCard>
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: widget.onTap,
-        hoverColor: theme.colorScheme.primary.withOpacity(0.04),
+        hoverColor: theme.colorScheme.primary.withValues(alpha: 0.04),
         child: SizedBox(
           height: 120, // 固定高度，保持整齐
           child: Row(
@@ -231,9 +231,9 @@ class _ProductCardState extends ConsumerState<ProductCard>
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: platformColor.withOpacity(0.1),
+                              color: platformColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: platformColor.withOpacity(0.5), width: 0.5),
+                              border: Border.all(color: platformColor.withValues(alpha: 0.5), width: 0.5),
                             ),
                             child: Text(
                               platformName,
@@ -289,7 +289,7 @@ class _ProductCardState extends ConsumerState<ProductCard>
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: widget.onTap,
-        hoverColor: theme.colorScheme.primary.withOpacity(0.04),
+        hoverColor: theme.colorScheme.primary.withValues(alpha: 0.04),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -365,9 +365,9 @@ class _ProductCardState extends ConsumerState<ProductCard>
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: platformColor.withOpacity(0.1),
+                                color: platformColor.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(4),
-                                border: Border.all(color: platformColor.withOpacity(0.5), width: 0.5),
+                                border: Border.all(color: platformColor.withValues(alpha: 0.5), width: 0.5),
                               ),
                               child: Text(
                                 platformName,
@@ -427,7 +427,7 @@ class _ProductCardState extends ConsumerState<ProductCard>
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: InkWell(
         onTap: widget.onTap,
-        hoverColor: theme.colorScheme.primary.withOpacity(0.04),
+        hoverColor: theme.colorScheme.primary.withValues(alpha: 0.04),
         child: SizedBox(
           height: 100, // 更紧凑的高度
           child: Row(
@@ -483,9 +483,9 @@ class _ProductCardState extends ConsumerState<ProductCard>
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                             decoration: BoxDecoration(
-                              color: platformColor.withOpacity(0.1),
+                              color: platformColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(3),
-                              border: Border.all(color: platformColor.withOpacity(0.5), width: 0.5),
+                              border: Border.all(color: platformColor.withValues(alpha: 0.5), width: 0.5),
                             ),
                             child: Text(
                               platformName,

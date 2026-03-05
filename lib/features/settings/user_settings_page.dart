@@ -1,4 +1,4 @@
-import 'dart:developer' as dev;
+﻿import 'dart:developer' as dev;
 
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
@@ -151,7 +151,7 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
                       controller: _openAiController,
                       decoration: InputDecoration(
                         filled: true,
-                        fillColor: colorScheme.surfaceVariant,
+                        fillColor: colorScheme.surfaceContainerHighest,
                         hintText: 'sk-...',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
@@ -175,7 +175,7 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
                       controller: _baseUrlController,
                       decoration: InputDecoration(
                         filled: true,
-                        fillColor: colorScheme.surfaceVariant,
+                        fillColor: colorScheme.surfaceContainerHighest,
                         hintText: 'https://api.openai.com/v1',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
@@ -218,7 +218,7 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
                             controller: _modelController,
                             decoration: InputDecoration(
                               filled: true,
-                              fillColor: colorScheme.surfaceVariant,
+                              fillColor: colorScheme.surfaceContainerHighest,
                               hintText: '手动输入模型，例如 gpt-3.5-turbo',
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
@@ -235,7 +235,7 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
                     else
                       DropdownButtonFormField<String>(
                         isExpanded: true,
-                        value: _models.contains(_modelController.text)
+                        initialValue: _models.contains(_modelController.text)
                             ? _modelController.text
                             : null,
                         items: _models
@@ -251,7 +251,7 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
                         },
                         decoration: InputDecoration(
                           filled: true,
-                          fillColor: colorScheme.surfaceVariant,
+                          fillColor: colorScheme.surfaceContainerHighest,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(10),
                             borderSide: BorderSide.none,

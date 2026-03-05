@@ -277,7 +277,16 @@ class ProductService {
       // If product is from PDD, ask backend to generate PDD promotion link
       if (p.platform == 'pdd') {
         try {
-          final signResp = await _client.post('$backend/sign/pdd', data: {'goods_sign_list': [p.id], 'custom_parameters': '{"uid":"chyinan"}'});
+          // 从设置中读取用户配置的 PDD uid，未配置则传空字符串
+          String pddUid = '';
+          try {
+            final settingsBox = await HiveConfig.getBox(HiveConfig.settingsBox);
+            pddUid = (settingsBox.get(HiveConfig.pddUidKey) as String?) ?? '';
+          } catch (e, st) {
+            log('Error reading PDD uid from settings: $e', name: 'ProductService', error: e, stackTrace: st);
+          }
+          final customParams = pddUid.isNotEmpty ? '{"uid":"$pddUid"}' : '';
+          final signResp = await _client.post('$backend/sign/pdd', data: {'goods_sign_list': [p.id], if (customParams.isNotEmpty) 'custom_parameters': customParams});
           if (signResp.data != null && signResp.data is Map) {
             final m = Map<String, dynamic>.from(signResp.data as Map);
             String? link;

@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:math' as math;
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
@@ -874,7 +874,6 @@ class ReliabilityDataCollector {
   /// 混沌注入统计
   int _chaosLatencyInjections = 0;
   int _chaosErrorInjections = 0;
-  final _chaosRng = math.Random();
 
   /// 启动混沌实验
   bool startChaosExperiment(String experimentId) {
