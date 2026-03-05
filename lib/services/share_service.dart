@@ -603,7 +603,6 @@ class ShareOptionsDialog extends StatelessWidget {
             title: const Text('文本链接分享'),
             subtitle: const Text('复制商品标题和推广链接'),
             onTap: () async {
-              Navigator.of(context).pop();
               await _shareTextLink(context);
             },
           ),
@@ -619,7 +618,9 @@ class ShareOptionsDialog extends StatelessWidget {
   }
 
   Future<void> _shareTextLink(BuildContext context) async {
-    // 显示加载中
+    // 先关闭 ShareOptionsDialog，再显示加载中
+    Navigator.of(context).pop();
+    if (!context.mounted) return;
     showDialog(
       context: context,
       barrierDismissible: false,

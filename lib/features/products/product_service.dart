@@ -277,35 +277,33 @@ class ProductService {
       // If product is from PDD, ask backend to generate PDD promotion link
       if (p.platform == 'pdd') {
         try {
-          // Do not pass pid from the client app — let backend use its configured PDD_PID
           final signResp = await _client.post('$backend/sign/pdd', data: {'goods_sign_list': [p.id], 'custom_parameters': '{"uid":"chyinan"}'});
           if (signResp.data != null && signResp.data is Map) {
             final m = Map<String, dynamic>.from(signResp.data as Map);
-            String? link = (m['clickURL'] ?? m['clickUrl'] ?? m['data'] ?? m['url'])?.toString();
-            if ((link == null || link.isEmpty) && m['raw'] is Map) {
-              final raw = m['raw'] as Map<String, dynamic>;
-              try {
-                if (raw.containsKey('goods_promotion_url_generate_response')) {
-                  final g = raw['goods_promotion_url_generate_response'];
-                  if (g is Map && g['goods_promotion_url_list'] is List && (g['goods_promotion_url_list'] as List).isNotEmpty) {
-                    final entry = (g['goods_promotion_url_list'] as List).first as Map<String, dynamic>;
-                    link = (entry['mobile_url'] ?? entry['url'] ?? entry['short_url'] ?? entry['mobile_short_url'])?.toString();
-                  }
-                }
-              } catch (e, st) { log('ProductService cache/parse error: $e', name: 'ProductService', error: e, stackTrace: st); }
-            }
+            String? link;
+
+            // 响应结构：{ goods_promotion_url_generate_response: { goods_promotion_url_list: [...] } }
+            try {
+              final resp = m['goods_promotion_url_generate_response'] ?? m['response']?['goods_promotion_url_generate_response'];
+              if (resp is Map && resp['goods_promotion_url_list'] is List && (resp['goods_promotion_url_list'] as List).isNotEmpty) {
+                final entry = (resp['goods_promotion_url_list'] as List).first as Map<String, dynamic>;
+                link = (entry['mobile_short_url'] ?? entry['short_url'] ?? entry['mobile_url'] ?? entry['url'])?.toString();
+              }
+            } catch (e, st) { log('ProductService PDD parse error: $e', name: 'ProductService', error: e, stackTrace: st); }
+
             if (link != null && link.isNotEmpty) {
               final expiry = now + 30 * 60 * 1000;
               _promoCache[p.id] = {'link': link, 'expiry': expiry};
               try {
-                await HiveConfig.getBox(HiveConfig.promoCacheBox);
                 final box = await HiveConfig.getBox(HiveConfig.promoCacheBox);
                 await box.put(p.id, {'link': link, 'expiry': expiry});
-              } catch (e, st) { log('ProductService cache/parse error: $e', name: 'ProductService', error: e, stackTrace: st); }
+              } catch (e, st) { log('ProductService cache write error: $e', name: 'ProductService', error: e, stackTrace: st); }
               return link;
             }
           }
-        } catch (e, st) { log('ProductService cache/parse error: $e', name: 'ProductService', error: e, stackTrace: st); }
+        } catch (e, st) { log('ProductService PDD sign error: $e', name: 'ProductService', error: e, stackTrace: st); }
+        // PDD 获取失败时直接返回商品页链接，不继续走其他平台的逻辑
+        return 'https://mobile.yangkeduo.com/goods.html?goods_id=${p.id}';
       }
 
       // Try to call backend Taobao convert endpoint instead of veapi
