@@ -11,7 +11,7 @@ include: package:flutter_lints/flutter.yaml
 
 analyzer:
   errors:
-    # 忽略 info 级别的问题
+    # 团队风格选择：关闭对应 linter rule，同时在 errors 中设为 ignore
     avoid_print: ignore
     prefer_interpolation_to_compose_strings: ignore
     curly_braces_in_flow_control_structures: ignore
@@ -19,26 +19,19 @@ analyzer:
     unnecessary_string_interpolations: ignore
     prefer_conditional_assignment: ignore
     prefer_null_aware_operators: ignore
+    # 文档注释格式
     dangling_library_doc_comments: ignore
-    use_build_context_synchronously: ignore
-    no_leading_underscores_for_local_identifiers: ignore
-    unnecessary_string_escapes: ignore
-    control_flow_in_finally: ignore
-    unnecessary_null_in_if_null_operators: ignore
     unintended_html_in_doc_comment: ignore
-    valid_regexps: ignore
-    unnecessary_import: ignore
-    use_super_parameters: ignore
-    unnecessary_const: ignore
-    avoid_relative_lib_imports: ignore
-    unused_local_variable: ignore
-    unnecessary_cast: ignore
-    unnecessary_null_comparison: ignore
-    dead_code: ignore
-    unnecessary_type_check: ignore
-    dead_null_aware_expression: ignore
-    unused_catch_clause: ignore
+    # 允许 TODO 注释
     todo: ignore
+    # 异步上下文：已在各调用处评估安全性
+    use_build_context_synchronously: ignore
+    # finally 中的控制流：已知场景
+    control_flow_in_finally: ignore
+    # 死代码：部分为预留逻辑
+    dead_code: ignore
+    # catch 子句：部分为占位
+    unused_catch_clause: ignore
   exclude:
     # 排除测试文件（暂时）
     - "test/**"
@@ -46,6 +39,9 @@ analyzer:
     - "**/*.g.dart"
     - "**/*.freezed.dart"
     - "lib/generated/**"
+    # 排除子项目（有独立 analysis_options）
+    - "server/**"
+    - "wisepick_admin/**"
 
 linter:
   # The lint rules applied to this project can be customized in the

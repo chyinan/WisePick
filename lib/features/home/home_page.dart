@@ -179,11 +179,13 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
         _currentIndex = idx;
       });
 
+  // ignore: unused_element
   Future<bool> _getPriceNotificationEnabled() async {
     final box = await HiveConfig.getBox(HiveConfig.settingsBox);
     return box.get(HiveConfig.priceNotificationEnabledKey, defaultValue: true) as bool;
   }
 
+  // ignore: unused_element
   Future<void> _setPriceNotificationEnabled(bool enabled) async {
     final box = await HiveConfig.getBox(HiveConfig.settingsBox);
     await box.put(HiveConfig.priceNotificationEnabledKey, enabled);
@@ -254,6 +256,7 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
   @override
   Widget build(BuildContext context) {
     // 在主页 build 里 watch authStateProvider，确保 Provider 在应用启动时就被激活
+    // ignore: unused_local_variable
     final authStateInMain = ref.watch(authStateProvider);
 
     final Widget body;

@@ -8,7 +8,7 @@ import '../core/error/app_error_mapper.dart';
 /// Accepts **any** [Object] as [error] and maps it via [AppErrorMapper].
 void showErrorSnackBar(BuildContext context, Object error) {
   final appError =
-      error is AppError ? error as AppError : AppErrorMapper.mapException(error);
+      error is AppError ? error : AppErrorMapper.mapException(error);
 
   if (!context.mounted) return;
 

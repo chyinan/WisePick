@@ -664,13 +664,13 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           final fTb = svc.searchWithMeta(kw, platform: 'taobao');
           final fPdd = svc.searchWithMeta(kw, platform: 'pdd');
 
-          Map jdMeta = {};
-          Map tbMeta = {};
-          Map pddMeta = {};
+          Map<String, dynamic> jdMeta = {};
+          Map<String, dynamic> tbMeta = {};
+          Map<String, dynamic> pddMeta = {};
 
-          try { jdMeta = await fJd.timeout(const Duration(seconds: 15)) as Map<String, dynamic>; } catch (e, st) { dev.log('JD search failed: $e', name: 'ChatPage', error: e, stackTrace: st); jdMeta = {'products': []}; }
-          try { tbMeta = await fTb.timeout(const Duration(seconds: 15)) as Map<String, dynamic>; } catch (e, st) { dev.log('Taobao search failed: $e', name: 'ChatPage', error: e, stackTrace: st); tbMeta = {'products': []}; }
-          try { pddMeta = await fPdd.timeout(const Duration(seconds: 15)) as Map<String, dynamic>; } catch (e, st) { dev.log('PDD search failed: $e', name: 'ChatPage', error: e, stackTrace: st); pddMeta = {'products': []}; }
+          try { jdMeta = await fJd.timeout(const Duration(seconds: 15)); } catch (e, st) { dev.log('JD search failed: $e', name: 'ChatPage', error: e, stackTrace: st); jdMeta = {'products': []}; }
+          try { tbMeta = await fTb.timeout(const Duration(seconds: 15)); } catch (e, st) { dev.log('Taobao search failed: $e', name: 'ChatPage', error: e, stackTrace: st); tbMeta = {'products': []}; }
+          try { pddMeta = await fPdd.timeout(const Duration(seconds: 15)); } catch (e, st) { dev.log('PDD search failed: $e', name: 'ChatPage', error: e, stackTrace: st); pddMeta = {'products': []}; }
 
           final List<ProductModel> jdList = List<ProductModel>.from(jdMeta['products'] ?? []);
           final List<ProductModel> tbList = List<ProductModel>.from(tbMeta['products'] ?? []);

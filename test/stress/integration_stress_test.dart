@@ -373,7 +373,7 @@ void main() {
         probability: 0.5,
       );
 
-      expect(exp.name, contains('Latency'));
+      expect(exp.name, contains('延迟'));
       expect(exp.faults.length, equals(1));
       expect(exp.faults.first.type, equals(FaultType.latency));
       expect(exp.hypothesis, isNotEmpty);

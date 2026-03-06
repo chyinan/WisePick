@@ -5,7 +5,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../core/storage/hive_config.dart';
 import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
 
 /// Token 管理器 - 安全存储和管理认证 Token
 class TokenManager {
@@ -40,6 +40,13 @@ class TokenManager {
       accessibility: KeychainAccessibility.first_unlock_this_device,
     ),
   );
+
+  /// 仅供测试使用：跳过 FlutterSecureStorage 初始化
+  @visibleForTesting
+  TokenManager.forTesting()
+      : _secureStorage = const FlutterSecureStorage(),
+        _initialized = true,
+        _cachedDeviceId = 'test-device';
 
   static final TokenManager _instance = TokenManager._();
   static TokenManager get instance => _instance;

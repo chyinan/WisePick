@@ -7,8 +7,27 @@ class FakeApiClient extends ApiClient {
   FakeApiClient() : super();
 
   @override
-  Future<Response> get(String path, {Map<String, dynamic>? params}) async {
-    // 模拟淘宝搜索
+  Future<Response> get(String path, {Map<String, dynamic>? params, Map<String, dynamic>? headers, Duration? timeout, bool retry = true}) async {
+    // 模拟淘宝搜索（后端代理路由）
+    if (path.contains('api/products/search') && (params?['platform'] == 'taobao' || path.contains('taobao'))) {
+      return Response(requestOptions: RequestOptions(path: path), data: {
+        'results': [
+          {
+            'num_iid': '1001',
+            'title': '示例淘宝耳机',
+            'zk_final_price': '199.0',
+            'reserve_price': '249.0',
+            'pict_url': 'https://img.taobao/test.jpg',
+            'volume': '1234',
+            'commission_rate': '500',
+            'coupon_amount': '20',
+            'click_url': 'https://item.taobao.com/item.htm?id=1001'
+          }
+        ]
+      }, statusCode: 200);
+    }
+
+    // 模拟淘宝搜索（旧路由兼容）
     if (path.contains('taobao/dg/material/optional')) {
       return Response(requestOptions: RequestOptions(path: path), data: {
         'results': [
@@ -52,10 +71,10 @@ class FakeApiClient extends ApiClient {
   }
 
   @override
-  Future<Response> post(String path, {dynamic data, Map<String, dynamic>? headers, ResponseType? responseType}) async {
-    // 淘口令生成
-    if (path.contains('taobao/tbk/tpwd/create')) {
-      return Response(requestOptions: RequestOptions(path: path), data: {'model': '￥FAKE_TPWD￥'}, statusCode: 200);
+  Future<Response> post(String path, {dynamic data, Map<String, dynamic>? headers, ResponseType? responseType, Duration? timeout, bool retry = true}) async {
+    // 淘宝口令生成（sign 路由）
+    if (path.contains('sign/taobao') || path.contains('taobao/convert') || path.contains('taobao/tbk/tpwd/create')) {
+      return Response(requestOptions: RequestOptions(path: path), data: {'tpwd': '￥FAKE_TPWD￥'}, statusCode: 200);
     }
 
     // 京东推广链接（后端 sign endpoint）

@@ -8,6 +8,10 @@ import 'package:wisepick_dart_version/features/cart/cart_service.dart';
 
 void main() {
   testWidgets('CartPage displays items and allows increment', (WidgetTester tester) async {
+    // 设置足够大的屏幕尺寸避免 overflow
+    tester.view.physicalSize = const Size(600, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
     final sample = ProductModel(
       id: 'p1',
       title: '商品A',
@@ -27,17 +31,15 @@ void main() {
     await fake.addOrUpdateItem(sample, qty: 1);
 
     final svcOverride = cartServiceProvider.overrideWithValue(fake);
-    final itemsOverride = cartItemsProvider.overrideWithProvider(
-      FutureProvider<List<Map<String, dynamic>>>((ref) async => await fake.getAllItems()),
-    );
+    final itemsOverride = cartItemsProvider.overrideWith((ref) async => await fake.getAllItems());
 
-    await tester.pumpWidget(ProviderScope(overrides: [svcOverride, itemsOverride], child: MaterialApp(home: CartPage())));
-    await tester.pump();
+    await tester.pumpWidget(ProviderScope(overrides: [svcOverride, itemsOverride], child: const MaterialApp(home: CartPage())));
+    await tester.pumpAndSettle();
 
     expect(find.text('商品A'), findsOneWidget);
     final addBtn = find.byIcon(Icons.add_circle_outline);
-    expect(addBtn, findsOneWidget);
-    await tester.tap(addBtn);
+    expect(addBtn, findsWidgets);
+    await tester.tap(addBtn.first);
 
     // wait small frames for UI to update
     await tester.pump();

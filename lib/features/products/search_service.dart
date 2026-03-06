@@ -35,10 +35,10 @@ class SearchService {
     try {
       final raw = body['raw_jd'] ?? body['raw'] ?? body;
       if (raw is Map) {
-        final Map<String, dynamic> rawMap = Map<String, dynamic>.from(raw as Map);
+        final Map<String, dynamic> rawMap = Map<String, dynamic>.from(raw);
         final jdRootDynamic = rawMap['jingdong_search_ware_responce'];
         if (jdRootDynamic is Map) {
-          final Map<String, dynamic> jdRoot = Map<String, dynamic>.from(jdRootDynamic as Map);
+          final Map<String, dynamic> jdRoot = Map<String, dynamic>.from(jdRootDynamic);
           final List<ProductModel> jdProducts = _mapJdSearchWare(jdRoot);
           if (jdProducts.isNotEmpty) {
             final ids = products.map((p) => p.id).toSet();

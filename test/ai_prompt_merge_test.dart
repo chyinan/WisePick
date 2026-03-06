@@ -12,7 +12,7 @@ class _FakeApiClient extends ApiClient {
   _FakeApiClient() : super(dio: Dio());
 
   @override
-  Future<Response> post(String path, {dynamic data, Map<String, dynamic>? headers, ResponseType? responseType}) async {
+  Future<Response> post(String path, {dynamic data, Map<String, dynamic>? headers, ResponseType? responseType, Duration? timeout, bool retry = true}) async {
     lastData = data as Map<String, dynamic>?;
     return Response(
       requestOptions: RequestOptions(path: path),

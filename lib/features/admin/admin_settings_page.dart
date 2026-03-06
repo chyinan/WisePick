@@ -28,8 +28,11 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
   bool _useMockAi = false;
   bool _showProductJson = false;
   String _maxTokens = 'unlimited';
+  // ignore: unused_field
   List<String> _models = [];
+  // ignore: unused_field
   bool _loadingModels = false;
+  // ignore: unused_field
   String? _modelError;
 
   @override

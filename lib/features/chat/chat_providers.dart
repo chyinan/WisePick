@@ -1,3 +1,4 @@
+// ignore_for_file: valid_regexps
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
@@ -489,7 +490,7 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
                 // rating may be under rec['rating'] or rec['score']
                 try {
                   final r = rec['rating'] ?? rec['score'];
-                  if (r is num) rating = (r as num).toDouble();
+                  if (r is num) rating = r.toDouble();
                 } catch (e, st) { log('ChatProviders error: $e', name: 'ChatProviders', error: e, stackTrace: st); }
               } else if (rec is String) {
                 candidate = rec;
