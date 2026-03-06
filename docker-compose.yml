@@ -1,4 +1,20 @@
-services:
+# 快淘帮 WisePick 完整部署 Docker Compose 配置
+#
+# ✅  包含 PostgreSQL + 后端代理服务，推荐用于生产/测试部署。
+# ⚠️  仅部署后端代理（已有外部数据库）请使用 server/docker-compose.yml
+#
+# 使用方法:
+#   1. 在宿主机设置环境变量（或创建 .env 文件）：
+#        JWT_SECRET=your-secret
+#        JWT_REFRESH_SECRET=your-refresh-secret
+#        TAOBAO_APP_KEY=...  TAOBAO_APP_SECRET=...  TAOBAO_ADZONE_ID=...
+#        JD_APP_KEY=...      JD_APP_SECRET=...      JD_UNION_ID=...
+#        PDD_CLIENT_ID=...   PDD_CLIENT_SECRET=...  PDD_PID=...
+#        ADMIN_PASSWORD=...
+#   2. docker-compose up -d
+#   3. 查看日志: docker-compose logs -f server
+
+
   postgres:
     image: postgres:15-alpine
     container_name: wisepick_postgres
@@ -32,10 +48,20 @@ services:
       DB_NAME: ${DB_NAME:-wisepick}
       DB_USER: ${DB_USER:-postgres}
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_SECRET: ${JWT_SECRET:-wisepick-jwt-secret-change-me}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-wisepick-refresh-secret-change-me}
       PORT: 9527
       HOST: 0.0.0.0
+      TAOBAO_APP_KEY: ${TAOBAO_APP_KEY:-}
+      TAOBAO_APP_SECRET: ${TAOBAO_APP_SECRET:-}
+      TAOBAO_ADZONE_ID: ${TAOBAO_ADZONE_ID:-}
+      JD_APP_KEY: ${JD_APP_KEY:-}
+      JD_APP_SECRET: ${JD_APP_SECRET:-}
+      JD_UNION_ID: ${JD_UNION_ID:-}
+      PDD_CLIENT_ID: ${PDD_CLIENT_ID:-}
+      PDD_CLIENT_SECRET: ${PDD_CLIENT_SECRET:-}
+      PDD_PID: ${PDD_PID:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
     ports:
       - "9527:9527"
     healthcheck:

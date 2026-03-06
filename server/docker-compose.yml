@@ -1,5 +1,12 @@
 # 快淘帮 WisePick 后端代理服务 Docker Compose 配置
-# 使用方法: docker-compose up -d
+#
+# ⚠️  仅包含后端代理服务，适用于已有外部 PostgreSQL 数据库的场景。
+# ✅  完整部署（含 PostgreSQL）请使用根目录的 docker-compose.yml：
+#       docker-compose -f ../docker-compose.yml up -d
+#
+# 使用方法（仅后端）:
+#   1. 复制并填写 bin/.env 文件中的 API Key 等配置
+#   2. docker-compose up -d
 
 services:
   wisepick-proxy:
@@ -18,15 +25,9 @@ services:
       - PORT=9527
       - BACKEND_BASE=http://localhost:9527
     
-    # 资源限制
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 512M
-        reservations:
-          cpus: '0.25'
-          memory: 128M
+    # 资源限制（docker-compose v2 语法，普通 docker compose up 生效）
+    mem_limit: 512m
+    cpus: 1.0
     
     # 健康检查
     healthcheck:

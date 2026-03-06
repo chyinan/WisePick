@@ -45,7 +45,7 @@ EXPOSE 9527
 ENV PORT=9527
 
 # 健康检查
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
     CMD curl -f http://localhost:9527/__settings || exit 1
 
 # 启动命令
