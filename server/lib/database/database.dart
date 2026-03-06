@@ -14,6 +14,9 @@ class Database {
   // 单例模式
   Database._();
 
+  /// 仅供测试使用的构造函数，允许子类继承
+  Database.testOnly();
+
   static Database get instance {
     _instance ??= Database._();
     return _instance!;

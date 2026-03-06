@@ -78,6 +78,7 @@ server/.venv/
 __pycache__/
 *.pyc
 server/.env
+server/bin/.env
 
 # BMAD related folders
 .bmad-core/

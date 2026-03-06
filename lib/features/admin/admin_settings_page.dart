@@ -203,11 +203,24 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                   FilledButton(
                     onPressed: () async {
                       try {
+                        // 验证后端地址（开发模式允许本地地址）
+                        final backendUrl = _backendBaseController.text.trim();
+                        if (backendUrl.isNotEmpty) {
+                          final urlError = BackendConfig.validateBackendUrl(
+                            backendUrl,
+                            allowPrivate: kDebugMode,
+                          );
+                          if (urlError != null) {
+                            if (!mounted) return;
+                            showErrorSnackBar(context, '后端地址无效：$urlError');
+                            return;
+                          }
+                        }
                         final box = await HiveConfig.getBox(HiveConfig.settingsBox);
                         await box.put('openai_api', _openAiController.text.trim());
                         await box.put('openai_base', _baseUrlController.text.trim());
                         await box.put('openai_model', _modelController.text.trim());
-                        await box.put('backend_base', _backendBaseController.text.trim());
+                        await box.put('backend_base', backendUrl);
                         await box.put('debug_ai_response', _debugAiResponse);
                         await box.put('embed_prompts', _embedPrompts);
                         await box.put('copy_full_return', _copyFullReturn);

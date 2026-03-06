@@ -123,6 +123,47 @@ class BackendConfig {
     _cacheTime = DateTime.now();
   }
 
+  /// 验证后端URL是否安全（防止SSRF攻击）
+  ///
+  /// [allowPrivate] 为 true 时允许内网/本地地址（开发模式下使用）。
+  /// 返回 null 表示验证通过，返回错误信息字符串表示验证失败。
+  static String? validateBackendUrl(String url, {bool allowPrivate = false}) {
+    final trimmed = url.trim();
+    if (trimmed.isEmpty) return 'URL不能为空';
+
+    final uri = Uri.tryParse(trimmed);
+    if (uri == null || !uri.hasAuthority) return 'URL格式无效';
+
+    if (uri.scheme != 'http' && uri.scheme != 'https') {
+      return 'URL必须使用 http 或 https 协议';
+    }
+
+    final host = uri.host.toLowerCase();
+    if (host.isEmpty) return 'URL缺少主机名';
+
+    if (!allowPrivate) {
+      if (host == 'localhost' || host == '::1') {
+        return '生产环境不允许使用本地地址';
+      }
+      final ipv4 = RegExp(r'^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$');
+      final m = ipv4.firstMatch(host);
+      if (m != null) {
+        final a = int.parse(m.group(1)!);
+        final b = int.parse(m.group(2)!);
+        if (a == 127) return '不允许使用回环地址（127.x.x.x）';
+        if (a == 10) return '不允许使用内网地址（10.x.x.x）';
+        if (a == 172 && b >= 16 && b <= 31) return '不允许使用内网地址（172.16-31.x.x）';
+        if (a == 192 && b == 168) return '不允许使用内网地址（192.168.x.x）';
+      }
+    }
+
+    if (uri.hasPort && (uri.port < 1 || uri.port > 65535)) {
+      return '端口号必须在 1-65535 范围内';
+    }
+
+    return null;
+  }
+
   /// 检查当前解析到的后端地址是否仍为开发默认值
   static bool isDefaultDevelopmentUrl() {
     final current = resolveSync();
