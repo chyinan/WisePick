@@ -2,6 +2,7 @@
 import 'dart:developer' as dev;
 import 'dart:io' show Platform;
 
+import 'package:bcrypt/bcrypt.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -76,13 +77,95 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
     if (trimmed.isEmpty) {
       throw Exception('密码不能为空');
     }
-    final inputHash = sha256.convert(utf8.encode(trimmed)).toString();
     final box = await HiveConfig.getBox(HiveConfig.settingsBox);
     final storedHash = box.get(HiveConfig.adminPasswordHashKey) as String?;
-    if (storedHash != null && inputHash == storedHash) {
+    if (storedHash == null) {
+      throw Exception('密码错误');
+    }
+    // 检测旧格式（SHA256 是 64 位十六进制，bcrypt 以 $2 开头）
+    if (!storedHash.startsWith('\$2')) {
+      final legacyHash = sha256.convert(utf8.encode(trimmed)).toString();
+      if (legacyHash != storedHash) {
+        throw Exception('密码错误');
+      }
+      // 迁移到 bcrypt
+      final newHash = BCrypt.hashpw(trimmed, BCrypt.gensalt());
+      await box.put(HiveConfig.adminPasswordHashKey, newHash);
       return true;
     }
-    throw Exception('密码错误');
+    if (!BCrypt.checkpw(trimmed, storedHash)) {
+      throw Exception('密码错误');
+    }
+    return true;
+  }
+
+  Future<void> _changeAdminPassword(String oldPassword, String newPassword) async {
+    await _verifyAdminPassword(oldPassword);
+    final trimmedNew = newPassword.trim();
+    if (trimmedNew.length < 6) {
+      throw Exception('新密码长度不能少于 6 位');
+    }
+    final box = await HiveConfig.getBox(HiveConfig.settingsBox);
+    final newHash = BCrypt.hashpw(trimmedNew, BCrypt.gensalt());
+    await box.put(HiveConfig.adminPasswordHashKey, newHash);
+    await box.delete(HiveConfig.adminPasswordNeedsResetKey);
+  }
+
+  Future<void> _showForceChangePasswordDialog() async {
+    final oldPwController = TextEditingController();
+    final newPwController = TextEditingController();
+    final confirmPwController = TextEditingController();
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('请修改默认密码'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('首次登录请修改默认密码以保障安全。'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: oldPwController,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: '当前密码'),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: newPwController,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: '新密码（至少 6 位）'),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: confirmPwController,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: '确认新密码'),
+            ),
+          ],
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () async {
+              if (newPwController.text != confirmPwController.text) {
+                if (ctx.mounted) showErrorSnackBar(ctx, Exception('两次输入的密码不一致'));
+                return;
+              }
+              try {
+                await _changeAdminPassword(oldPwController.text, newPwController.text);
+                if (ctx.mounted) Navigator.of(ctx).pop();
+              } catch (e) {
+                if (ctx.mounted) showErrorSnackBar(ctx, e);
+              }
+            },
+            child: const Text('确认修改'),
+          ),
+        ],
+      ),
+    );
+    oldPwController.dispose();
+    newPwController.dispose();
+    confirmPwController.dispose();
   }
 
   void _onTap(int idx) => setState(() {
@@ -148,6 +231,13 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
   Future<void> _handleAdminUnlock(String password) async {
     try {
       await _verifyAdminPassword(password);
+      if (!mounted) return;
+      // 检查是否需要强制修改默认密码
+      final box = await HiveConfig.getBox(HiveConfig.settingsBox);
+      final needsReset = box.get(HiveConfig.adminPasswordNeedsResetKey) as bool? ?? false;
+      if (needsReset && mounted) {
+        await _showForceChangePasswordDialog();
+      }
       if (!mounted) return;
       Navigator.of(context)
           .push(MaterialPageRoute(builder: (_) => const AdminSettingsPage()));

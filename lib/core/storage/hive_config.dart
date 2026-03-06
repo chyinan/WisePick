@@ -1,3 +1,4 @@
+import 'package:bcrypt/bcrypt.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import '../../features/products/product_model.dart';
@@ -38,11 +39,8 @@ class HiveConfig {
   static const String jdPidKey = 'jd_pid';
   static const String priceNotificationEnabledKey = 'price_notification_enabled';
   static const String adminPasswordHashKey = 'admin_password_hash';
+  static const String adminPasswordNeedsResetKey = 'admin_password_needs_reset';
   static const String pddUidKey = 'pdd_uid';
-
-  /// 默认管理员密码哈希（对应密码 "admin123"），仅首次启动时写入
-  static const String _defaultAdminPasswordHash =
-      'b054968e7426730e9a005f1430e6d5cd70a03b08370a82323f9a9b231cf270be';
 
   /// 初始化 Hive
   ///
@@ -54,11 +52,13 @@ class HiveConfig {
     await _initAdminPassword();
   }
 
-  /// 首次启动时写入默认管理员密码哈希（若已存在则不覆盖）
+  /// 首次启动时用 bcrypt 生成默认管理员密码哈希（若已存在则不覆盖）
   static Future<void> _initAdminPassword() async {
     final box = Hive.box(settingsBox);
     if (box.get(adminPasswordHashKey) == null) {
-      await box.put(adminPasswordHashKey, _defaultAdminPasswordHash);
+      final hash = BCrypt.hashpw('admin123', BCrypt.gensalt());
+      await box.put(adminPasswordHashKey, hash);
+      await box.put(adminPasswordNeedsResetKey, true);
     }
   }
 
