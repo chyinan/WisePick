@@ -278,22 +278,6 @@ class StatsDashboard extends StatelessWidget {
               color: const Color(0xFF06B6D4),
               width: cardWidth,
             ),
-            _buildStatCard(
-              context,
-              title: '已验证',
-              value: '${userStats['verifiedUsers'] ?? 0}',
-              icon: Icons.verified_user_rounded,
-              color: const Color(0xFF10B981),
-              width: cardWidth,
-            ),
-            _buildStatCard(
-              context,
-              title: '验证率',
-              value: '${userStats['verificationRate'] ?? 0}%',
-              icon: Icons.percent_rounded,
-              color: const Color(0xFF14B8A6),
-              width: cardWidth,
-            ),
           ],
         );
       },

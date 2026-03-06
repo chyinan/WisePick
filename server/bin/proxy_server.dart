@@ -6,6 +6,7 @@ import 'package:shelf/shelf_io.dart' show serve;
 import 'package:shelf_router/shelf_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:crypto/crypto.dart';
+import 'package:dbcrypt/dbcrypt.dart';
 import 'dart:async';
 
 // 导入认证模块
@@ -71,6 +72,40 @@ bool _constantTimeEquals(String a, String b) {
     result |= a.codeUnitAt(i) ^ b.codeUnitAt(i);
   }
   return result == 0;
+}
+
+/// 管理员密码哈希文件路径（相对于工作目录）
+const _adminPasswordHashFile = 'data/admin_password.hash';
+
+final _dbCrypt = DBCrypt();
+
+/// 用 bcrypt 哈希管理员密码
+String _hashAdminPassword(String password) {
+  return _dbCrypt.hashpw(password, _dbCrypt.gensalt());
+}
+
+/// 验证管理员密码：优先读取 bcrypt 哈希文件，回退到环境变量明文
+bool _verifyAdminPassword(String provided) {
+  final hashFile = File(_adminPasswordHashFile);
+  if (hashFile.existsSync()) {
+    final storedHash = hashFile.readAsStringSync().trim();
+    try {
+      return _dbCrypt.checkpw(provided, storedHash);
+    } catch (_) {
+      return false;
+    }
+  }
+  // 回退：与环境变量明文做恒定时间比较（首次使用前）
+  final configured = (Platform.environment['ADMIN_PASSWORD'] ?? '').trim();
+  if (configured.isEmpty) return false;
+  return _constantTimeEquals(provided, configured);
+}
+
+/// 检查管理员密码是否已配置
+bool _isAdminPasswordConfigured() {
+  final hashFile = File(_adminPasswordHashFile);
+  if (hashFile.existsSync()) return true;
+  return (Platform.environment['ADMIN_PASSWORD'] ?? '').trim().isNotEmpty;
 }
 
 Future<Response> _handleProxy(Request req) async {
@@ -258,10 +293,7 @@ Future<void> runServer(List<String> args) async {
       'access-control-allow-headers':
           'Origin, Content-Type, Accept, Authorization',
     };
-    final env = Platform.environment;
-    final configured = (env['ADMIN_PASSWORD'] ?? '').trim();
-    final resolvedPassword = configured;
-    if (resolvedPassword.isEmpty) {
+    if (!_isAdminPasswordConfigured()) {
       return Response.internalServerError(
           body: jsonEncode(
               {'success': false, 'message': 'ADMIN_PASSWORD not configured'}),
@@ -290,14 +322,95 @@ Future<void> runServer(List<String> args) async {
           headers: headers);
     }
 
-    final success = _constantTimeEquals(provided.trim(), resolvedPassword);
-    if (!success) {
+    if (!_verifyAdminPassword(provided.trim())) {
       return Response(401,
           body: jsonEncode({'success': false, 'message': '密码错误'}),
           headers: headers);
     }
 
     return Response.ok(jsonEncode({'success': true}), headers: headers);
+  });
+
+  // 修改管理员密码
+  router.post('/admin/change-password', (Request r) async {
+    const headers = {
+      'content-type': 'application/json',
+      'access-control-allow-origin': '*',
+      'access-control-allow-methods': 'POST, OPTIONS',
+      'access-control-allow-headers':
+          'Origin, Content-Type, Accept, Authorization',
+    };
+
+    if (!_isAdminPasswordConfigured()) {
+      return Response.internalServerError(
+          body: jsonEncode(
+              {'success': false, 'message': 'ADMIN_PASSWORD not configured'}),
+          headers: headers);
+    }
+
+    final bodyStr = await r.readAsString();
+    String oldPassword = '';
+    String newPassword = '';
+    try {
+      final decoded = jsonDecode(bodyStr) as Map<String, dynamic>;
+      oldPassword = (decoded['old_password'] as String? ?? '').trim();
+      newPassword = (decoded['new_password'] as String? ?? '').trim();
+    } catch (_) {
+      return Response(400,
+          body: jsonEncode({'success': false, 'message': '请求格式错误'}),
+          headers: headers);
+    }
+
+    if (oldPassword.isEmpty) {
+      return Response(400,
+          body: jsonEncode({'success': false, 'message': '原密码不能为空'}),
+          headers: headers);
+    }
+
+    if (newPassword.isEmpty) {
+      return Response(400,
+          body: jsonEncode({'success': false, 'message': '新密码不能为空'}),
+          headers: headers);
+    }
+
+    if (newPassword.length < 8) {
+      return Response(400,
+          body: jsonEncode({'success': false, 'message': '新密码长度不能少于8位'}),
+          headers: headers);
+    }
+
+    // 校验原密码
+    if (!_verifyAdminPassword(oldPassword)) {
+      return Response(401,
+          body: jsonEncode({'success': false, 'message': '原密码错误'}),
+          headers: headers);
+    }
+
+    // 新旧密码不能相同
+    if (_verifyAdminPassword(newPassword)) {
+      return Response(400,
+          body: jsonEncode({'success': false, 'message': '新密码不能与原密码相同'}),
+          headers: headers);
+    }
+
+    try {
+      // 确保 data 目录存在
+      final dataDir = Directory('data');
+      if (!dataDir.existsSync()) dataDir.createSync(recursive: true);
+
+      // 写入新密码哈希
+      final newHash = _hashAdminPassword(newPassword);
+      File(_adminPasswordHashFile).writeAsStringSync(newHash);
+
+      return Response.ok(
+          jsonEncode({'success': true, 'message': '密码修改成功'}),
+          headers: headers);
+    } catch (e) {
+      print('[Admin] Change password error: $e');
+      return Response.internalServerError(
+          body: jsonEncode({'success': false, 'message': '保存失败，请重试'}),
+          headers: headers);
+    }
   });
 
 // Call universal convert and normalize response to a standard map.

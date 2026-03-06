@@ -23,6 +23,11 @@ class _SettingsPageState extends State<SettingsPage> with SingleTickerProviderSt
   bool _isLoadingSessions = false;
   String? _error;
   bool _activeOnly = true;
+
+  // 修改密码表单
+  final _oldPasswordController = TextEditingController();
+  final _newPasswordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   
   void _log(String message, {bool isError = false}) {
     final prefix = isError ? '❌ Settings' : '⚙️ Settings';
@@ -58,7 +63,65 @@ class _SettingsPageState extends State<SettingsPage> with SingleTickerProviderSt
   @override
   void dispose() {
     _tabController.dispose();
+    _oldPasswordController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _changeAdminPassword() async {
+    final oldPwd = _oldPasswordController.text.trim();
+    final newPwd = _newPasswordController.text.trim();
+    final confirmPwd = _confirmPasswordController.text.trim();
+
+    if (oldPwd.isEmpty || newPwd.isEmpty || confirmPwd.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请填写所有密码字段'), backgroundColor: Colors.orange),
+      );
+      return;
+    }
+
+    if (newPwd.length < 8) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('新密码长度不能少于8位'), backgroundColor: Colors.orange),
+      );
+      return;
+    }
+
+    if (newPwd != confirmPwd) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('两次输入的新密码不一致'), backgroundColor: Colors.orange),
+      );
+      return;
+    }
+
+    try {
+      await _service.changeAdminPassword(
+        oldPassword: oldPwd,
+        newPassword: newPwd,
+      );
+      if (mounted) {
+        _oldPasswordController.clear();
+        _newPasswordController.clear();
+        _confirmPasswordController.clear();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('密码修改成功'), backgroundColor: Color(0xFF10B981)),
+        );
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message), backgroundColor: Colors.red),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        final msg = e.toString().replaceFirst('Exception: ', '');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(msg), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   Future<void> _loadSettings() async {
@@ -299,6 +362,8 @@ class _SettingsPageState extends State<SettingsPage> with SingleTickerProviderSt
               ),
             ],
           ),
+          const SizedBox(height: 20),
+          _buildChangePasswordSection(),
         ],
       ),
     );
@@ -377,6 +442,89 @@ class _SettingsPageState extends State<SettingsPage> with SingleTickerProviderSt
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildChangePasswordSection() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEF4444).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.lock_reset_rounded, color: Color(0xFFEF4444), size: 20),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '管理员密码',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF1E293B),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '定期更换密码有助于保障后台安全',
+                    style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                  ),
+                ],
+              ),
+            ),
+            OutlinedButton.icon(
+              onPressed: _showChangePasswordDialog,
+              icon: const Icon(Icons.edit_rounded, size: 16),
+              label: const Text('修改密码'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFFEF4444),
+                side: const BorderSide(color: Color(0xFFEF4444)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showChangePasswordDialog() {
+    _oldPasswordController.clear();
+    _newPasswordController.clear();
+    _confirmPasswordController.clear();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => _ChangePasswordDialog(
+        oldController: _oldPasswordController,
+        newController: _newPasswordController,
+        confirmController: _confirmPasswordController,
+        onSubmit: (navigator) async {
+          await _changeAdminPassword();
+          if (_oldPasswordController.text.isEmpty) {
+            navigator.pop();
+          }
+        },
       ),
     );
   }
@@ -642,5 +790,184 @@ class _SettingsPageState extends State<SettingsPage> with SingleTickerProviderSt
     if (diff.inHours < 24) return '${diff.inHours}小时前';
     if (diff.inDays < 7) return '${diff.inDays}天前';
     return '${date.month}/${date.day} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+  }
+}
+
+class _ChangePasswordDialog extends StatefulWidget {
+  final TextEditingController oldController;
+  final TextEditingController newController;
+  final TextEditingController confirmController;
+  final Future<void> Function(NavigatorState navigator) onSubmit;
+
+  const _ChangePasswordDialog({
+    required this.oldController,
+    required this.newController,
+    required this.confirmController,
+    required this.onSubmit,
+  });
+
+  @override
+  State<_ChangePasswordDialog> createState() => _ChangePasswordDialogState();
+}
+
+class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
+  bool _oldVisible = false;
+  bool _newVisible = false;
+  bool _confirmVisible = false;
+  bool _loading = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Container(
+        width: 420,
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 标题
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEF4444).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.lock_reset_rounded, color: Color(0xFFEF4444), size: 22),
+                ),
+                const SizedBox(width: 14),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '修改管理员密码',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF1E293B),
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        '请先验证原密码后再设置新密码',
+                        style: TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: _loading ? null : () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close_rounded, color: Color(0xFF94A3B8)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 28),
+            // 原密码
+            _buildField(
+              controller: widget.oldController,
+              label: '原密码',
+              visible: _oldVisible,
+              onToggle: () => setState(() => _oldVisible = !_oldVisible),
+            ),
+            const SizedBox(height: 16),
+            // 分隔线
+            Row(
+              children: [
+                const Expanded(child: Divider()),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Text('设置新密码', style: TextStyle(fontSize: 12, color: Colors.grey[400])),
+                ),
+                const Expanded(child: Divider()),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // 新密码
+            _buildField(
+              controller: widget.newController,
+              label: '新密码（至少 8 位）',
+              visible: _newVisible,
+              onToggle: () => setState(() => _newVisible = !_newVisible),
+            ),
+            const SizedBox(height: 16),
+            // 确认新密码
+            _buildField(
+              controller: widget.confirmController,
+              label: '确认新密码',
+              visible: _confirmVisible,
+              onToggle: () => setState(() => _confirmVisible = !_confirmVisible),
+            ),
+            const SizedBox(height: 28),
+            // 按钮
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _loading ? null : () => Navigator.of(context).pop(),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: const Text('取消'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: _loading ? null : _submit,
+                    icon: _loading
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Icon(Icons.check_rounded, size: 18),
+                    label: Text(_loading ? '保存中...' : '确认修改'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFFEF4444),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildField({
+    required TextEditingController controller,
+    required String label,
+    required bool visible,
+    required VoidCallback onToggle,
+  }) {
+    return TextField(
+      controller: controller,
+      obscureText: !visible,
+      enabled: !_loading,
+      decoration: InputDecoration(
+        labelText: label,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        suffixIcon: IconButton(
+          icon: Icon(visible ? Icons.visibility_off_rounded : Icons.visibility_rounded, size: 20),
+          onPressed: onToggle,
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      ),
+    );
+  }
+
+  Future<void> _submit() async {
+    final navigator = Navigator.of(context);
+    setState(() => _loading = true);
+    await widget.onSubmit(navigator);
+    if (mounted) setState(() => _loading = false);
   }
 }

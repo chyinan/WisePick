@@ -64,6 +64,31 @@ class SettingsService {
     }
   }
 
+  /// 修改管理员密码
+  Future<void> changeAdminPassword({
+    required String oldPassword,
+    required String newPassword,
+  }) async {
+    if (oldPassword.isEmpty) throw ArgumentError('原密码不能为空');
+    if (newPassword.isEmpty) throw ArgumentError('新密码不能为空');
+    if (newPassword.length < 8) throw ArgumentError('新密码长度不能少于8位');
+
+    try {
+      final response = await _apiClient.post(
+        '/admin/change-password',
+        data: {'old_password': oldPassword, 'new_password': newPassword},
+      );
+      final data = response.data;
+      if (data is Map && data['success'] != true) {
+        throw Exception(data['message']?.toString() ?? '修改失败');
+      }
+      _log('管理员密码修改成功');
+    } catch (e) {
+      _log('修改密码失败: $e', isError: true);
+      rethrow;
+    }
+  }
+
   /// 删除设备会话（强制下线）
   Future<void> deleteSession(String id) async {
     if (id.trim().isEmpty) {
