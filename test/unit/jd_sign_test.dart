@@ -50,12 +50,7 @@ void main() {
 
     test('should handle single param', () {
       final sign = computeJdSign({'key': 'val'}, 'sec');
-      final expected = md5.convert(utf8.encode('seckeyvalSEC'.replaceAll('SEC', 'sec'))).toString().toUpperCase();
-      // Manual: "sec" + "keyval" + "sec" = "seckeyvalSEC" -> wrong, should be "seckeyval sec"
-      // Let's compute manually:
-      // buffer = "sec" + "key" + "val" + "sec" = "seckeyval sec"
-      // Actually: buffer.write(appSecret) -> "sec", then "key" + "val", then buffer.write(appSecret) -> "sec"
-      // So: "seckeyval" + "sec" = "seckeyvalsec"
+      // buffer = "sec" + "key" + "val" + "sec" = "seckeyvalsec"
       final correctExpected = md5.convert(utf8.encode('seckeyvalsec')).toString().toUpperCase();
       expect(sign, equals(correctExpected));
     });

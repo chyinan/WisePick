@@ -25,7 +25,6 @@ import 'package:wisepick_dart_version/core/resilience/circuit_breaker.dart';
 import 'package:wisepick_dart_version/core/resilience/global_rate_limiter.dart';
 import 'package:wisepick_dart_version/core/resilience/retry_budget.dart';
 import 'package:wisepick_dart_version/core/resilience/retry_policy.dart';
-import 'package:wisepick_dart_version/core/resilience/result.dart';
 
 /// Concrete test implementation of ResilientServiceBase
 class TestResilientService extends ResilientServiceBase {

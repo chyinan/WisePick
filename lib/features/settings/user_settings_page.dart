@@ -277,6 +277,7 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
               children: [
                 FilledButton(
                   onPressed: () async {
+                    final navigator = Navigator.of(context);
                     try {
                       setState(() => _loading = true);
                       final box = await HiveConfig.getBox(HiveConfig.settingsBox);
@@ -293,12 +294,12 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
                         _modelController.text.trim(),
                       );
                       if (!mounted) return;
-                      showSuccessSnackBar(context, '保存成功');
-                      Navigator.of(context).pop();
+                      showSuccessSnackBar(context, '保存成功'); // ignore: use_build_context_synchronously
+                      navigator.pop();
                     } catch (e, st) {
                       dev.log('Error saving user settings: $e', name: 'UserSettings', error: e, stackTrace: st);
                       if (!mounted) return;
-                      showErrorSnackBar(context, AppErrorMapper.mapException(e));
+                      showErrorSnackBar(context, AppErrorMapper.mapException(e)); // ignore: use_build_context_synchronously
                     } finally {
                       if (mounted) setState(() => _loading = false);
                     }

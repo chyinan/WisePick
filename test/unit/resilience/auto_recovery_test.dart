@@ -76,14 +76,11 @@ void main() {
     });
 
     test('should not allow concurrent execution', () async {
-      var executing = false;
       final action = RecoveryAction(
         type: RecoveryActionType.custom,
         name: 'concurrent_test',
         execute: () async {
-          executing = true;
           await Future.delayed(const Duration(milliseconds: 100));
-          executing = false;
           return true;
         },
         cooldown: Duration.zero,

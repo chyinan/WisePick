@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:test/test.dart';
 import 'package:wisepick_dart_version/core/resilience/retry_policy.dart';
-import 'package:wisepick_dart_version/core/resilience/result.dart';
 
 void main() {
   group('RetryConfig', () {

@@ -10,14 +10,14 @@ import 'package:dbcrypt/dbcrypt.dart';
 import 'dart:async';
 
 // 导入认证模块
-import '../lib/database/database.dart';
-import '../lib/auth/auth_handler.dart';
-import '../lib/sync/sync_handler.dart';
-import '../lib/analytics/analytics_service.dart';
-import '../lib/price_history/price_history_service.dart';
-import '../lib/decision/decision_service.dart';
-import '../lib/admin/admin_service.dart';
-import '../lib/reliability/reliability_api.dart';
+import 'package:wisepick_proxy_server/database/database.dart';
+import 'package:wisepick_proxy_server/auth/auth_handler.dart';
+import 'package:wisepick_proxy_server/sync/sync_handler.dart';
+import 'package:wisepick_proxy_server/analytics/analytics_service.dart';
+import 'package:wisepick_proxy_server/price_history/price_history_service.dart';
+import 'package:wisepick_proxy_server/decision/decision_service.dart';
+import 'package:wisepick_proxy_server/admin/admin_service.dart';
+import 'package:wisepick_proxy_server/reliability/reliability_api.dart';
 
 // NOTE: veapi support removed per user request
 
@@ -506,7 +506,7 @@ Future<void> runServer(List<String> args) async {
   });
 
   // helper to estimate matched count in a taobao body
-  int _safeMatchCount(Map<dynamic, dynamic>? b) {
+  int safeMatchCount(Map<dynamic, dynamic>? b) {
     if (b == null) return 0;
     try {
       // common places to find lists
@@ -536,16 +536,16 @@ Future<void> runServer(List<String> args) async {
       }
       // fallback: search for any List<Map> in body
       int count = 0;
-      void _walk(dynamic node) {
+      void walk(dynamic node) {
         if (node is List) {
           if (node.isNotEmpty && node.first is Map) count += node.length;
-          for (final e in node) _walk(e);
+          for (final e in node) walk(e);
         } else if (node is Map) {
-          for (final v in node.values) _walk(v);
+          for (final v in node.values) walk(v);
         }
       }
 
-      _walk(b);
+      walk(b);
       return count;
     } catch (_) {
       return 0;
@@ -554,7 +554,7 @@ Future<void> runServer(List<String> args) async {
 
   // Generate candidate simplified queries from original query.
   // Rules: remove parenthesis content, split on /, remove common noise words, keep brand+model combos.
-  List<String> _generateCandidates(String q) {
+  List<String> generateCandidates(String q) {
     try {
       var s = q.trim();
       // remove content inside parentheses/brackets
@@ -858,7 +858,7 @@ Future<void> runServer(List<String> args) async {
             final gl = goodsResp['goods_list'] as List<dynamic>;
             for (final it in gl) {
               if (it is Map) {
-                final m = Map<String, dynamic>.from(it as Map);
+                final m = Map<String, dynamic>.from(it);
                 try {
                   final id = (m['goods_sign'] ?? '').toString();
                   final title = (m['goods_name'] ?? '').toString();
@@ -966,7 +966,7 @@ Future<void> runServer(List<String> args) async {
           attemptsLocal.add({
             'attempt': 'initial',
             'query': query,
-            'matched': _safeMatchCount(body)
+            'matched': safeMatchCount(body)
           });
           _lastReturnDebug = rec;
           _lastReturnHistory.add(rec);
@@ -974,8 +974,7 @@ Future<void> runServer(List<String> args) async {
         } catch (_) {}
         source = 'taobao';
       } else {
-        // fallback to veapi or JD when configured
-        final veApiKey = env['VEAPI_KEY'];
+        // fallback to JD when configured
         if ((platformParam == 'jd' || !useTaobao) && useJd) {
           // If the caller requested JD or Taobao is not configured, prefer JD
           try {
@@ -1106,20 +1105,20 @@ Future<void> runServer(List<String> args) async {
 
       // 寻找包含商品列表的字段（兼容多种返回结构），递归查找首个 List<Map>
       List<dynamic>? items;
-      List<dynamic>? _findListOfMaps(dynamic node) {
+      List<dynamic>? findListOfMaps(dynamic node) {
         if (node is List) {
           // 若列表内包含 Map 则认为是商品列表
           if (node.isNotEmpty && node.first is Map) return node;
           // 否则尝试在子元素中查找
           for (final e in node) {
-            final r = _findListOfMaps(e);
+            final r = findListOfMaps(e);
             if (r != null) return r;
           }
           return null;
         }
         if (node is Map) {
           for (final v in node.values) {
-            final r = _findListOfMaps(v);
+            final r = findListOfMaps(v);
             if (r != null) return r;
           }
           return null;
@@ -1128,8 +1127,7 @@ Future<void> runServer(List<String> args) async {
       }
 
       // Prefer explicit known Taobao response paths for reliability
-      if (body is Map &&
-          body.containsKey('tbk_dg_material_optional_upgrade_response')) {
+      if (body.containsKey('tbk_dg_material_optional_upgrade_response')) {
         try {
           final respMap = body['tbk_dg_material_optional_upgrade_response'];
           if (respMap is Map &&
@@ -1140,7 +1138,6 @@ Future<void> runServer(List<String> args) async {
         } catch (_) {}
       }
       if (items == null &&
-          body is Map &&
           body.containsKey('tbk_sc_material_optional_response')) {
         try {
           final respMap = body['tbk_sc_material_optional_response'];
@@ -1152,7 +1149,6 @@ Future<void> runServer(List<String> args) async {
         } catch (_) {}
       }
       if (items == null &&
-          body is Map &&
           body.containsKey('tbk_dg_material_optional_response')) {
         try {
           final respMap = body['tbk_dg_material_optional_response'];
@@ -1165,19 +1161,19 @@ Future<void> runServer(List<String> args) async {
       }
 
       // Fallback to recursive search
-      if (items == null) items = _findListOfMaps(body);
+      if (items == null) items = findListOfMaps(body);
 
       // If taobao returned an error or no items, attempt lightweight fallbacks:
       // 1) simplified query (strip special chars) -> retry taobao route
       // 2) shop.get to at least return shops
       try {
         bool bodyHasError = false;
-        if (body is Map && body.containsKey('error_response'))
+        if (body.containsKey('error_response'))
           bodyHasError = true;
-        if (items == null || (items is List && items.isEmpty) || bodyHasError) {
+        if (items == null || items.isEmpty || bodyHasError) {
           // Attempt 1: simplified query
           try {
-            final candidates = _generateCandidates(query);
+            final candidates = generateCandidates(query);
             for (final simplified in candidates) {
               if (simplified.isEmpty) continue;
               final uri2 = Uri.parse(
@@ -1187,7 +1183,7 @@ Future<void> runServer(List<String> args) async {
                     await http.get(uri2).timeout(Duration(seconds: 6));
                 if (resp2.statusCode == 200) {
                   final body2 = jsonDecode(resp2.body) as Map<String, dynamic>;
-                  final found = _findListOfMaps(body2);
+                  final found = findListOfMaps(body2);
                   // record attempt
                   try {
                     final rec = {
@@ -1199,7 +1195,7 @@ Future<void> runServer(List<String> args) async {
                     attemptsLocal.add({
                       'attempt': 'simplified',
                       'query': simplified,
-                      'matched': _safeMatchCount(body2)
+                      'matched': safeMatchCount(body2)
                     });
                     _lastReturnDebug = rec;
                     _lastReturnHistory.add(rec);
@@ -1218,14 +1214,14 @@ Future<void> runServer(List<String> args) async {
           } catch (_) {}
 
           // Attempt 2: shop.get to return shops (as fallback suggestions)
-          if (items == null || (items is List && items.isEmpty)) {
+          if (items == null || items.isEmpty) {
             try {
               final uri3 = Uri.parse(
                   'http://localhost:9527/taobao/tbk_search?para=${Uri.encodeComponent(query)}&method=taobao.tbk.shop.get&fields=user_id,shop_title,shop_type,seller_nick,pict_url,shop_url');
               final resp3 = await http.get(uri3).timeout(Duration(seconds: 6));
               if (resp3.statusCode == 200) {
                 final body3 = jsonDecode(resp3.body) as Map<String, dynamic>;
-                final found3 = _findListOfMaps(body3);
+                final found3 = findListOfMaps(body3);
                 // record attempt
                 try {
                   final rec = {
@@ -1237,7 +1233,7 @@ Future<void> runServer(List<String> args) async {
                   attemptsLocal.add({
                     'attempt': 'shop_get',
                     'query': query,
-                    'matched': _safeMatchCount(body3)
+                    'matched': safeMatchCount(body3)
                   });
                   _lastReturnDebug = rec;
                   _lastReturnHistory.add(rec);
@@ -1259,7 +1255,6 @@ Future<void> runServer(List<String> args) async {
       // Special-case: if we used jingdong.search.ware fallback, map its Paragraph list
       try {
         if (source == 'jd_search' &&
-            body is Map &&
             body.containsKey('jingdong_search_ware_responce')) {
           // Paragraph may be directly under the root of jingdong_search_ware_responce
           final rawJd =
@@ -1272,9 +1267,8 @@ Future<void> runServer(List<String> args) async {
               rawJd['Head']['Paragraph'] is List) {
             paras = rawJd['Head']['Paragraph'] as List<dynamic>;
           }
-          if (paras != null && paras is List) {
-            final List<dynamic> _paras = paras;
-            for (final it in _paras) {
+          if (paras != null) {
+            for (final it in paras) {
               if (it is! Map) continue;
               // extract basic fields directly; prefer Content.warename + Content.imageurl
               final id = (it['wareid'] ?? it['wareId'] ?? '').toString();
@@ -1296,7 +1290,7 @@ Future<void> runServer(List<String> args) async {
                 final c = it['Content'];
                 if (c is Map && c['imageurl'] != null)
                   imageUrl = _normalizeJdImageUrl(c['imageurl']);
-                if ((imageUrl == null || imageUrl.isEmpty) &&
+                if (imageUrl.isEmpty &&
                     it['SlaveParagraph'] is List &&
                     it['SlaveParagraph'].isNotEmpty) {
                   final sp = it['SlaveParagraph'][0];
@@ -1305,9 +1299,6 @@ Future<void> runServer(List<String> args) async {
                       sp['SlaveContent']['Slaveimageurl'] != null)
                     imageUrl = _normalizeJdImageUrl(
                         sp['SlaveContent']['Slaveimageurl']);
-                }
-                if (imageUrl != null && imageUrl.isNotEmpty) {
-                  // already normalized by helper
                 }
               } catch (_) {}
 
@@ -1333,7 +1324,7 @@ Future<void> runServer(List<String> args) async {
               // If id empty but Content contains slaveware, try to use first SlaveWare wareid
               String finalId = id;
               try {
-                if ((finalId == null || finalId.isEmpty) &&
+                if (finalId.isEmpty &&
                     it['SlaveWare'] is List &&
                     it['SlaveWare'].isNotEmpty) {
                   final sw = it['SlaveWare'][0];
@@ -1344,19 +1335,19 @@ Future<void> runServer(List<String> args) async {
 
               // push mapped product
               products.add({
-                'id': finalId ?? '',
+                'id': finalId,
                 'platform': 'jd',
-                'title': title ?? '',
+                'title': title,
                 'price': price,
                 'original_price': price,
                 'coupon': 0.0,
                 'final_price': price,
-                'image_url': imageUrl ?? '',
+                'image_url': imageUrl,
                 'sales': sales,
                 'rating': 0.0,
-                'link': link ?? '',
+                'link': link,
                 'commission': 0.0,
-                'description': title ?? '',
+                'description': title,
                 'shop_title':
                     (it['shop_id'] ?? it['shopTitle'] ?? '').toString(),
               });
@@ -1508,14 +1499,14 @@ Future<void> runServer(List<String> args) async {
               };
             } else if (source == 'veapi') {
               // best-effort map veapi item -> standard product map (avoid importing Flutter model)
-              num? _num(Map m, List<String> keys) {
+              num? numVal(Map m, List<String> keys) {
                 for (final k in keys) {
                   if (m.containsKey(k) && m[k] != null) {
                     final v = m[k];
                     if (v is num) return v;
                     if (v is String) {
                       final parsed =
-                          num.tryParse(v.replaceAll(RegExp('[^0-9\.]'), ''));
+                          num.tryParse(v.replaceAll(RegExp(r'[^0-9.]'), ''));
                       if (parsed != null) return parsed;
                     }
                   }
@@ -1523,7 +1514,6 @@ Future<void> runServer(List<String> args) async {
                   // Fallback: if no products produced but JD raw response exists, try mapping Paragraph again
                   try {
                     if (products.isEmpty &&
-                        body is Map &&
                         body.containsKey('jingdong_search_ware_responce')) {
                       final rawJd2 = body['jingdong_search_ware_responce']
                           as Map<String, dynamic>;
@@ -1596,7 +1586,7 @@ Future<void> runServer(List<String> args) async {
                                 'rating': 0.0,
                                 'link': link,
                                 'commission': 0.0,
-                                'description': title ?? '',
+                                'description': title,
                                 'shop_title':
                                     (it['shop_id'] ?? it['shopTitle'] ?? '')
                                         .toString(),
@@ -1611,7 +1601,7 @@ Future<void> runServer(List<String> args) async {
                 return null;
               }
 
-              String? _str(Map m, List<String> keys) {
+              String? strVal(Map m, List<String> keys) {
                 for (final k in keys) {
                   if (m.containsKey(k) && m[k] != null) return m[k].toString();
                 }
@@ -1619,13 +1609,13 @@ Future<void> runServer(List<String> args) async {
               }
 
               final id =
-                  _str(it, ['id', 'num_iid', 'item_id', 'goods_id']) ?? '';
+                  strVal(it, ['id', 'num_iid', 'item_id', 'goods_id']) ?? '';
               final title =
-                  (_str(it, ['title', 'item_title', 'name']) ?? '').trim();
-              final imageUrl = _str(it,
+                  (strVal(it, ['title', 'item_title', 'name']) ?? '').trim();
+              final imageUrl = strVal(it,
                       ['pic_url', 'pict_url', 'image_url', 'small_images']) ??
                   '';
-              final price = (_num(it, [
+              final price = (numVal(it, [
                         'zk_final_price',
                         'price',
                         'reserve_price',
@@ -1635,12 +1625,12 @@ Future<void> runServer(List<String> args) async {
                       0)
                   .toDouble();
               final originalPrice =
-                  (_num(it, ['original_price', 'reserve_price', 'price']) ??
+                  (numVal(it, ['original_price', 'reserve_price', 'price']) ??
                           price)
                       .toDouble();
               final coupon =
-                  (_num(it, ['coupon_amount', 'coupon']) ?? 0).toDouble();
-              final finalPrice = (_num(it, [
+                  (numVal(it, ['coupon_amount', 'coupon']) ?? 0).toDouble();
+              final finalPrice = (numVal(it, [
                         'after_coupon_price',
                         'final_price',
                         'finalPrice'
@@ -1648,10 +1638,10 @@ Future<void> runServer(List<String> args) async {
                       (price - coupon))
                   .toDouble();
               final sales =
-                  (_num(it, ['volume', 'sell_num', 'sales', 'trade_count']) ??
+                  (numVal(it, ['volume', 'sellnumVal', 'sales', 'trade_count']) ??
                           0)
                       .toInt();
-              final commission = (_num(it, [
+              final commission = (numVal(it, [
                         'commission',
                         'commission_rate',
                         'max_commission',
@@ -1659,7 +1649,7 @@ Future<void> runServer(List<String> args) async {
                       ]) ??
                       0)
                   .toDouble();
-              final link = _str(it, [
+              final link = strVal(it, [
                     'clickURL',
                     'click_url',
                     'url',
@@ -1735,7 +1725,7 @@ Future<void> runServer(List<String> args) async {
                       (price - coupon))
                   .toDouble();
               int sales = (num.tryParse(
-                          (it['volume'] ?? it['sell_num'] ?? it['sales'] ?? '0')
+                          (it['volume'] ?? it['sellnumVal'] ?? it['sales'] ?? '0')
                               .toString()) ??
                       0)
                   .toInt();
@@ -1785,7 +1775,7 @@ Future<void> runServer(List<String> args) async {
           final respJ = await http.get(uri).timeout(Duration(seconds: 8));
           if (respJ.statusCode == 200) {
             final bodyJ = jsonDecode(respJ.body);
-            final jdItems = _findListOfMaps(bodyJ);
+            final jdItems = findListOfMaps(bodyJ);
             if (jdItems != null) {
               for (final it in jdItems) {
                 if (it is Map<String, dynamic>) {
@@ -1833,7 +1823,7 @@ Future<void> runServer(List<String> args) async {
                           it['zk_final_price'] ??
                           it['priceInfo']);
 
-                      void _walkPrices(dynamic node) {
+                      void walkPrices(dynamic node) {
                         try {
                           if (node is Map) {
                             for (final entry in node.entries) {
@@ -1842,21 +1832,21 @@ Future<void> runServer(List<String> args) async {
                               if (k.toLowerCase().contains('price') ||
                                   k.toLowerCase().contains('amount'))
                                 candidates.add(v);
-                              _walkPrices(v);
+                              walkPrices(v);
                             }
                           } else if (node is List) {
-                            for (final e in node) _walkPrices(e);
+                            for (final e in node) walkPrices(e);
                           }
                         } catch (_) {}
                       }
 
-                      _walkPrices(it);
+                      walkPrices(it);
 
                       for (final c in candidates) {
                         if (c == null) continue;
                         final s = c.toString();
                         final parsed =
-                            num.tryParse(s.replaceAll(RegExp('[^0-9\.]'), ''));
+                            num.tryParse(s.replaceAll(RegExp(r'[^0-9.]'), ''));
                         if (parsed != null) {
                           price = parsed.toDouble();
                           break;
@@ -1918,9 +1908,8 @@ Future<void> runServer(List<String> args) async {
                         .toInt();
 
                     // ensure price: if missing try cached or fetch from item page
-                    double usedPrice = price ?? 0.0;
-                    if ((usedPrice == 0.0 || usedPrice == null) &&
-                        id.isNotEmpty) {
+                    double usedPrice = price;
+                    if (usedPrice == 0.0 && id.isNotEmpty) {
                       // check cache
                       try {
                         final entry = _priceCache[id];
@@ -1934,7 +1923,7 @@ Future<void> runServer(List<String> args) async {
                       } catch (_) {}
 
                       // if still missing, try lightweight HTML fetch of mobile item page
-                      if ((usedPrice == 0.0 || usedPrice == null)) {
+                      if (usedPrice == 0.0) {
                         try {
                           final itemUrl = 'https://item.jd.com/${id}.html';
                           final client = http.Client();
@@ -1958,7 +1947,7 @@ Future<void> runServer(List<String> args) async {
                               if (m != null && m.groupCount >= 1) {
                                 final parsed = num.tryParse(m
                                     .group(1)!
-                                    .replaceAll(RegExp('[^0-9\.]'), ''));
+                                    .replaceAll(RegExp(r'[^0-9.]'), ''));
                                 if (parsed != null) {
                                   usedPrice = parsed.toDouble();
                                   final expiry =
@@ -2177,7 +2166,7 @@ Future<void> runServer(List<String> args) async {
                 for (final it in gl) {
                   try {
                     if (it is Map) {
-                      final m = Map<String, dynamic>.from(it as Map);
+                      final m = Map<String, dynamic>.from(it);
                       final id = (m['goods_sign'] ?? '').toString();
                       final title = (m['goods_name'] ?? '').toString();
                       final image = (m['goods_image_url'] ??
@@ -2264,7 +2253,7 @@ Future<void> runServer(List<String> args) async {
       // always try to parse its Paragraph list and append JD products to `products`.
       // This ensures JD items are included even when Taobao results exist.
       try {
-        if (body is Map && body.containsKey('jingdong_search_ware_responce')) {
+        if (body.containsKey('jingdong_search_ware_responce')) {
           final rawJd =
               body['jingdong_search_ware_responce'] as Map<String, dynamic>;
           List<dynamic>? paras;
@@ -2338,7 +2327,7 @@ Future<void> runServer(List<String> args) async {
                     'rating': 0.0,
                     'link': link,
                     'commission': 0.0,
-                    'description': title ?? '',
+                    'description': title,
                     'shop_title':
                         (it['shop_id'] ?? it['shopTitle'] ?? '').toString(),
                   });
@@ -2374,14 +2363,14 @@ Future<void> runServer(List<String> args) async {
       }
 
       // Deduplicate products by normalized title (and fallback to id when title empty)
-      String _normalize(String? s) {
+      String normalize(String? s) {
         if (s == null) return '';
         return s
             .replaceAll(RegExp(r'[^0-9a-zA-Z\u4e00-\u9fa5]+'), '')
             .toLowerCase();
       }
 
-      double _score(Map p) {
+      double score(Map p) {
         double score = 0.0;
         try {
           if ((p['link'] as String?)?.isNotEmpty ?? false) score += 100000.0;
@@ -2398,7 +2387,7 @@ Future<void> runServer(List<String> args) async {
       final Map<String, List<Map<String, dynamic>>> groups = {};
       for (final p in products) {
         try {
-          final key = _normalize(p['title'] as String? ?? '') ?? '';
+          final key = normalize(p['title'] as String? ?? '');
           final k = (key.isEmpty) ? ('id:' + (p['id']?.toString() ?? '')) : key;
           groups.putIfAbsent(k, () => []).add(p);
         } catch (_) {}
@@ -2410,7 +2399,7 @@ Future<void> runServer(List<String> args) async {
         if (list.length == 1)
           merged.add(list.first);
         else {
-          list.sort((a, b) => _score(b).compareTo(_score(a)));
+          list.sort((a, b) => score(b).compareTo(score(a)));
           // pick top-scoring as representative
           merged.add(list.first);
         }
@@ -2436,7 +2425,7 @@ Future<void> runServer(List<String> args) async {
       final sortOrder = (params['sort'] ?? 'desc').toString().toLowerCase();
       int order = (sortOrder == 'asc') ? 1 : -1;
 
-      int _cmpByField(String field, Map a, Map b) {
+      int cmpByField(String field, Map a, Map b) {
         final na = (a[field] as num?)?.toDouble() ?? 0.0;
         final nb = (b[field] as num?)?.toDouble() ?? 0.0;
         if (na == nb) return 0;
@@ -2444,14 +2433,14 @@ Future<void> runServer(List<String> args) async {
       }
 
       if (sortName == 'price') {
-        merged.sort((a, b) => _cmpByField('final_price', a, b));
+        merged.sort((a, b) => cmpByField('final_price', a, b));
       } else if (sortName == 'commission') {
-        merged.sort((a, b) => _cmpByField('commission', a, b));
+        merged.sort((a, b) => cmpByField('commission', a, b));
       } else if (sortName == 'sales' || sortName == 'inordercount30days') {
-        merged.sort((a, b) => _cmpByField('sales', a, b));
+        merged.sort((a, b) => cmpByField('sales', a, b));
       } else {
         // default: score desc
-        merged.sort((a, b) => _score(b).compareTo(_score(a)));
+        merged.sort((a, b) => score(b).compareTo(score(a)));
       }
 
       // paging
@@ -2477,7 +2466,7 @@ Future<void> runServer(List<String> args) async {
       // For any JD product missing price, attempt a lightweight HTML fetch of the mobile item page
       // Do this in limited concurrency batches and cache results in _priceCache to avoid repeated fetches.
       try {
-        final List<Future<void>> _priceFutures = [];
+        final List<Future<void>> priceFutures = [];
         for (int i = 0; i < finalProducts.length; i++) {
           final p = finalProducts[i];
           try {
@@ -2487,7 +2476,7 @@ Future<void> runServer(List<String> args) async {
                   : (num.tryParse((p['price'] ?? '').toString()));
               final bool needFetch = (curPriceNum == null || curPriceNum == 0);
               if (needFetch) {
-                _priceFutures.add(Future(() async {
+                priceFutures.add(Future(() async {
                   final id = (p['id']?.toString() ?? '');
                   if (id.isEmpty) return;
                   try {
@@ -2527,7 +2516,7 @@ Future<void> runServer(List<String> args) async {
                           final m = pat.firstMatch(body);
                           if (m != null && m.groupCount >= 1) {
                             final parsed = num.tryParse(
-                                m.group(1)!.replaceAll(RegExp('[^0-9\.]'), ''));
+                                m.group(1)!.replaceAll(RegExp(r'[^0-9.]'), ''));
                             if (parsed != null) {
                               found = parsed.toDouble();
                               break;
@@ -2551,17 +2540,17 @@ Future<void> runServer(List<String> args) async {
             }
           } catch (_) {}
 
-          if (_priceFutures.length >= 4) {
+          if (priceFutures.length >= 4) {
             try {
-              await Future.wait(_priceFutures);
+              await Future.wait(priceFutures);
             } catch (_) {}
-            _priceFutures.clear();
+            priceFutures.clear();
           }
         }
 
-        if (_priceFutures.isNotEmpty) {
+        if (priceFutures.isNotEmpty) {
           try {
-            await Future.wait(_priceFutures);
+            await Future.wait(priceFutures);
           } catch (_) {}
         }
       } catch (_) {}
@@ -2613,7 +2602,7 @@ Future<void> runServer(List<String> args) async {
 
     // Fix common Windows/curl double-encoding: if para looks like Latin-1 representation
     // of UTF-8 bytes (e.g. 'å¥³è£' instead of '女装'), try to recover.
-    String _tryRecoverUtf8(String s) {
+    String tryRecoverUtf8(String s) {
       // if already contains CJK, keep
       if (RegExp(r'[\u4e00-\u9fff]').hasMatch(s)) return s;
       try {
@@ -2626,7 +2615,7 @@ Future<void> runServer(List<String> args) async {
       return s;
     }
 
-    para = _tryRecoverUtf8(para);
+    para = tryRecoverUtf8(para);
     if (para.isEmpty)
       return Response(400,
           body: jsonEncode({'error': 'para parameter required'}),
@@ -3098,10 +3087,7 @@ Future<void> runServer(List<String> args) async {
             .toString()
             .trim();
     final unionId = (env['JD_UNION_ID'] ?? '').toString().trim();
-    if (appKey == null ||
-        appSecret == null ||
-        appKey.isEmpty ||
-        appSecret.isEmpty) {
+    if (appKey.isEmpty || appSecret.isEmpty) {
       return Response.internalServerError(
           body:
               jsonEncode({'error': 'JD_APP_KEY/JD_APP_SECRET not configured'}),
@@ -3192,7 +3178,7 @@ Future<void> runServer(List<String> args) async {
     // priority: payload values override environment variables
     if (payloadSiteId.isNotEmpty)
       biz['siteId'] = payloadSiteId;
-    else if (siteIdEnv != null && siteIdEnv.isNotEmpty)
+    else if (siteIdEnv.isNotEmpty)
       biz['siteId'] = siteIdEnv;
 
     if (payloadPositionId.isNotEmpty) {

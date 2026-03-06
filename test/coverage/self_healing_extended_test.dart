@@ -11,7 +11,7 @@ import 'package:wisepick_dart_version/core/resilience/auto_recovery.dart';
 import 'package:wisepick_dart_version/core/resilience/retry_budget.dart';
 
 class TestSHService extends SelfHealingService {
-  TestSHService(SelfHealingServiceConfig config) : super(config);
+  TestSHService(super.config);
 
   @override
   bool isRetryableError(Object error) {

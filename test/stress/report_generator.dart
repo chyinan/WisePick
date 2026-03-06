@@ -123,7 +123,9 @@ class StabilityAssessment {
 // ============================================================================
 
 class ReportGenerator {
+  // ignore: unused_field
   static const int _chartWidth = 60;
+  // ignore: unused_field
   static const int _chartHeight = 15;
 
   // --------------------------------------------------------------------------

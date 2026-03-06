@@ -133,7 +133,7 @@ void main() {
   // ─── ScoreLevel ──────────────────────────────────────────────────────────
 
   group('ScoreLevel', () {
-    PurchaseDecisionScore _scoreWith(double total) {
+    PurchaseDecisionScore scoreWith(double total) {
       // 分配到各维度，使 totalScore == total
       return PurchaseDecisionScore(
         priceScore: total * 0.3,
@@ -145,39 +145,39 @@ void main() {
     }
 
     test('totalScore=90 → excellent，displayName=极力推荐', () {
-      final s = _scoreWith(90);
+      final s = scoreWith(90);
       expect(s.level, ScoreLevel.excellent);
       expect(s.level.displayName, '极力推荐');
     });
 
     test('totalScore=72 → good', () {
-      expect(_scoreWith(72).level, ScoreLevel.good);
+      expect(scoreWith(72).level, ScoreLevel.good);
     });
 
     test('totalScore=57 → average', () {
-      expect(_scoreWith(57).level, ScoreLevel.average);
+      expect(scoreWith(57).level, ScoreLevel.average);
     });
 
     test('totalScore=42 → belowAverage', () {
-      expect(_scoreWith(42).level, ScoreLevel.belowAverage);
+      expect(scoreWith(42).level, ScoreLevel.belowAverage);
     });
 
     test('totalScore=30 → poor', () {
-      expect(_scoreWith(30).level, ScoreLevel.poor);
+      expect(scoreWith(30).level, ScoreLevel.poor);
     });
   });
 
   // ─── ComparisonProduct.discountRate ──────────────────────────────────────
 
   group('ComparisonProduct.discountRate', () {
-    PurchaseDecisionScore _emptyScore() => PurchaseDecisionScore.empty();
+    PurchaseDecisionScore emptyScore() => PurchaseDecisionScore.empty();
 
     test('originalPrice=100, price=80 → discountRate = 20.0', () {
       final p = ComparisonProduct(
         id: '1', title: 'T', platform: 'jd',
         price: 80, originalPrice: 100,
         rating: 4.5, sales: 1000,
-        specifications: {}, decisionScore: _emptyScore(),
+        specifications: {}, decisionScore: emptyScore(),
       );
       expect(p.discountRate, closeTo(20.0, 0.01));
     });
@@ -187,7 +187,7 @@ void main() {
         id: '1', title: 'T', platform: 'jd',
         price: 80, originalPrice: null,
         rating: 4.5, sales: 1000,
-        specifications: {}, decisionScore: _emptyScore(),
+        specifications: {}, decisionScore: emptyScore(),
       );
       expect(p.discountRate, equals(0));
     });

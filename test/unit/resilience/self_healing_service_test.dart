@@ -21,7 +21,6 @@ import 'dart:async';
 import 'package:test/test.dart';
 
 import 'package:wisepick_dart_version/core/resilience/self_healing_service.dart';
-import 'package:wisepick_dart_version/core/resilience/result.dart';
 import 'package:wisepick_dart_version/core/resilience/slo_manager.dart';
 
 /// Concrete test implementation of SelfHealingService

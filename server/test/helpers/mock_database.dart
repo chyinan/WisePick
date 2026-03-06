@@ -1,4 +1,4 @@
-import '../../lib/database/database.dart';
+import 'package:wisepick_proxy_server/database/database.dart';
 import 'package:postgres/postgres.dart';
 
 /// 用于单元测试的内存 Mock 数据库
@@ -72,7 +72,6 @@ class _MockResult implements Result {
   @override
   ResultSchema get schema => throw UnimplementedError();
 
-  @override
   List<ResultRow> get rows => [];
 
   @override

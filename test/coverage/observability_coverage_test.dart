@@ -49,7 +49,7 @@ void main() {
           Duration(milliseconds: 50 * i),
         );
       }
-      final summary = MetricsCollector.instance.getSummary();
+      MetricsCollector.instance.getSummary();
       // The latency appears in the summary under 'latency' key
       // Also verify the histogram data is accessible directly
       final histogram = MetricsCollector.instance.getHistogram(
@@ -133,7 +133,7 @@ void main() {
         HealthCheckers.ping('ping-svc', () async => true),
       );
       final health = await HealthCheckRegistry.instance.check('ping-test');
-      expect(health?.status, equals(HealthStatus.healthy));
+      expect(health.status, equals(HealthStatus.healthy));
     });
 
     test('ping checker should detect unhealthy endpoint', () async {
@@ -142,7 +142,7 @@ void main() {
         HealthCheckers.ping('ping-svc', () async => false),
       );
       final health = await HealthCheckRegistry.instance.check('ping-down');
-      expect(health?.status, equals(HealthStatus.unhealthy));
+      expect(health.status, equals(HealthStatus.unhealthy));
     });
 
     test('ping checker should handle exception', () async {
@@ -151,7 +151,7 @@ void main() {
         HealthCheckers.ping('ping-svc', () async => throw Exception('connect failed')),
       );
       final health = await HealthCheckRegistry.instance.check('ping-err');
-      expect(health?.status, equals(HealthStatus.unhealthy));
+      expect(health.status, equals(HealthStatus.unhealthy));
     });
 
     test('threshold checker healthy below threshold', () async {
@@ -165,7 +165,7 @@ void main() {
         ),
       );
       final health = await HealthCheckRegistry.instance.check('threshold-ok');
-      expect(health?.status, equals(HealthStatus.healthy));
+      expect(health.status, equals(HealthStatus.healthy));
     });
 
     test('threshold checker warning at threshold', () async {
@@ -179,7 +179,7 @@ void main() {
         ),
       );
       final health = await HealthCheckRegistry.instance.check('threshold-warn');
-      expect(health?.status, equals(HealthStatus.degraded));
+      expect(health.status, equals(HealthStatus.degraded));
     });
 
     test('threshold checker critical above threshold', () async {
@@ -193,7 +193,7 @@ void main() {
         ),
       );
       final health = await HealthCheckRegistry.instance.check('threshold-crit');
-      expect(health?.status, equals(HealthStatus.unhealthy));
+      expect(health.status, equals(HealthStatus.unhealthy));
     });
 
     test('circuit breaker checker closed state', () async {
@@ -205,7 +205,7 @@ void main() {
         ),
       );
       final health = await HealthCheckRegistry.instance.check('cb-check');
-      expect(health?.status, equals(HealthStatus.healthy));
+      expect(health.status, equals(HealthStatus.healthy));
     });
 
     test('circuit breaker checker half_open state', () async {
@@ -217,7 +217,7 @@ void main() {
         ),
       );
       final health = await HealthCheckRegistry.instance.check('cb-half');
-      expect(health?.status, equals(HealthStatus.degraded));
+      expect(health.status, equals(HealthStatus.degraded));
     });
 
     test('circuit breaker checker open state', () async {
@@ -229,7 +229,7 @@ void main() {
         ),
       );
       final health = await HealthCheckRegistry.instance.check('cb-open');
-      expect(health?.status, equals(HealthStatus.unhealthy));
+      expect(health.status, equals(HealthStatus.unhealthy));
     });
 
     test('SystemHealth should aggregate correctly', () async {

@@ -180,9 +180,7 @@ void main() {
     });
 
     test('should NOT retry on HandshakeException', () async {
-      var callCount = 0;
       final result = await executor.execute<String>(() async {
-        callCount++;
         throw const TlsException('SSL error'); // TlsException extends HandshakeException category
       });
       // HandshakeException not directly in dart:io, but TlsException is

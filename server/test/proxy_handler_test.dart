@@ -1,11 +1,10 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:shelf/shelf.dart';
 import 'package:test/test.dart';
 
-import '../lib/proxy/proxy_handler.dart';
-import '../lib/database/database.dart';
+import 'package:wisepick_proxy_server/proxy/proxy_handler.dart';
+import 'package:wisepick_proxy_server/database/database.dart';
 
 /// ============================================================
 /// Module: ProxyHandler

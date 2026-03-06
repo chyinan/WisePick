@@ -170,12 +170,10 @@ void main() {
 
     test('monitoring detects unhealthy state', () async {
       HealthState? oldState;
-      HealthState? newState;
       final manager = AutoRecoveryManager(
         serviceName: 'unhealthy-svc',
         onStateChange: (o, n) {
           oldState = o;
-          newState = n;
         },
       );
 
@@ -256,15 +254,9 @@ void main() {
 
     test('recovery action throws exception', () async {
       final manager = AutoRecoveryManager(serviceName: 'err-svc');
-      RecoveryAction? attemptedAction;
-      bool? attemptSuccess;
-
       final errManager = AutoRecoveryManager(
         serviceName: 'err-svc2',
-        onRecoveryAttempt: (a, s) {
-          attemptedAction = a;
-          attemptSuccess = s;
-        },
+        onRecoveryAttempt: (a, s) {},
       );
 
       errManager.addTrigger(RecoveryTrigger(

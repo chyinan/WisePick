@@ -157,13 +157,12 @@ void main() {
     });
 
     test('should clear storm when rate drops', () {
-      var stormCleared = false;
       final detector = FailureStormDetector(
         name: 'clear_test',
         windowSize: const Duration(seconds: 10),
         stormThreshold: 5,
         consecutiveHighCount: 1,
-        onStormCleared: () => stormCleared = true,
+        onStormCleared: () {},
       );
 
       // Trigger storm

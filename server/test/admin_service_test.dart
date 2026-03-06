@@ -3,8 +3,8 @@ import 'dart:convert';
 import 'package:shelf/shelf.dart';
 import 'package:test/test.dart';
 
-import '../lib/admin/admin_service.dart';
-import '../lib/database/database.dart';
+import 'package:wisepick_proxy_server/admin/admin_service.dart';
+import 'package:wisepick_proxy_server/database/database.dart';
 import 'helpers/mock_database.dart';
 
 /// ============================================================

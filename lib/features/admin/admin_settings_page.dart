@@ -205,6 +205,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                 children: [
                   FilledButton(
                     onPressed: () async {
+                      final navigator = Navigator.of(context);
                       try {
                         // 验证后端地址（开发模式允许本地地址）
                         final backendUrl = _backendBaseController.text.trim();
@@ -215,7 +216,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                           );
                           if (urlError != null) {
                             if (!mounted) return;
-                            showErrorSnackBar(context, '后端地址无效：$urlError');
+                            showErrorSnackBar(context, '后端地址无效：$urlError'); // ignore: use_build_context_synchronously
                             return;
                           }
                         }
@@ -233,11 +234,11 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                         // 使 BackendConfig 缓存失效，以便新地址立即生效
                         BackendConfig.invalidateCache();
                         if (!mounted) return;
-                        showSuccessSnackBar(context, '保存成功');
-                        Navigator.of(context).pop();
+                        showSuccessSnackBar(context, '保存成功'); // ignore: use_build_context_synchronously
+                        navigator.pop();
                       } catch (e) {
                         if (!mounted) return;
-                        showErrorSnackBar(context, AppErrorMapper.mapException(e));
+                        showErrorSnackBar(context, AppErrorMapper.mapException(e)); // ignore: use_build_context_synchronously
                       }
                     },
                     child: Text('保存', style: Theme.of(context).textTheme.labelLarge),

@@ -1,8 +1,8 @@
 import 'package:test/test.dart';
 import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
 
-import '../lib/auth/jwt_service.dart';
-import '../lib/database/database.dart';
+import 'package:wisepick_proxy_server/auth/jwt_service.dart';
+import 'package:wisepick_proxy_server/database/database.dart';
 
 /// ============================================================
 /// Module: JwtService

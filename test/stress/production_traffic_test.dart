@@ -282,10 +282,7 @@ void main() {
       await Future.wait(baselineFutures)
           .timeout(const Duration(seconds: 10));
 
-      final baselineSuccess = service.successCount;
       service.reset();
-
-      // Phase 2: Burst to 1000 (10x spike)
       final burstFutures = List.generate(1000, (i) async {
         await service.execute(() => _simulatedOperation(rng));
       });
@@ -481,8 +478,6 @@ void main() {
         await service.execute(() => _simulatedOperation(rng));
       });
       await Future.wait(futures).timeout(const Duration(seconds: 10));
-      final baselineSuccess = service.successCount;
-      final baselineLatencies = List<double>.from(service.latenciesMs);
 
       // Phase 2: Massive spike (5000 requests)
       service.reset();
@@ -509,8 +504,6 @@ void main() {
 
       // ignore: avoid_print
       print('=== Spike-then-Calm Recovery ===');
-      // ignore: avoid_print
-      print('  Pre-spike baseline success: $baselineSuccess / 100');
       // ignore: avoid_print
       print('  Post-spike baseline success: $postSpikeSuccess / 100');
 

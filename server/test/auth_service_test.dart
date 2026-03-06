@@ -1,7 +1,7 @@
 import 'package:test/test.dart';
 
-import '../lib/auth/auth_service.dart';
-import '../lib/database/database.dart';
+import 'package:wisepick_proxy_server/auth/auth_service.dart';
+import 'package:wisepick_proxy_server/database/database.dart';
 import 'helpers/mock_database.dart';
 
 /// ============================================================
@@ -216,7 +216,7 @@ void main() {
   // 密码验证规则（通过注册接口间接测试）
   // ============================================================
   group('AuthService - 密码强度规则', () {
-    void _testPwd(String pwd, bool valid, String desc) {
+    void testPwd(String pwd, bool valid, String desc) {
       test('密码 "$pwd" ($desc)', () async {
         mockDb.stubQueryOne('SELECT id, status FROM users WHERE email', null);
         final result = await authService.register(
@@ -234,11 +234,11 @@ void main() {
       });
     }
 
-    _testPwd('abc1234', false, '长度不足8位');
-    _testPwd('abcdefgh', false, '无数字');
-    _testPwd('12345678', false, '无字母');
-    _testPwd('Password1', true, '合法密码');
-    _testPwd('abc123456', true, '合法密码（小写+数字）');
+    testPwd('abc1234', false, '长度不足8位');
+    testPwd('abcdefgh', false, '无数字');
+    testPwd('12345678', false, '无字母');
+    testPwd('Password1', true, '合法密码');
+    testPwd('abc123456', true, '合法密码（小写+数字）');
   });
 }
 

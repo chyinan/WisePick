@@ -58,13 +58,11 @@ void main() {
     });
 
     test('_runPredictionCycle with trend alert callback', () async {
-      bool trendAlerted = false;
       final managerWithCallback = PredictiveLoadManager(
         serviceName: 'trend-alert-svc',
         historyWindow: const Duration(hours: 1),
         predictionHorizon: const Duration(minutes: 5),
         onTrendAlert: (trend) {
-          trendAlerted = true;
         },
       );
 
@@ -204,10 +202,9 @@ void main() {
     });
 
     test('getOrCreate with onActionRequired callback', () {
-      LoadManagementAction? action;
       final m = PredictiveLoadManagerRegistry.instance.getOrCreate(
         'cb-svc',
-        onActionRequired: (a, p) => action = a,
+        onActionRequired: (a, p) {},
       );
 
       expect(m.serviceName, 'cb-svc');

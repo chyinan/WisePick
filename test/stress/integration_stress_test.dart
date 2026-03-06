@@ -11,7 +11,6 @@
 library;
 
 import 'dart:async';
-import 'dart:math';
 import 'package:test/test.dart';
 
 import 'package:wisepick_dart_version/core/resilience/circuit_breaker.dart';
@@ -86,7 +85,7 @@ void main() {
 
     test('should handle normal load through full stack', () async {
       var successes = 0;
-      var failures = 0;
+      var failures = 0; // tracked but not asserted (informational)
 
       for (int i = 0; i < 30; i++) {
         // Check storm protection
@@ -103,7 +102,7 @@ void main() {
 
         try {
           retryBudget.recordRequest();
-          final result = await rateLimiter.execute(() async {
+          await rateLimiter.execute(() async {
             await Future.delayed(const Duration(milliseconds: 5));
             return 'success';
           });
@@ -120,6 +119,8 @@ void main() {
           failures++;
         }
       }
+      // ignore: unused_local_variable
+      final _ = failures;
 
       expect(successes, greaterThan(20),
           reason: 'Most requests should succeed under normal load');

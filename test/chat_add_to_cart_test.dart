@@ -70,7 +70,7 @@ void main() {
 
     final svcOverride = chatServiceProvider.overrideWithValue(fakeChat as ChatService);
     final cartSvcOverride = cartServiceProvider.overrideWithValue(fakeCart as dynamic);
-    final itemsOverride = cartItemsProvider.overrideWithProvider(FutureProvider<List<Map<String, dynamic>>>((ref) async => await fakeCart.getAllItems()));
+    final itemsOverride = cartItemsProvider.overrideWith((ref) async => await fakeCart.getAllItems());
 
     await tester.pumpWidget(ProviderScope(overrides: [svcOverride, cartSvcOverride, itemsOverride], child: const WisePickApp()));
     await tester.pump(const Duration(milliseconds: 300));

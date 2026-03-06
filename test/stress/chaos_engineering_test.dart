@@ -17,7 +17,6 @@
 library;
 
 import 'dart:async';
-import 'dart:math';
 import 'package:test/test.dart';
 
 import 'package:wisepick_dart_version/core/reliability/chaos_engineering.dart';
@@ -27,7 +26,6 @@ import 'package:wisepick_dart_version/core/resilience/retry_budget.dart';
 import 'package:wisepick_dart_version/core/resilience/result.dart';
 import 'package:wisepick_dart_version/core/resilience/adaptive_config.dart';
 import 'package:wisepick_dart_version/core/resilience/auto_recovery.dart';
-import 'package:wisepick_dart_version/core/observability/metrics_collector.dart';
 
 // ============================================================================
 // Helper: Simulated resilient operation executor

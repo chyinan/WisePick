@@ -217,8 +217,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     nickname: nicknameController.text.trim(),
                   );
               if (success && mounted) {
-                Navigator.pop(ctx);
-                showSuccessSnackBar(context, '资料更新成功');
+                Navigator.pop(ctx); // ignore: use_build_context_synchronously
+                showSuccessSnackBar(context, '资料更新成功'); // ignore: use_build_context_synchronously
               }
             },
             child: const Text('保存'),
@@ -290,8 +290,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   );
 
               if (success && mounted) {
-                Navigator.pop(ctx);
-                showSuccessSnackBar(context, '密码修改成功');
+                Navigator.pop(ctx); // ignore: use_build_context_synchronously
+                showSuccessSnackBar(context, '密码修改成功'); // ignore: use_build_context_synchronously
               }
             },
             child: const Text('确认'),

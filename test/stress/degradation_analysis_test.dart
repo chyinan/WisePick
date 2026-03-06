@@ -18,8 +18,6 @@ import 'package:wisepick_dart_version/core/resilience/circuit_breaker.dart';
 import 'package:wisepick_dart_version/core/resilience/global_rate_limiter.dart';
 import 'package:wisepick_dart_version/core/resilience/retry_budget.dart';
 import 'package:wisepick_dart_version/core/resilience/adaptive_config.dart';
-import 'package:wisepick_dart_version/core/resilience/result.dart';
-import 'package:wisepick_dart_version/core/observability/metrics_collector.dart';
 
 import 'report_generator.dart';
 

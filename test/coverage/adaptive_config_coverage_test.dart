@@ -208,13 +208,12 @@ void main() {
     });
 
     test('storm clearing', () {
-      bool stormCleared = false;
       final d = FailureStormDetector(
         name: 'clear-test',
         windowSize: const Duration(seconds: 10),
         stormThreshold: 1.0,
         consecutiveHighCount: 1,
-        onStormCleared: () => stormCleared = true,
+        onStormCleared: () {},
       );
 
       // Trigger storm

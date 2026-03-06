@@ -56,6 +56,7 @@ class _HomeDrawerState extends ConsumerState<HomeDrawer> {
 
   Future<void> _newConversation() async {
     // 使用 ChatStateNotifier 创建并直接切换到新会话（会保存到仓库），然后关闭抽屉进入聊天界面
+    final navigator = Navigator.of(context);
     final notifier = ref.read(chatStateNotifierProvider.notifier);
     await notifier.createNewConversation();
     // 刷新本地列表（从仓库重新加载），并立即关闭抽屉以展示新会话
@@ -69,7 +70,7 @@ class _HomeDrawerState extends ConsumerState<HomeDrawer> {
     } catch (e, st) {
       dev.log('Error refreshing conversations after new: $e', name: 'HomeDrawer', error: e, stackTrace: st);
     }
-    Navigator.of(context).pop();
+    navigator.pop();
   }
 
   void _toggleSelect(String id) {
@@ -124,6 +125,7 @@ class _HomeDrawerState extends ConsumerState<HomeDrawer> {
   }
 
   Future<void> _checkAdminAccess(BuildContext context) async {
+    final navigator = Navigator.of(context);
     final passwordController = TextEditingController();
     final verified = await showDialog<bool>(
       context: context,
@@ -165,8 +167,8 @@ class _HomeDrawerState extends ConsumerState<HomeDrawer> {
 
     if (verified == true) {
       if (!mounted) return;
-      Navigator.of(context).pop(); // Close drawer
-      Navigator.of(context).push(
+      navigator.pop(); // Close drawer
+      navigator.push(
         MaterialPageRoute(builder: (_) => const AdminDashboardPage()),
       );
     } else if (verified == false) {
