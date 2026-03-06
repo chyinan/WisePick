@@ -625,14 +625,11 @@ class _SettingsPage extends ConsumerWidget {
         padding: const EdgeInsets.all(32.0),
         child: Column(
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: Image.asset(
-                'assets/icon/app_logo.png',
-                width: 80,
-                height: 80,
-                fit: BoxFit.cover,
-              ),
+            Image.asset(
+              'assets/icon/app_logo.png',
+              width: 80,
+              height: 80,
+              fit: BoxFit.contain,
             ),
             const SizedBox(height: 16),
             Text(
