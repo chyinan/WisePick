@@ -579,7 +579,14 @@ class _ReliabilityPageState extends State<ReliabilityPage>
                       title: '错误率趋势',
                       metric: 'errorRate',
                       data: _errorRateData,
-                      color: Colors.red,
+                      color: () {
+                        final latest = (_errorRateData.isNotEmpty
+                            ? (_errorRateData.last['value'] as num?)?.toDouble()
+                            : null) ?? 0;
+                        if (latest <= 0) return Colors.green;
+                        if (latest < 0.05) return Colors.orange;
+                        return Colors.red;
+                      }(),
                       unit: '%',
                       threshold: 0.05,
                     ),

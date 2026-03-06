@@ -268,14 +268,6 @@ class _SettingsPageState extends State<SettingsPage> with SingleTickerProviderSt
     final dbPort = _safeGetNested(_settings, ['database', 'port'])?.toString() ?? '-';
     final dbName = _safeGetNested<String>(_settings, ['database', 'name']) ?? '-';
     final dbStatus = _safeGetNested<String>(_settings, ['database', 'status']);
-    final aiProvider = _safeGetNested<String>(_settings, ['ai', 'provider']) ?? '-';
-    final aiModel = _safeGetNested<String>(_settings, ['ai', 'model']) ?? '-';
-    final aiBaseUrl = _safeGetNested<String>(_settings, ['ai', 'baseUrl']) ?? '-';
-    final aiHasApiKey = _safeGetNested<bool>(_settings, ['ai', 'hasApiKey']) ?? false;
-    final jdHasCookie = _safeGetNested<bool>(_settings, ['jd', 'hasCookie']) ?? false;
-    final jdCookieSource = _safeGetNested<String>(_settings, ['jd', 'cookieSource']) ?? '-';
-    final emailVerification = _safeGetNested<bool>(_settings, ['features', 'emailVerification']) ?? false;
-    final rateLimit = _safeGetNested<bool>(_settings, ['features', 'rateLimit']) ?? false;
     
     return SingleChildScrollView(
       child: Column(
@@ -304,62 +296,6 @@ class _SettingsPageState extends State<SettingsPage> with SingleTickerProviderSt
                 valueColor: dbStatus == 'connected'
                     ? const Color(0xFF10B981)
                     : Colors.red,
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          _buildSettingsSection(
-            title: 'AI 配置',
-            icon: Icons.psychology_rounded,
-            color: const Color(0xFF8B5CF6),
-            children: [
-              _buildSettingItem('AI 服务商', aiProvider),
-              _buildSettingItem('模型', aiModel),
-              _buildSettingItem('API 地址', aiBaseUrl),
-              _buildSettingItem(
-                'API Key',
-                aiHasApiKey ? '已配置' : '未配置',
-                valueColor: aiHasApiKey
-                    ? const Color(0xFF10B981)
-                    : Colors.orange,
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          _buildSettingsSection(
-            title: '京东配置',
-            icon: Icons.shopping_bag_rounded,
-            color: const Color(0xFFE52B2B),
-            children: [
-              _buildSettingItem(
-                'Cookie 状态',
-                jdHasCookie ? '已配置' : '未配置',
-                valueColor: jdHasCookie
-                    ? const Color(0xFF10B981)
-                    : Colors.orange,
-              ),
-              _buildSettingItem('Cookie 来源', jdCookieSource),
-            ],
-          ),
-          const SizedBox(height: 20),
-          _buildSettingsSection(
-            title: '功能开关',
-            icon: Icons.toggle_on_rounded,
-            color: const Color(0xFFF59E0B),
-            children: [
-              _buildSettingItem(
-                '邮箱验证',
-                emailVerification ? '开启' : '关闭',
-                valueColor: emailVerification
-                    ? const Color(0xFF10B981)
-                    : Colors.grey,
-              ),
-              _buildSettingItem(
-                '请求限流',
-                rateLimit ? '开启' : '关闭',
-                valueColor: rateLimit
-                    ? const Color(0xFF10B981)
-                    : Colors.grey,
               ),
             ],
           ),

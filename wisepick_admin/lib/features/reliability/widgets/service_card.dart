@@ -473,7 +473,7 @@ class ServiceList extends StatelessWidget {
         crossAxisCount: 2,
         mainAxisSpacing: 16,
         crossAxisSpacing: 16,
-        childAspectRatio: 1.4,
+        mainAxisExtent: 260,
       ),
       itemCount: services.length,
       itemBuilder: (context, index) {

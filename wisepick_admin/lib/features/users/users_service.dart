@@ -84,6 +84,36 @@ class UsersService {
     }
   }
 
+  /// 封禁用户
+  Future<void> banUser(String id) async {
+    if (id.trim().isEmpty) throw ArgumentError('用户 ID 不能为空');
+    try {
+      await _apiClient.put(
+        '/api/v1/admin/users/${Uri.encodeComponent(id)}',
+        data: {'status': 'suspended'},
+      );
+      _log('用户封禁成功: $id');
+    } catch (e) {
+      _log('封禁用户失败: $e', isError: true);
+      rethrow;
+    }
+  }
+
+  /// 解封用户
+  Future<void> unbanUser(String id) async {
+    if (id.trim().isEmpty) throw ArgumentError('用户 ID 不能为空');
+    try {
+      await _apiClient.put(
+        '/api/v1/admin/users/${Uri.encodeComponent(id)}',
+        data: {'status': 'active'},
+      );
+      _log('用户解封成功: $id');
+    } catch (e) {
+      _log('解封用户失败: $e', isError: true);
+      rethrow;
+    }
+  }
+
   /// 空结果
   Map<String, dynamic> _emptyResult(int page) => {
         'users': <Map<String, dynamic>>[],

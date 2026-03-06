@@ -598,7 +598,7 @@ class StatsDashboard extends StatelessWidget {
       }
     }
 
-    final isVerified = user['emailVerified'] == true;
+    final status = _safeGetString(user['status'], 'active');
     final email = _safeGetString(user['email'], '');
     final nickname = _safeGetString(user['nickname'], '未设置');
 
@@ -654,19 +654,19 @@ class StatsDashboard extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: isVerified 
-                    ? const Color(0xFF10B981).withOpacity(0.1)
-                    : const Color(0xFFF59E0B).withOpacity(0.1),
+                color: status == 'suspended'
+                    ? Colors.red.withOpacity(0.1)
+                    : const Color(0xFF10B981).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
-                isVerified ? '已验证' : '未验证',
+                status == 'suspended' ? '已封禁' : '正常',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
-                  color: isVerified 
-                      ? const Color(0xFF10B981)
-                      : const Color(0xFFF59E0B),
+                  color: status == 'suspended'
+                      ? Colors.red
+                      : const Color(0xFF10B981),
                 ),
                 textAlign: TextAlign.center,
               ),

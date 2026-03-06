@@ -278,7 +278,7 @@ class AuthService {
         userAgent: userAgent,
         failureReason: 'account_${user.status}',
       );
-      return AuthResult.error('账号已被${user.status == 'suspended' ? '暂停' : '禁用'}');
+      return AuthResult.error('您的账号已被封禁，请联系管理员解封');
     }
 
     // 验证密码

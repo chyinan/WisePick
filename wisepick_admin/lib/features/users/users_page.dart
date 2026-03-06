@@ -70,6 +70,46 @@ class _UsersPageState extends State<UsersPage> {
     }
   }
 
+  Future<void> _banUser(Map<String, dynamic> user) async {
+    final userId = _safeGetString(user, 'id');
+    if (userId.isEmpty) { _showError('无效的用户 ID'); return; }
+    final isBanned = _safeGetString(user, 'status') == 'suspended';
+    final userEmail = _safeGetString(user, 'email', '未知用户');
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(isBanned ? '确认解封' : '确认封号'),
+        content: Text(isBanned
+            ? '确定要解封用户 $userEmail 吗？'
+            : '确定要封禁用户 $userEmail 吗？封禁后该用户将无法登录。'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('取消')),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(backgroundColor: isBanned ? Colors.green : Colors.orange),
+            child: Text(isBanned ? '解封' : '封号'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      if (isBanned) {
+        await _service.unbanUser(userId);
+        if (!mounted) return;
+        _showSuccess('用户已解封');
+      } else {
+        await _service.banUser(userId);
+        if (!mounted) return;
+        _showSuccess('用户已封禁');
+      }
+      _loadUsers();
+    } catch (e) {
+      if (!mounted) return;
+      _showError('操作失败: ${_formatErrorMessage(e)}');
+    }
+  }
+
   Future<void> _deleteUser(Map<String, dynamic> user) async {
     final userId = _safeGetString(user, 'id');
     if (userId.isEmpty) {
@@ -430,7 +470,7 @@ class _UsersPageState extends State<UsersPage> {
                 Expanded(flex: 2, child: Text('昵称', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF64748B)))),
                 Expanded(flex: 2, child: Text('注册时间', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF64748B)))),
                 Expanded(flex: 1, child: Text('状态', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF64748B)))),
-                SizedBox(width: 100, child: Text('操作', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF64748B)))),
+                SizedBox(width: 140, child: Text('操作', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF64748B)))),
               ],
             ),
           ),
@@ -457,7 +497,6 @@ class _UsersPageState extends State<UsersPage> {
       }
     }
 
-    final isVerified = user['emailVerified'] == true;
     final status = _safeGetString(user, 'status', 'active');
 
     return Container(
@@ -529,45 +568,25 @@ class _UsersPageState extends State<UsersPage> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: isVerified 
-                        ? const Color(0xFF10B981).withOpacity(0.1)
-                        : const Color(0xFFF59E0B).withOpacity(0.1),
+                    color: status == 'suspended'
+                        ? Colors.red.withOpacity(0.1)
+                        : const Color(0xFF10B981).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    isVerified ? '已验证' : '未验证',
+                    status == 'suspended' ? '已封禁' : '正常',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: isVerified 
-                          ? const Color(0xFF10B981)
-                          : const Color(0xFFF59E0B),
+                      color: status == 'suspended' ? Colors.red : const Color(0xFF10B981),
                     ),
                   ),
                 ),
-                if (status != 'active') ...[
-                  const SizedBox(width: 4),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      status == 'suspended' ? '已暂停' : status,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.red,
-                      ),
-                    ),
-                  ),
-                ],
               ],
             ),
           ),
           SizedBox(
-            width: 100,
+            width: 140,
             child: Row(
               children: [
                 IconButton(
@@ -575,6 +594,15 @@ class _UsersPageState extends State<UsersPage> {
                   icon: const Icon(Icons.edit_rounded, size: 18),
                   tooltip: '编辑',
                   color: const Color(0xFF6366F1),
+                ),
+                IconButton(
+                  onPressed: () => _banUser(user),
+                  icon: Icon(
+                    status == 'suspended' ? Icons.lock_open_rounded : Icons.block_rounded,
+                    size: 18,
+                  ),
+                  tooltip: status == 'suspended' ? '解封' : '封号',
+                  color: status == 'suspended' ? Colors.green : Colors.orange,
                 ),
                 IconButton(
                   onPressed: () => _deleteUser(user),
