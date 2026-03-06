@@ -153,12 +153,14 @@ class JdAdapter {
     return '';
   }
 
+  // ignore: unused_element
   String _formatJdTimestamp() {
     final now = DateTime.now().toUtc().add(const Duration(hours: 8));
     String two(int n) => n.toString().padLeft(2, '0');
     return '${now.year}-${two(now.month)}-${two(now.day)} ${two(now.hour)}:${two(now.minute)}:${two(now.second)}';
   }
 
+  // ignore: unused_element
   String _md5Sign(Map<String, String> params, String secret) {
     final keys = params.keys.toList()..sort();
     final sb = StringBuffer();

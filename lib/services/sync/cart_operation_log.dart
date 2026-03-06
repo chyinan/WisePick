@@ -75,7 +75,7 @@ class CartOperationLogger {
           final raw = box.get(key);
           if (raw is Map) {
             entries.add(CartOperationLog.fromMap(
-                Map<String, dynamic>.from(raw as Map)));
+                Map<String, dynamic>.from(raw)));
           }
         }
       }
@@ -97,7 +97,7 @@ class CartOperationLogger {
         final raw = box.get(key);
         if (raw is Map) {
           final entry = CartOperationLog.fromMap(
-              Map<String, dynamic>.from(raw as Map));
+              Map<String, dynamic>.from(raw));
           result.putIfAbsent(entry.itemId, () => []).add(entry);
         }
       }

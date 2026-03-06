@@ -682,6 +682,7 @@ class RetryStrategy extends ResilienceStrategy {
 class StrategyPipeline {
   final String name;
   final List<ResilienceStrategy> _strategies = [];
+  // ignore: unused_field
   late final dynamic _logger;
 
   StrategyPipeline({required this.name})

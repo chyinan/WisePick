@@ -162,7 +162,9 @@ class ShoppingTimeHeatmap extends StatelessWidget {
   }
 
   Widget _buildStats(BuildContext context) {
+    // ignore: unused_local_variable
     final colorScheme = Theme.of(context).colorScheme;
+    // ignore: unused_local_variable
     final textTheme = Theme.of(context).textTheme;
 
     return Row(

@@ -1,4 +1,5 @@
-﻿import 'dart:async';
+﻿// ignore_for_file: valid_regexps
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as dev;
 
@@ -41,6 +42,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
   bool _isLoadingImages = false;
   String? _imageError;
   List<String> _galleryImages = const <String>[];
+  // ignore: unused_field
   int _currentImageIndex = 0;
   late final TaobaoItemDetailService _taobaoDetailService;
   late final PddGoodsDetailService _pddDetailService;
@@ -406,7 +408,9 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
     );
   }
 
+  // ignore: unused_element
   void _startAutoPlay() {}
+  // ignore: unused_element
   void _stopAutoPlay() {}
 
   Widget _buildImageCarousel(BuildContext context, bool wide) {
@@ -419,6 +423,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
   }
 
   // Try to recover recommendation entries from loose / malformed AI JSON-like text.
+  // ignore: unused_element
   List<Map<String, dynamic>> _extractRecommendationsFromLooseJson(String raw) {
     final List<Map<String, dynamic>> out = [];
     if (raw.trim().isEmpty) return out;
@@ -473,7 +478,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
         if (d != null) item['description'] = d.group(1)!.trim();
 
         final r = ratingRe.firstMatch(part);
-        if (r != null) item['rating'] = double.tryParse(r.group(1)!) ?? null;
+        if (r != null) item['rating'] = double.tryParse(r.group(1)!);
 
         // if we found at least a title or description, keep it
         if (item.containsKey('title') || item.containsKey('description')) {

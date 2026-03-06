@@ -25,7 +25,15 @@ class TaobaoAdapter {
     };
 
     final resp = await _client.get(apiUrl, params: params);
-    final List data = resp.data is Map && resp.data['results'] != null ? resp.data['results'] as List : (resp.data as List? ?? []);
+    final dynamic rawData = resp.data;
+    final List data;
+    if (rawData is Map && rawData['results'] is List) {
+      data = rawData['results'] as List;
+    } else if (rawData is List) {
+      data = rawData;
+    } else {
+      data = [];
+    }
 
     final futures = data.map((e) async {
       final map = Map<String, dynamic>.from(e as Map);

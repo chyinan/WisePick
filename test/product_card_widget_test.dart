@@ -24,7 +24,7 @@ void main() {
           child: ProductCard(
             product: sample,
             onTap: () {},
-            onFavorite: () async {
+            onFavorite: (_) {
               favCalled = true;
             },
           ),

@@ -33,6 +33,7 @@ class AdminService {
             : response.data;
 
         final totalUsers = (data['totalUsers'] as num?)?.toInt() ?? 0;
+        // ignore: unused_local_variable
         final todayNew = (data['todayNewUsers'] as num?)?.toInt() ?? 0;
         final weekNew = (data['weekNewUsers'] as num?)?.toInt() ?? 0;
         final monthNew = (data['monthNewUsers'] as num?)?.toInt() ?? 0;
@@ -126,15 +127,19 @@ class AdminService {
         final messages = data['messages'] as Map<String, dynamic>? ?? {};
         final devices = data['devices'] as Map<String, dynamic>? ?? {};
         final dbInfo = data['database'] as Map<String, dynamic>? ?? {};
+        // ignore: unused_local_variable
         final serverStartTime = data['serverStartTime'] as String? ?? '';
 
         final totalCartItems = (cartItems['total'] as num?)?.toInt() ?? 0;
+        // ignore: unused_local_variable
         final todayCartItems = (cartItems['today'] as num?)?.toInt() ?? 0;
         final byPlatform = cartItems['byPlatform'] as Map<String, dynamic>? ?? {};
 
         final totalConversations = (conversations['total'] as num?)?.toInt() ?? 0;
         final totalMessages = (messages['total'] as num?)?.toInt() ?? 0;
+        // ignore: unused_local_variable
         final activeDevices = (devices['active'] as num?)?.toInt() ?? 0;
+        // ignore: unused_local_variable
         final dbStatus = dbInfo['status'] as String? ?? 'unknown';
 
         // 将系统级数据映射到现有模型

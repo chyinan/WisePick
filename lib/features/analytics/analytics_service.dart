@@ -407,6 +407,7 @@ class AnalyticsService {
   }
 
   /// 将平台标识翻译为中文
+  // ignore: unused_element
   String _translatePlatform(String platform) {
     switch (platform.toLowerCase()) {
       case 'jd':

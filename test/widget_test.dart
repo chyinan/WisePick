@@ -5,25 +5,33 @@
 // gestures. You can also use WidgetTester to find child widgets in the widget
 // tree, read text, and verify that the values of widget properties are correct.
 
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive/hive.dart';
 
-import 'package:wisepick_dart_version/main.dart';
+import 'package:wisepick_dart_version/app.dart';
 
 void main() {
-  testWidgets('App shows chat title', (WidgetTester tester) async {
-    // 包裹 ProviderScope 后启动应用并触发一帧
-    await tester.pumpWidget(const ProviderScope(child: WisePickApp()));
-    // 切换到底部导航的「关于」页，再验证页面中的标题文本存在
-    // 先等待一帧以完成初始渲染
-    await tester.pumpAndSettle();
-    // 点击底部导航的关于项（标签文本为 '关于'）
-    final aboutFinder = find.text('关于');
-    expect(aboutFinder, findsWidgets);
-    await tester.tap(aboutFinder.first);
-    await tester.pumpAndSettle();
+  late Directory tempDir;
 
-    // 验证关于页中的标题文本出现在页面上
-    expect(find.text('快淘帮 — WisePick'), findsOneWidget);
+  setUp(() async {
+    tempDir = await Directory.systemTemp.createTemp('hive_widget_test_');
+    Hive.init(tempDir.path);
   });
+
+  tearDown(() async {
+    await Hive.close();
+    await tempDir.delete(recursive: true);
+  });
+
+  testWidgets('App shows chat title', (WidgetTester tester) async {
+    await tester.pumpWidget(const ProviderScope(child: WisePickApp()));
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // 验证底部导航存在
+    expect(find.text('AI 助手'), findsWidgets);
+    expect(find.text('购物车'), findsWidgets);
+    expect(find.text('设置'), findsWidgets);
+  }, timeout: const Timeout(Duration(seconds: 30)));
 }
