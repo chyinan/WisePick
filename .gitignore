@@ -80,6 +80,9 @@ __pycache__/
 server/.env
 server/bin/.env
 
+# Hive test data
+.dart_test_hive/
+
 # BMAD related folders
 .bmad-core/
 _bmad

@@ -104,7 +104,7 @@
 ### 10. 管理员功能
 
 #### 9.1. 应用内管理员设置
-- OpenAI API Key 配置
+- LLM API Key 配置
 - 后端代理地址配置
 - AI 模型选择
 - 调试模式和 Mock AI 模式
@@ -244,7 +244,6 @@ flutter build web --release         # Web
 - **框架**: Shelf
 - **数据库**: PostgreSQL（用户账号和同步数据存储）
 - **认证**: JWT（Access Token + Refresh Token）
-- **浏览器自动化**: 已移除
 - **功能**: 代理服务器、API 签名、转链、用户认证、数据同步
 
 ### 项目结构
@@ -252,7 +251,7 @@ flutter build web --release         # Web
 ```
 wisepick_dart_version/
 ├── lib/                      # Flutter 应用源码
-│   ├── core/                 # 核心功能（API 客户端、配置、OAuth）
+│   ├── core/                 # 核心功能（API 客户端、配置、存储）
 │   ├── features/             # 功能模块
 │   │   ├── auth/             # 用户认证（登录、注册、Token管理）
 │   │   ├── chat/             # AI 聊天
@@ -261,38 +260,42 @@ wisepick_dart_version/
 │   │   ├── price_history/    # 价格历史（记录、趋势分析、购买建议）
 │   │   ├── decision/         # 商品比价（对比、评分、推荐）
 │   │   └── admin/            # 管理员功能（应用内设置）
-│   ├── screens/              # 页面组件
 │   ├── services/             # 业务服务
 │   │   ├── sync/             # 数据同步（购物车、会话）
-│   │   └── price_refresh_service.dart  # 价格刷新服务
+│   │   └── price_refresh_service.dart
 │   ├── widgets/              # 通用组件
 │   └── models/               # 数据模型
-├── server/                   # 后端代理服务
+├── server/                   # 后端服务
 │   ├── bin/
-│   │   ├── proxy_server.dart # 代理服务器入口
-│   │   └── .env              # 环境变量配置
+│   │   ├── proxy_server.dart # 服务入口
+│   │   ├── .env              # 环境变量（不提交到版本控制）
+│   │   └── .env.example      # 环境变量模板
 │   ├── lib/
-│   │   ├── auth/             # 用户认证模块（JWT、中间件）
+│   │   ├── auth/             # 用户认证（JWT、中间件、Handler）
 │   │   ├── sync/             # 数据同步服务
-│   │   ├── db/               # 数据库连接
 │   │   ├── admin/            # 管理员后台 API
+│   │   ├── proxy/            # AI API 代理转发
+│   │   ├── database/         # 数据库连接管理
+│   │   ├── models/           # 数据模型
+│   │   ├── analytics/        # 数据统计
+│   │   ├── decision/         # 商品比价服务
 │   │   ├── price_history/    # 价格历史服务
-│   │   └── decision/         # 商品比价服务
-│   └── pubspec.yaml
-├── wisepick_admin/           # 独立管理员后台应用（Web）
-│   ├── lib/
-│   │   ├── features/
-│   │   │   ├── dashboard/    # 数据概览
-│   │   │   ├── users/        # 用户管理
-│   │   │   ├── cart/         # 购物车数据管理
-│   │   │   ├── conversations/# 会话记录管理
-│   │   │   └── settings/     # 系统设置
-│   │   └── core/
-│   │       └── api_client.dart  # API 客户端
-│   └── pubspec.yaml
-├── test/                     # 测试文件
+│   │   ├── reliability/      # 健康检查
+│   │   ├── debug/            # 调试接口
+│   │   └── shared/           # 共享状态
+│   ├── test/                 # 后端测试
+│   │   ├── jwt_service_test.dart
+│   │   ├── auth_service_test.dart
+│   │   ├── admin_service_test.dart
+│   │   ├── proxy_handler_test.dart
+│   │   └── helpers/
+│   │       └── mock_database.dart
+│   └── API.md                # 完整 API 文档
+├── wisepick_admin/           # 独立管理员后台（Web）
+├── docker-compose.yml        # Docker 一键部署（含 PostgreSQL）
+├── test/                     # Flutter 测试
 ├── assets/                   # 资源文件
-└── pubspec.yaml              # 项目配置
+└── pubspec.yaml
 ```
 
 ---
@@ -301,181 +304,63 @@ wisepick_dart_version/
 
 ### 前端配置
 
-应用支持通过管理员设置页面配置以下选项：
+**用户设置页**（普通用户可配置）：
+- **LLM API Key**: 用户自行配置 AI 服务商的 API Key（服务端不持有）
+- **LLM Base URL**: AI 服务商的 API 地址（支持 OpenAI 兼容接口）
+- **LLM 模型**: 选择要使用的对话模型
 
-- **OpenAI API Key**: 用于直接调用 OpenAI API（可选，也可通过后端代理）
+**管理员设置页**（需管理员密码）：
 - **后端代理地址**: 后端服务器地址（默认: `http://localhost:9527`）
-- **AI 模型**: 选择使用的 AI 模型（默认: `gpt-3.5-turbo`）
-- **Max Tokens**: 限制 AI 回复的最大 token 数（可选: unlimited/300/800/1000/2000）
-- **Prompt 嵌入**: 是否启用增强的 Prompt（默认: 开启）
-- **调试模式**: 显示原始 JSON 响应（默认: 关闭）
 - **Mock AI**: 使用模拟 AI 响应（用于离线开发，默认: 关闭）
+- **调试选项**: 显示原始 AI 响应、商品 JSON 等调试开关
 
 ### 后端配置
 
-后端代理服务器需要配置以下环境变量（通过 `.env` 文件或系统环境变量）：
+复制 `server/bin/.env.example` 为 `server/bin/.env` 并填入实际值。
 
 #### 必需配置
 
-- `ADMIN_PASSWORD`: 管理员密码（用于后台设置入口验证）
+- `DB_PASSWORD`: PostgreSQL 数据库密码
+- `JWT_SECRET`: Access Token 签名密钥（建议 `openssl rand -hex 32` 生成）
+- `JWT_REFRESH_SECRET`: Refresh Token 签名密钥
+- `ADMIN_PASSWORD`: 管理员密码
 
-#### 数据库配置（用户账号和云端同步）
+#### 可选配置
 
-- `DB_HOST`: PostgreSQL 数据库主机（默认: `localhost`）
-- `DB_PORT`: 数据库端口（默认: `5432`）
-- `DB_NAME`: 数据库名称（默认: `wisepick`）
-- `DB_USER`: 数据库用户名（默认: `postgres`）
-- `DB_PASSWORD`: 数据库密码
-
-#### JWT 认证配置
-
-- `JWT_SECRET`: Access Token 签名密钥（必需，建议使用随机字符串）
-- `JWT_REFRESH_SECRET`: Refresh Token 签名密钥（必需，建议使用随机字符串）
-
-#### 可选配置（按需）
-
-**淘宝联盟**
-- `TAOBAO_APP_SECRET`: 淘宝应用密钥（使用官方淘宝签名/SDK 时需要）
-
-**京东联盟**
-- `JD_APP_KEY`: 京东应用 Key
-- `JD_APP_SECRET`: 京东联盟密钥
-- `JD_UNION_ID`: 京东联盟 ID
-
-**拼多多**
-- `PDD_CLIENT_ID`: 拼多多客户端 ID
-- `PDD_CLIENT_SECRET`: 拼多多客户端密钥
-- `PDD_PID`: 拼多多推广位 ID
-
-**服务器配置**
-- `PORT`: 服务器端口（默认: 9527）
+- `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER`: 数据库连接（默认 localhost:5432/wisepick/postgres）
+- `PORT`: 服务器端口（默认 9527）
+- `TAOBAO_APP_KEY` / `TAOBAO_APP_SECRET` / `TAOBAO_ADZONE_ID`: 淘宝联盟
+- `JD_APP_KEY` / `JD_APP_SECRET` / `JD_UNION_ID`: 京东联盟
+- `PDD_CLIENT_ID` / `PDD_CLIENT_SECRET` / `PDD_PID`: 拼多多
 
 ### 启动后端服务
 
-1. **安装 PostgreSQL**
-   
-   下载并安装 PostgreSQL 数据库：https://www.postgresql.org/download/
-   
-   创建数据库：
-   ```sql
-   CREATE DATABASE wisepick;
-   ```
-   
-   > 注意：首次启动服务时会自动创建所需的表结构。
+**方式一：Docker（推荐）**
 
-2. **进入服务器目录**
-   ```bash
-   cd server
-   ```
+```bash
+cp server/bin/.env.example server/bin/.env
+# 编辑 server/bin/.env 填入配置
+docker-compose up -d
+```
 
-3. **安装依赖**
-   ```bash
-   dart pub get
-   ```
+**方式二：本地运行**
 
-4. **配置环境变量**
-   
-   创建 `server/bin/.env` 文件（或使用系统环境变量）：
-   ```bash
-   # 数据库配置
-   DB_HOST=localhost
-   DB_PORT=5432
-   DB_NAME=wisepick
-   DB_USER=postgres
-   DB_PASSWORD=your_db_password
-   
-   # JWT 认证配置
-   JWT_SECRET=your-jwt-secret-random-string
-   JWT_REFRESH_SECRET=your-refresh-secret-random-string
-   
-   # 电商联盟配置（可选）
-   TAOBAO_APP_SECRET=your_taobao_secret
-   JD_APP_SECRET=your_jd_secret
-   JD_APP_KEY=your_jd_app_key
-   JD_UNION_ID=your_jd_union_id
-   PDD_CLIENT_ID=your_pdd_client_id
-   PDD_CLIENT_SECRET=your_pdd_client_secret
-   PDD_PID=your_pdd_pid
-   
-   # 其他配置
-   ADMIN_PASSWORD=your_admin_password
-   PORT=9527
-   ```
-
-5. **启动服务**
-   ```bash
-   dart run bin/proxy_server.dart
-   ```
-   
-   服务启动后，会在终端提示未配置项（交互式启动）。配置会保存到 `server/.env` 文件中。
-
-   **注意**: `.env` 文件可能包含密钥，请勿提交到版本控制（推荐将其加入 `.gitignore`）。
+```bash
+# 需要先安装并启动 PostgreSQL，创建 wisepick 数据库
+cd server
+dart pub get
+dart run bin/proxy_server.dart
+```
 
 ### 后端 API 端点
 
-后端提供以下 API 端点：
+完整文档见 [server/API.md](server/API.md)。
 
-- `POST /v1/chat/completions`: OpenAI API 代理转发（支持流式响应）
-- `POST /sign/taobao`: 淘宝联盟签名和转链
-- `POST /taobao/convert`: 淘宝链接转换
-- `POST /sign/jd`: 京东联盟签名
-- `POST /jd/union/promotion/bysubunionid`: 京东联盟推广链接生成
-- `POST /sign/pdd`: 拼多多推广链接生成
-- `POST /admin/login`: 管理员登录验证
-
-#### 用户认证 API
-
-- `POST /api/v1/auth/register`: 用户注册（邮箱、密码）
-- `POST /api/v1/auth/login`: 用户登录（返回 Access Token 和 Refresh Token）
-- `POST /api/v1/auth/refresh`: 刷新 Access Token
-- `POST /api/v1/auth/logout`: 退出登录（使当前 Token 失效）
-- `POST /api/v1/auth/logout-all`: 退出所有设备
-- `GET /api/v1/auth/me`: 获取当前用户信息
-- `PUT /api/v1/auth/profile`: 更新用户资料
-- `PUT /api/v1/auth/password`: 修改密码
-- `GET /api/v1/auth/sessions`: 获取登录设备列表
-
-#### 数据同步 API
-
-- `POST /api/v1/sync/cart/pull`: 拉取购物车数据（增量同步）
-- `POST /api/v1/sync/cart/push`: 推送购物车数据
-- `POST /api/v1/sync/cart/sync`: 双向同步购物车数据（推荐使用）
-- `GET /api/v1/sync/cart/version`: 获取购物车当前版本号
-- `POST /api/v1/sync/conversations/pull`: 拉取会话数据
-- `POST /api/v1/sync/conversations/push`: 推送会话数据
-- `POST /api/v1/sync/conversations/sync`: 双向同步会话数据（推荐使用）
-- `GET /api/v1/sync/conversations/version`: 获取会话当前版本号
-
-#### 价格历史 API
-
-- `GET /api/v1/price-history/<productId>`: 获取商品价格历史
-- `POST /api/v1/price-history/batch`: 批量获取多个商品的价格历史
-
-#### 商品比价 API
-
-- `POST /api/v1/decision/compare`: 商品对比分析
-- `POST /api/v1/decision/score`: 计算商品购买决策评分
-- `POST /api/v1/decision/alternatives`: 获取替代商品推荐
-
-#### 管理员后台 API
-
-- `GET /api/v1/admin/users/stats`: 获取用户统计数据
-- `GET /api/v1/admin/system/stats`: 获取系统监控数据
-- `GET /api/v1/admin/recent-users`: 获取最近注册用户
-- `GET /api/v1/admin/activity-chart`: 获取用户活跃度图表数据
-- `GET /api/v1/admin/users`: 获取用户列表
-- `DELETE /api/v1/admin/users/<id>`: 删除用户
-- `PUT /api/v1/admin/users/<id>`: 更新用户信息
-- `GET /api/v1/admin/cart-items`: 获取购物车数据列表
-- `GET /api/v1/admin/cart-items/stats`: 获取购物车统计
-- `DELETE /api/v1/admin/cart-items/<id>`: 删除购物车商品
-- `GET /api/v1/admin/conversations`: 获取会话列表
-- `GET /api/v1/admin/conversations/<id>/messages`: 获取会话消息
-- `DELETE /api/v1/admin/conversations/<id>`: 删除会话
-- `GET /api/v1/admin/settings`: 获取系统设置
-- `PUT /api/v1/admin/settings`: 更新系统设置
-- `GET /api/v1/admin/sessions`: 获取登录设备列表
-- `DELETE /api/v1/admin/sessions/<id>`: 删除登录设备
+- `POST /v1/chat/completions`: AI API 代理（透传客户端 Authorization 头，支持流式响应）
+- `POST /api/v1/auth/*`: 用户认证（注册、登录、Token 刷新、密码重置）
+- `GET/POST /api/v1/sync/*`: 购物车与会话云端同步
+- `GET/PUT/DELETE /api/v1/admin/*`: 管理员后台（用户管理、数据统计）
+- `GET /api/v1/reliability/health`: 健康检查
 
 ---
 
@@ -484,14 +369,12 @@ wisepick_dart_version/
 ### 运行测试
 
 ```bash
-# 运行所有测试
+# Flutter 客户端测试
 flutter test
 
-# 运行特定测试文件
-flutter test test/chat_service_test.dart
-
-# 生成测试覆盖率报告
-flutter test --coverage
+# 后端测试（无需真实数据库）
+cd server
+dart test
 ```
 
 ### 代码规范
