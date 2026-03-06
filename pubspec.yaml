@@ -1,5 +1,5 @@
 name: wisepick_dart_version
-description: "A new Flutter project."
+description: "快淘帮 WisePick —— 基于 AI 的多平台智能购物推荐应用，支持淘宝、京东、拼多多商品搜索、AI 聊天推荐与价格监控。"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev

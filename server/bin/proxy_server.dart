@@ -116,7 +116,7 @@ Future<Response> _handleProxy(Request req) async {
     final apiKey = env['OPENAI_API_KEY'];
     if (apiKey == null || apiKey.isEmpty) {
       return Response(500,
-          body: jsonEncode({'error': 'OPENAI_API_KEY not set'}),
+          body: jsonEncode({'error': 'Service configuration error'}),
           headers: {'content-type': 'application/json'});
     }
 
@@ -421,6 +421,12 @@ Future<void> runServer(List<String> args) async {
 
   // Debug endpoint to inspect last returned payloads
   router.get('/__debug/last_return', (Request r) async {
+    final adminPwd = r.headers['x-admin-password'] ?? '';
+    if (!_verifyAdminPassword(adminPwd)) {
+      return Response(401,
+          body: jsonEncode({'error': 'Unauthorized'}),
+          headers: {'content-type': 'application/json'});
+    }
     try {
       final params = r.requestedUri.queryParameters;
       final asHistory = params['history'] == '1';
@@ -458,6 +464,12 @@ Future<void> runServer(List<String> args) async {
 
   // Alias routes for convenience (some clients/typos use single underscore or no underscore)
   router.get('/_debug/last_return', (Request r) async {
+    final adminPwd = r.headers['x-admin-password'] ?? '';
+    if (!_verifyAdminPassword(adminPwd)) {
+      return Response(401,
+          body: jsonEncode({'error': 'Unauthorized'}),
+          headers: {'content-type': 'application/json'});
+    }
     final params = r.requestedUri.queryParameters;
     final asHistory = params['history'] == '1';
     if (asHistory) {
@@ -473,6 +485,12 @@ Future<void> runServer(List<String> args) async {
   });
 
   router.get('/debug/last_return', (Request r) async {
+    final adminPwd = r.headers['x-admin-password'] ?? '';
+    if (!_verifyAdminPassword(adminPwd)) {
+      return Response(401,
+          body: jsonEncode({'error': 'Unauthorized'}),
+          headers: {'content-type': 'application/json'});
+    }
     final params = r.requestedUri.queryParameters;
     final asHistory = params['history'] == '1';
     if (asHistory) {
