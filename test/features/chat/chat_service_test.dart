@@ -1,11 +1,9 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:wisepick_dart_version/core/api_client.dart';
 import 'package:wisepick_dart_version/features/chat/chat_service.dart';
-import 'package:wisepick_dart_version/features/chat/chat_error_mapper.dart';
 
 // ── 构造 mock ApiClient ──────────────────────────────────────────
 ApiClient _mockClient({
@@ -136,11 +134,6 @@ void main() {
     });
 
     test('401 错误返回认证相关消息', () async {
-      final client = _mockClient(
-        responseData: null,
-        throwDio: true,
-        dioErrorType: DioExceptionType.badResponse,
-      );
       // 用自定义 Dio 模拟 401
       final dio = Dio();
       dio.interceptors.add(InterceptorsWrapper(

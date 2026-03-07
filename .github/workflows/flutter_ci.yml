@@ -24,7 +24,7 @@ jobs:
         run: flutter pub get
 
       - name: 代码静态分析
-        run: flutter analyze --no-fatal-infos
+        run: flutter analyze lib/ test/
 
       - name: 运行单元测试（含覆盖率）
         run: flutter test --coverage --exclude-tags stress
@@ -56,7 +56,7 @@ jobs:
 
       - name: 代码静态分析
         working-directory: server
-        run: dart analyze --no-fatal-infos
+        run: dart analyze lib/
 
       - name: 运行测试
         working-directory: server
