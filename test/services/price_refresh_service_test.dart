@@ -45,7 +45,7 @@ void main() {
     await tempDir.delete(recursive: true);
   });
 
-  PriceRefreshService _makeService(Map<String, TaobaoItemDetail> responses) {
+  PriceRefreshService makeService(Map<String, TaobaoItemDetail> responses) {
     return PriceRefreshService(
       taobaoService: _FakeTaobaoService(responses),
     );
@@ -56,7 +56,7 @@ void main() {
   // ──────────────────────────────────────────────────────────────
   group('refreshCartPrices - 基本行为', () {
     test('空购物车不抛出异常', () async {
-      final service = _makeService({});
+      final service = makeService({});
       await expectLater(service.refreshCartPrices(), completes);
     });
 
@@ -66,7 +66,7 @@ void main() {
         'title': '京东商品',
         'price': 100.0,
       });
-      final service = _makeService({});
+      final service = makeService({});
       await service.refreshCartPrices();
       // 京东商品价格不变
       final item = Map<String, dynamic>.from(cartBox.get('jd1') as Map);
@@ -80,7 +80,7 @@ void main() {
         'title': '淘宝商品',
         'price': 100.0,
       });
-      final service = _makeService({
+      final service = makeService({
         'tb1': TaobaoItemDetail(zkFinalPrice: 90.0),
       });
       await service.refreshCartPrices();
@@ -97,7 +97,7 @@ void main() {
         'title': '淘宝商品',
         'price': 100.0,
       });
-      final service = _makeService({
+      final service = makeService({
         'tb1': TaobaoItemDetail(zkFinalPrice: 85.0),
       });
       await service.refreshCartPrices();
@@ -110,7 +110,7 @@ void main() {
     test('多个淘宝商品都被更新', () async {
       await _putCartItem(cartBox, 'tb1', {'platform': 'taobao', 'title': '商品1', 'price': 100.0});
       await _putCartItem(cartBox, 'tb2', {'platform': 'taobao', 'title': '商品2', 'price': 200.0});
-      final service = _makeService({
+      final service = makeService({
         'tb1': TaobaoItemDetail(zkFinalPrice: 90.0),
         'tb2': TaobaoItemDetail(zkFinalPrice: 180.0),
       });
@@ -134,7 +134,7 @@ void main() {
         'price': 100.0,
         'initial_price': 150.0,
       });
-      final service = _makeService({
+      final service = makeService({
         'tb1': TaobaoItemDetail(zkFinalPrice: 90.0),
       });
       await service.refreshCartPrices();
@@ -150,7 +150,7 @@ void main() {
         'title': '商品',
         'price': 100.0,
       });
-      final service = _makeService({
+      final service = makeService({
         'tb1': TaobaoItemDetail(zkFinalPrice: 90.0),
       });
       await service.refreshCartPrices();
@@ -166,7 +166,7 @@ void main() {
         'title': '商品',
         'price': '88.5',
       });
-      final service = _makeService({
+      final service = makeService({
         'tb1': TaobaoItemDetail(zkFinalPrice: 80.0),
       });
       await service.refreshCartPrices();
@@ -177,7 +177,7 @@ void main() {
 
     test('preferredPrice 优先级：finalPromotionPrice > predictRoundingUpPrice > zkFinalPrice', () async {
       await _putCartItem(cartBox, 'tb1', {'platform': 'taobao', 'title': '商品', 'price': 100.0});
-      final service = _makeService({
+      final service = makeService({
         'tb1': TaobaoItemDetail(
           finalPromotionPrice: 70.0,
           predictRoundingUpPrice: 75.0,
@@ -206,7 +206,7 @@ void main() {
         'title': '成功商品',
         'price': 100.0,
       });
-      final service = _makeService({
+      final service = makeService({
         'tb_ok': TaobaoItemDetail(zkFinalPrice: 90.0),
         // tb_fail 没有 mock，会抛出异常
       });
@@ -226,7 +226,7 @@ void main() {
         'title': '商品',
         'price': 100.0,
       });
-      final service = _makeService({
+      final service = makeService({
         'tb1': const TaobaoItemDetail(), // 无任何价格字段
       });
       await service.refreshCartPrices();
@@ -238,7 +238,7 @@ void main() {
 
     test('整体不抛出异常即使所有商品都失败', () async {
       await _putCartItem(cartBox, 'tb1', {'platform': 'taobao', 'title': '商品', 'price': 100.0});
-      final service = _makeService({}); // 没有任何 mock
+      final service = makeService({}); // 没有任何 mock
       await expectLater(service.refreshCartPrices(), completes);
     });
   });
@@ -255,7 +255,7 @@ void main() {
         'price': 100.0,
         'initial_price': 100.0,
       });
-      final service = _makeService({
+      final service = makeService({
         'tb1': TaobaoItemDetail(zkFinalPrice: 80.0),
       });
       // 通知插件在测试环境不可用，但不应抛出异常
@@ -270,7 +270,7 @@ void main() {
         'price': 100.0,
         'initial_price': 100.0,
       });
-      final service = _makeService({
+      final service = makeService({
         'tb1': TaobaoItemDetail(zkFinalPrice: 80.0),
       });
       await expectLater(service.refreshCartPrices(), completes);
