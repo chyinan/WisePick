@@ -49,6 +49,8 @@ linter:
     unnecessary_string_interpolations: false
     prefer_conditional_assignment: false
     prefer_null_aware_operators: false
+    use_null_aware_elements: false
+    unnecessary_underscores: false
 
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options

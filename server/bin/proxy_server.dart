@@ -4060,6 +4060,9 @@ Future<void> runServer(List<String> args) async {
       print('Server listening on port ${server.port}');
     }
   }
+
+  // 将实际端口传递给可靠性数据收集器，供压力测试使用
+  ReliabilityDataCollector.instance.setServerPort(server.port);
 }
 
 /// Interactive launcher: prompts for missing environment values and then

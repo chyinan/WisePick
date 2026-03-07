@@ -8,7 +8,6 @@ import 'widgets/metrics_chart.dart';
 import 'widgets/service_card.dart';
 import 'widgets/dependency_graph.dart';
 import 'widgets/incident_timeline.dart';
-import 'widgets/chaos_control_panel.dart';
 import 'widgets/load_prediction_card.dart';
 import 'widgets/stress_test_results.dart';
 
@@ -67,7 +66,6 @@ class _ReliabilityPageState extends State<ReliabilityPage>
   List<Map<String, dynamic>> _selfHealingActions = [];
   Map<String, dynamic>? _loadPrediction;
   Map<String, dynamic>? _dependencyGraph;
-  Map<String, dynamic>? _chaosStatus;
   List<Map<String, dynamic>> _rootCauseResults = [];
 
   // 时间序列数据
@@ -95,7 +93,7 @@ class _ReliabilityPageState extends State<ReliabilityPage>
   void initState() {
     super.initState();
     _service = ReliabilityService(ApiClient());
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _loadAllData();
     _startAutoRefresh();
   }
@@ -195,7 +193,6 @@ class _ReliabilityPageState extends State<ReliabilityPage>
             _selfHealingActions = _safeParseList(results[3]);
             _loadPrediction = _safeParseMap(results[4]);
             _dependencyGraph = _safeParseMap(results[5]);
-            _chaosStatus = _safeParseMap(results[6]);
             _rootCauseResults = _safeParseList(results[7]);
             _errorRateData = _safeParseList(results[8]);
             _latencyData = _safeParseList(results[9]);
@@ -290,91 +287,6 @@ class _ReliabilityPageState extends State<ReliabilityPage>
     }
   }
 
-  Future<void> _toggleChaos(bool enable) async {
-    try {
-      _log('Toggling chaos: $enable');
-      if (enable) {
-        await _service.enableChaos();
-      } else {
-        await _service.disableChaos();
-      }
-      _loadAllData(silent: true);
-    } on ApiException catch (e) {
-      _log('Failed to toggle chaos (API): ${e.message}', isError: true);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('操作失败: ${e.message}')),
-        );
-      }
-    } catch (e) {
-      _log('Failed to toggle chaos (unexpected): $e', isError: true);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('操作失败，请稍后重试')),
-        );
-      }
-    }
-  }
-
-  Future<void> _startExperiment(String experimentId) async {
-    if (experimentId.isEmpty) {
-      _log('Cannot start experiment: empty experimentId', isError: true);
-      return;
-    }
-    
-    try {
-      _log('Starting experiment: $experimentId');
-      await _service.startChaosExperiment(experimentId);
-      _loadAllData(silent: true);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('实验已启动')),
-        );
-      }
-    } on ApiException catch (e) {
-      _log('Failed to start experiment (API): ${e.message}', isError: true);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('启动实验失败: ${e.message}')),
-        );
-      }
-    } catch (e) {
-      _log('Failed to start experiment (unexpected): $e', isError: true);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('启动实验失败，请稍后重试')),
-        );
-      }
-    }
-  }
-
-  Future<void> _stopExperiment() async {
-    try {
-      _log('Stopping experiment');
-      await _service.stopChaosExperiment();
-      _loadAllData(silent: true);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('实验已停止')),
-        );
-      }
-    } on ApiException catch (e) {
-      _log('Failed to stop experiment (API): ${e.message}', isError: true);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('停止实验失败: ${e.message}')),
-        );
-      }
-    } catch (e) {
-      _log('Failed to stop experiment (unexpected): $e', isError: true);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('停止实验失败，请稍后重试')),
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -391,7 +303,6 @@ class _ReliabilityPageState extends State<ReliabilityPage>
                         _buildOverviewTab(),
                         _buildServicesTab(),
                         _buildAnalyticsTab(),
-                        _buildChaosTab(),
                         _buildStressTestTab(),
                       ],
                     ),
@@ -421,7 +332,6 @@ class _ReliabilityPageState extends State<ReliabilityPage>
                 Tab(text: '概览', icon: Icon(Icons.dashboard_outlined, size: 20)),
                 Tab(text: '服务', icon: Icon(Icons.dns_outlined, size: 20)),
                 Tab(text: '分析', icon: Icon(Icons.analytics_outlined, size: 20)),
-                Tab(text: '混沌', icon: Icon(Icons.bug_report_outlined, size: 20)),
                 Tab(text: '压力测试', icon: Icon(Icons.speed_outlined, size: 20)),
               ],
             ),
@@ -934,29 +844,6 @@ class _ReliabilityPageState extends State<ReliabilityPage>
     if (confidence >= 0.8) return Colors.green;
     if (confidence >= 0.6) return Colors.orange;
     return Colors.grey;
-  }
-
-  Widget _buildChaosTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ChaosControlPanel(
-            chaosEnabled: _chaosStatus?['enabled'] ?? false,
-            experimentRunning: _chaosStatus?['experimentRunning'] ?? false,
-            currentExperimentId: _chaosStatus?['currentExperimentId'],
-            currentExperimentName: _chaosStatus?['currentExperimentName'],
-            // 使用安全解析避免 List.from 遇到非 Map 元素时抛出异常
-            experiments: _safeParseList(_chaosStatus?['registeredExperiments']),
-            onEnableChaos: () => _toggleChaos(true),
-            onDisableChaos: () => _toggleChaos(false),
-            onStartExperiment: _startExperiment,
-            onStopExperiment: _stopExperiment,
-          ),
-        ],
-      ),
-    );
   }
 
   Widget _buildStressTestTab() {

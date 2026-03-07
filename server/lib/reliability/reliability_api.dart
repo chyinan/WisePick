@@ -1,4 +1,6 @@
-﻿import 'dart:convert';
+﻿import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 import 'dart:math' as math;
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
@@ -927,6 +929,265 @@ class ReliabilityDataCollector {
     return null;
   }
 
+  /// 服务端口，由外部设置
+  int _serverPort = 9527;
+  void setServerPort(int port) => _serverPort = port;
+
+  /// 运行压力测试 — 向自身端点发送真实 HTTP 请求
+  Future<Map<String, dynamic>> runStressTest() async {
+    final client = HttpClient();
+    client.connectionTimeout = const Duration(seconds: 5);
+    final loadSteps = <Map<String, dynamic>>[];
+    final targetPath = '/api/v1/reliability/health';
+
+    for (final concurrency in [10, 50, 100, 200, 500]) {
+      final latencies = <int>[];
+      int successCount = 0;
+      int errorCount = 0;
+      final sw = Stopwatch()..start();
+
+      // 每个并发级别发送 concurrency 个并发请求
+      final futures = <Future<void>>[];
+      for (int i = 0; i < concurrency; i++) {
+        futures.add(() async {
+          final reqSw = Stopwatch()..start();
+          try {
+            final req = await client.get('127.0.0.1', _serverPort, targetPath);
+            final resp = await req.close().timeout(const Duration(seconds: 10));
+            await resp.drain<void>();
+            reqSw.stop();
+            final ms = reqSw.elapsedMilliseconds;
+            latencies.add(ms);
+            if (resp.statusCode >= 200 && resp.statusCode < 400) {
+              successCount++;
+            } else {
+              errorCount++;
+            }
+          } catch (_) {
+            reqSw.stop();
+            latencies.add(reqSw.elapsedMilliseconds);
+            errorCount++;
+          }
+        }());
+      }
+      await Future.wait(futures);
+      sw.stop();
+
+      latencies.sort();
+      final total = successCount + errorCount;
+      final durationSec = sw.elapsedMilliseconds / 1000.0;
+      final throughput = durationSec > 0 ? (total / durationSec).round() : total;
+
+      int percentile(List<int> sorted, double p) {
+        if (sorted.isEmpty) return 0;
+        final idx = ((p / 100.0) * (sorted.length - 1)).round();
+        return sorted[idx];
+      }
+
+      loadSteps.add({
+        'concurrency': concurrency,
+        'throughput': throughput,
+        'p50': percentile(latencies, 50),
+        'p95': percentile(latencies, 95),
+        'p99': percentile(latencies, 99),
+        'errorRate': total > 0
+            ? double.parse((errorCount / total).toStringAsFixed(4))
+            : 0.0,
+        'successCount': successCount,
+        'totalRequests': total,
+      });
+    }
+    client.close();
+
+    // 稳定性评估
+    int? degradationPoint;
+    int? maxSafeConcurrency;
+    for (int i = 1; i < loadSteps.length; i++) {
+      final prev = loadSteps[i - 1];
+      final curr = loadSteps[i];
+      final prevP95 = prev['p95'] as int;
+      final currP95 = curr['p95'] as int;
+      if (degradationPoint == null && currP95 > prevP95 * 2) {
+        degradationPoint = curr['concurrency'] as int;
+      }
+      final errRate = curr['errorRate'] as double;
+      if (maxSafeConcurrency == null && errRate > 0.05) {
+        maxSafeConcurrency = prev['concurrency'] as int;
+      }
+    }
+    degradationPoint ??= loadSteps.last['concurrency'] as int;
+    maxSafeConcurrency ??= loadSteps.last['concurrency'] as int;
+
+    final avgErrorRate = loadSteps.fold<double>(
+            0.0, (sum, s) => sum + (s['errorRate'] as double)) /
+        loadSteps.length;
+    final score = math.max(0, math.min(100,
+        (100 - avgErrorRate * 200 - (degradationPoint < 100 ? 20 : 0)).round()));
+    final grade = score >= 90
+        ? 'A'
+        : score >= 80
+            ? 'B+'
+            : score >= 70
+                ? 'B'
+                : score >= 60
+                    ? 'C'
+                    : 'D';
+
+    final passed = score >= 60 && avgErrorRate < 0.05;
+
+    final findings = <String>[
+      '最大安全并发: $maxSafeConcurrency',
+      '延迟退化点: $degradationPoint 并发',
+      '平均错误率: ${(avgErrorRate * 100).toStringAsFixed(2)}%',
+      '综合评级: $grade',
+    ];
+    final warnings = <String>[
+      if (degradationPoint <= 100) '延迟在 $degradationPoint 并发时即开始退化，建议优化热路径',
+      if (avgErrorRate > 0.01) '平均错误率 ${(avgErrorRate * 100).toStringAsFixed(2)}% 偏高，建议排查',
+    ];
+    final criticals = <String>[
+      if (avgErrorRate > 0.05) '错误率超过 5% 阈值，系统在高负载下不稳定',
+      if (maxSafeConcurrency < 50) '最大安全并发低于 50，需要紧急优化',
+    ];
+
+    final assessment = {
+      'stabilityScore': score,
+      'passed': passed,
+      'grade': grade,
+      'maxSafeConcurrency': maxSafeConcurrency,
+      'degradationPoint': degradationPoint,
+      'findings': findings,
+      'warnings': warnings,
+      'criticalIssues': criticals,
+      'summary': '压力测试完成：在 $degradationPoint 并发时延迟开始退化，'
+          '最大安全并发 $maxSafeConcurrency，综合评分 $score ($grade)',
+    };
+
+    _lastStressTestResults = {
+      'loadSteps': loadSteps,
+      'chaosExperiments': <Map<String, dynamic>>[],
+      'stabilityAssessment': assessment,
+      'timestamp': DateTime.now().toIso8601String(),
+    };
+    return _lastStressTestResults!;
+  }
+
+  Map<String, dynamic>? _lastStressTestResults;
+
+  /// 获取最近一次压力测试结果
+  Map<String, dynamic> getStressTestResults() {
+    return _lastStressTestResults ?? {
+      'loadSteps': <Map<String, dynamic>>[],
+      'chaosExperiments': <Map<String, dynamic>>[],
+      'stabilityAssessment': null,
+    };
+  }
+
+  /// 运行混沌测试套件 — 逐个启动已注册实验，发送真实请求，收集故障影响
+  Future<Map<String, dynamic>> runChaosTest() async {
+    final client = HttpClient();
+    client.connectionTimeout = const Duration(seconds: 5);
+    final targetPath = '/api/v1/reliability/health';
+    final experiments = <Map<String, dynamic>>[];
+    final wasChaosEnabled = _chaosEnabled;
+    final prevExperimentId = _currentExperimentId;
+
+    // 临时启用混沌工程
+    _chaosEnabled = true;
+
+    for (final exp in _registeredExperiments) {
+      final expId = exp['id'] as String? ?? '';
+      final expName = exp['name'] as String? ?? expId;
+      final faults = exp['faults'] as List?;
+      final faultType = (faults?.isNotEmpty == true)
+          ? (faults!.first as Map)['type']?.toString() ?? 'unknown'
+          : 'unknown';
+
+      // 启动实验
+      _currentExperimentId = expId;
+      _chaosLatencyInjections = 0;
+      _chaosErrorInjections = 0;
+
+      int successCount = 0;
+      int failureCount = 0;
+      int retryCount = 0;
+      const totalRequests = 50;
+
+      for (int i = 0; i < totalRequests; i++) {
+        int attempts = 0;
+        bool succeeded = false;
+        while (attempts < 3 && !succeeded) {
+          attempts++;
+          try {
+            final req = await client.get('127.0.0.1', _serverPort, targetPath);
+            final resp = await req.close().timeout(const Duration(seconds: 10));
+            await resp.drain<void>();
+            if (resp.statusCode >= 200 && resp.statusCode < 400) {
+              succeeded = true;
+            }
+          } catch (_) {
+            // 请求失败
+          }
+          if (!succeeded && attempts < 3) retryCount++;
+        }
+        if (succeeded) {
+          successCount++;
+        } else {
+          failureCount++;
+        }
+      }
+
+      // 停止实验
+      _currentExperimentId = null;
+
+      final errorRate = totalRequests > 0
+          ? double.parse((failureCount / totalRequests).toStringAsFixed(4))
+          : 0.0;
+      final cbState = errorRate > 0.2 ? 'OPEN' : 'CLOSED';
+      final stormDetected = errorRate > 0.25;
+
+      final observations = <String>[];
+      if (errorRate > 0.2) observations.add('错误率超过阈值，熔断器已触发');
+      if (errorRate <= 0.1) observations.add('系统在故障注入下表现良好');
+      if (retryCount > 0) observations.add('重试机制触发 $retryCount 次');
+      if (_chaosLatencyInjections > 0) {
+        observations.add('延迟注入 $_chaosLatencyInjections 次');
+      }
+      if (_chaosErrorInjections > 0) {
+        observations.add('错误注入 $_chaosErrorInjections 次');
+      }
+
+      experiments.add({
+        'experimentName': expName,
+        'faultType': faultType,
+        'successCount': successCount,
+        'failureCount': failureCount,
+        'rejectedCount': 0,
+        'retryCount': retryCount,
+        'errorRate': errorRate,
+        'circuitBreakerFinalState': cbState,
+        'stormDetected': stormDetected,
+        'observations': observations,
+      });
+    }
+
+    client.close();
+
+    // 恢复之前的混沌状态
+    _chaosEnabled = wasChaosEnabled;
+    _currentExperimentId = prevExperimentId;
+
+    if (_lastStressTestResults != null) {
+      _lastStressTestResults!['chaosExperiments'] = experiments;
+    }
+
+    return {
+      'triggered': true,
+      'experiments': experiments,
+      'timestamp': DateTime.now().toIso8601String(),
+    };
+  }
+
   /// 记录混沌延迟注入事件
   void recordChaosLatencyInjection() {
     _chaosLatencyInjections++;
@@ -1362,6 +1623,53 @@ class ReliabilityApiHandler {
         return Response.ok(jsonEncode({
           'success': true,
           'message': 'Experiment stopped',
+        }), headers: headers);
+      } catch (e) {
+        return Response.internalServerError(
+          body: jsonEncode({'success': false, 'error': e.toString()}),
+          headers: headers,
+        );
+      }
+    });
+
+    // ========== 压力测试 ==========
+    router.get('/stress-test/results', (Request r) async {
+      try {
+        final results = _collector.getStressTestResults();
+        return Response.ok(jsonEncode({
+          'success': true,
+          'data': results,
+        }), headers: headers);
+      } catch (e) {
+        return Response.internalServerError(
+          body: jsonEncode({'success': false, 'error': e.toString()}),
+          headers: headers,
+        );
+      }
+    });
+
+    router.post('/stress-test/run', (Request r) async {
+      try {
+        final results = await _collector.runStressTest();
+        return Response.ok(jsonEncode({
+          'success': true,
+          'data': results,
+        }), headers: headers);
+      } catch (e) {
+        return Response.internalServerError(
+          body: jsonEncode({'success': false, 'error': e.toString()}),
+          headers: headers,
+        );
+      }
+    });
+
+    // ========== 混沌测试套件 ==========
+    router.post('/chaos-test/run', (Request r) async {
+      try {
+        final results = await _collector.runChaosTest();
+        return Response.ok(jsonEncode({
+          'success': true,
+          'data': results,
         }), headers: headers);
       } catch (e) {
         return Response.internalServerError(
