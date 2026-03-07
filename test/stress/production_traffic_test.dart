@@ -15,6 +15,7 @@
 /// - System recovers to baseline after load subsides
 ///
 /// Generates concurrency stability reports via [ReportGenerator].
+@Tags(['stress'])
 library;
 
 import 'dart:async';

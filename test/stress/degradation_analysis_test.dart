@@ -8,6 +8,7 @@
 ///
 /// Each test ramps load and collects detailed metrics at each step,
 /// then produces a full report with visualizations.
+@Tags(['stress'])
 library;
 
 import 'dart:async';

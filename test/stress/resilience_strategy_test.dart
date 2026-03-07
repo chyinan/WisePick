@@ -9,6 +9,7 @@
 /// - Strategy pipeline composition
 /// - Degradation behavior under load
 /// - Strategy interaction under stress
+@Tags(['stress'])
 library;
 
 import 'dart:async';

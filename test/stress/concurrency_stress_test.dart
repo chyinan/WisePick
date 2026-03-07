@@ -12,6 +12,7 @@
 /// - No memory growth (resource cleanup is correct)
 /// - Correct degradation behavior (rate limiting, circuit opening)
 /// - System recovery after overload (circuit closes again, rate limiter drains)
+@Tags(['stress'])
 library;
 
 import 'dart:async';

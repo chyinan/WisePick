@@ -14,6 +14,7 @@
 /// - No cascading collapse occurs
 ///
 /// Generates chaos test reports.
+@Tags(['stress'])
 library;
 
 import 'dart:async';

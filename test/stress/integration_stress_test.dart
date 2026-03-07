@@ -8,6 +8,7 @@
 ///
 /// These tests validate that all components work correctly together
 /// under realistic conditions.
+@Tags(['stress'])
 library;
 
 import 'dart:async';

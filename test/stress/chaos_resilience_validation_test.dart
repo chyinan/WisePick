@@ -11,6 +11,7 @@
 /// - Corrupted response handling: Graceful degradation on bad data
 ///
 /// Generates chaos resilience reports via [ReportGenerator].
+@Tags(['stress'])
 library;
 
 import 'dart:async';
