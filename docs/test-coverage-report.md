@@ -1,21 +1,21 @@
 # WisePick 测试覆盖率报告
 
 > 生成日期：2026-03-07
-> 最后更新：2026-03-07（新增 14 个测试文件，372 个用例）
+> 最后更新：2026-03-07（新增 17 个测试文件，417 个用例）
 
 ## 概览
 
 | 指标 | 数值 |
 |------|------|
 | lib/ 源文件总数 | 133 |
-| test/ 测试文件总数 | 85（+14） |
-| 估算整体覆盖率 | ~72%（+19%） |
+| test/ 测试文件总数 | 88（+17） |
+| 估算整体覆盖率 | ~75%（+22%） |
 
 ```
 按层级统计：
 ├── core/       83%  (33/40)  █████████████████████░░░░  (+3)
-├── features/   44%  (35/80)  ███████████░░░░░░░░░░░░░░
-├── services/   60%  ( 6/10)  ███████████████░░░░░░░░░░
+├── features/   50%  (40/80)  ████████████░░░░░░░░░░░░░  (+5)
+├── services/   80%  ( 8/10)  ████████████████████░░░░░  (+2)
 └── widgets/     0%  ( 0/10)  ░░░░░░░░░░░░░░░░░░░░░░░░░
 ```
 
@@ -103,6 +103,17 @@
 |------|---------|-----------|
 | ai_prompt_service.dart | ai_prompt_service_test.dart | buildMessages/buildCasualPromptMessages/buildRecommendationPromptMessages/buildProductDetailMessages/buildPrompt/buildPromptMessages/buildCasualPrompt/buildRecommendationPrompt 全接口 |
 
+### services/（新增）
+| 文件 | 测试文件 | 覆盖功能点 |
+|------|---------|-----------|
+| share_service.dart | share_service_test.dart | truncateTitle 截断逻辑、getPromotionLink 全平台链接生成、generateShareText 文本拼接与 URL 补全 |
+| price_refresh_service.dart | price_refresh_service_test.dart | 购物车价格刷新写入、价格提取优先级、initial_price 保留、字符串价格解析、错误隔离、通知开关控制 |
+
+### features/chat/（新增）
+| 文件 | 测试文件 | 覆盖功能点 |
+|------|---------|-----------|
+| conversation_repository.dart | conversation_repository_test.dart | listConversations 空/排序/损坏条目跳过、getConversation 按 id 获取、saveConversation 新建/覆盖/含消息/PARSE_ 过滤、deleteConversation 全场景、Hive 持久化 |
+
 ### features/analytics/（新增）
 | 文件 | 测试文件 | 覆盖功能点 |
 |------|---------|-----------|
@@ -128,9 +139,8 @@
 | 模块 | 文件 |
 |------|------|
 | features/analytics/ | analytics_service.dart（依赖 PDF/path_provider，需集成测试） |
-| features/admin/ | admin_service.dart |
-| features/chat/ | conversation_repository.dart |
-| services/ | notification_service.dart, price_refresh_service.dart, share_service.dart |
+| features/admin/ | admin_service.dart（依赖 path_provider + excel + 单例 ApiClient，难以 mock） |
+| services/ | notification_service.dart（深度依赖平台插件 FlutterLocalNotificationsPlugin、WindowsNotification） |
 
 ### ℹ️ 低优先级（UI 层）
 
@@ -148,6 +158,6 @@
 
 ## 补充测试建议（优先级排序）
 
-1. **features/chat/conversation_repository.dart** — 会话 CRUD、Hive 持久化
-2. **features/admin/admin_service.dart** — 管理员服务逻辑
-3. **features/analytics/analytics_service.dart** — 需集成测试（依赖 PDF/path_provider）
+1. **features/admin/admin_service.dart** — 需重构为可注入依赖后再补充测试
+2. **features/analytics/analytics_service.dart** — 需集成测试（依赖 PDF/path_provider）
+3. **services/notification_service.dart** — 需平台插件 mock 或集成测试
