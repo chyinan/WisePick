@@ -32,11 +32,18 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   String? _lastShownDebugNotification;
   // store per-message product list page index for pagination controls
   final Map<String, int> _messageProductPage = {};
+  late final ChatStateNotifier _chatNotifier;
+
+  @override
+  void initState() {
+    super.initState();
+    _chatNotifier = ref.read(chatStateNotifierProvider.notifier);
+  }
 
   @override
   void dispose() {
     try {
-      ref.read(chatStateNotifierProvider.notifier).saveCurrentConversation();
+      _chatNotifier.saveCurrentConversation();
     } catch (e, st) {
       dev.log('Error saving conversation on dispose: $e', name: 'ChatPage', error: e, stackTrace: st);
     }

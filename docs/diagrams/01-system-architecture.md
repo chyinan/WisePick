@@ -1,105 +1,95 @@
 # 图1：系统整体架构图
 
 ```mermaid
-graph TB
-    subgraph 用户设备层
-        W[Windows]
-        M[macOS]
-        L[Linux]
-        A[Android / iOS]
+graph LR
+    %% 用户设备
+    subgraph 客户端平台
+        DEV["Windows / macOS\nLinux / Android / iOS"]
     end
 
+    %% Flutter 客户端
     subgraph Flutter客户端
-        subgraph UI层
-            CP[ChatPage]
-            PP[ProductPage]
-            CAP[CartPage]
-            AP[AnalyticsPage]
-            PHP[PriceHistoryPage]
-            DP[DecisionPage]
+        subgraph UI["UI 层"]
+            U1[聊天推荐]
+            U2[商品搜索]
+            U3[购物车]
+            U4[价格监控]
+            U5[决策比价]
         end
 
-        subgraph 状态管理层_Riverpod
-            CPR[ChatProviders]
-            CAPR[CartProviders]
-            TPR[ThemeProvider]
-            APR[AnalyticsProviders]
+        subgraph BIZ["业务层 · Riverpod + Services"]
+            B1[ChatService]
+            B2[ProductService]
+            B3[CartService]
+            B4[PriceHistoryService]
+            B5[DecisionService]
         end
 
-        subgraph 业务逻辑层_Services
-            CS[ChatService]
-            PS[ProductService]
-            CAS[CartService]
-            AS[AnalyticsService]
-            PHS[PriceHistoryService]
-            DS[DecisionService]
-            PRS[PriceRefreshService]
-            NS[NotificationService]
+        subgraph INFRA["弹性基础设施"]
+            I1[CircuitBreaker]
+            I2[RetryPolicy]
+            I3[RateLimiter]
+            I4[SelfHealingService]
         end
 
-        subgraph 数据访问层
-            AC[ApiClient]
-            HIVE[(Hive本地存储)]
-            TA[TaobaoAdapter]
-            JA[JdAdapter]
-            PA[PddAdapter]
-        end
-
-        subgraph 弹性基础设施
-            CB[CircuitBreaker]
-            RP[RetryPolicy]
-            RL[RateLimiter]
-            SH[SelfHealingService]
+        subgraph DATA["数据访问层"]
+            D1[ApiClient]
+            D2[(Hive 本地存储)]
+            D3[TaobaoAdapter]
+            D4[JdAdapter]
+            D5[PddAdapter]
         end
     end
 
-    subgraph 后端代理服务_Shelf_9527
-        subgraph 路由层
-            R1["POST /v1/chat/completions"]
-            R2["POST /sign/taobao,jd,pdd"]
-            R3["GET /taobao,jd,pdd API"]
-            R4["POST /api/v1/auth"]
-            R5["POST /api/v1/sync"]
-            R6["GET /api/v1/analytics"]
-            R7["GET /api/v1/admin"]
+    %% 管理后台
+    subgraph 管理员后台
+        ADM["wisepick_admin\nFlutter Web"]
+    end
+
+    %% 后端
+    subgraph 后端代理服务["后端代理服务  ·  Dart/Shelf  ·  :9527"]
+        subgraph API["API 路由"]
+            A1["/auth"]
+            A2["/sync"]
+            A3["/analytics · /admin"]
+            A4["/chat · /sign · /products"]
         end
 
-        subgraph 业务处理层
-            AIP[AI代理]
-            SS[签名服务]
-            LS[转链服务]
-            AUTH[认证服务]
-            SYNC[同步服务]
-            ANALY[分析服务]
-            ADMIN[管理服务]
+        subgraph SVC["业务处理"]
+            S1[认证 · JWT]
+            S2[同步 · 冲突解决]
+            S3[分析 · 管理]
+            S4[AI代理 · 签名 · 转链]
         end
 
         PG[(PostgreSQL)]
     end
 
-    subgraph 管理员后台_独立Web应用
-        ADMWEB[wisepick_admin\nFlutter Web]
-    end
-
+    %% 第三方
     subgraph 第三方服务
-        OAI[OpenAI API]
-        TB[淘宝联盟 API]
-        JD[京东联盟 API]
-        PDD[拼多多 API]
+        EXT1[OpenAI API]
+        EXT2[淘宝联盟]
+        EXT3[京东联盟]
+        EXT4[拼多多]
     end
 
-    W & M & L & A --> Flutter客户端
-    UI层 --> 状态管理层_Riverpod
-    状态管理层_Riverpod --> 业务逻辑层_Services
-    业务逻辑层_Services --> 数据访问层
-    数据访问层 --> 弹性基础设施
-    弹性基础设施 --> 后端代理服务_Shelf_9527
+    %% 连接关系
+    DEV --> UI
+    UI --> BIZ
+    BIZ --> DATA
+    DATA --> INFRA
+    INFRA --> D1
+    D1 --> API
 
-    后端代理服务_Shelf_9527 --> OAI
-    后端代理服务_Shelf_9527 --> TB
-    后端代理服务_Shelf_9527 --> JD
-    后端代理服务_Shelf_9527 --> PDD
-    后端代理服务_Shelf_9527 --> PG
+    ADM --> API
 
-    ADMWEB --> 后端代理服务_Shelf_9527
+    A1 --> S1 --> PG
+    A2 --> S2 --> PG
+    A3 --> S3 --> PG
+    A4 --> S4
+
+    S4 --> EXT1
+    S4 --> EXT2
+    S4 --> EXT3
+    S4 --> EXT4
 ```

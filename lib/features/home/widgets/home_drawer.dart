@@ -4,10 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../chat/chat_providers.dart';
 import '../../chat/conversation_model.dart';
-import '../../analytics/analytics_page.dart';
 import '../../decision/product_comparison_page.dart';
-import '../../admin/admin_dashboard_page.dart';
-import '../../settings/ai_provider_settings_page.dart';
 
 /// 侧边菜单：展示会话列表并支持新建会话
 class HomeDrawer extends ConsumerStatefulWidget {
@@ -124,60 +121,6 @@ class _HomeDrawerState extends ConsumerState<HomeDrawer> {
     }
   }
 
-  Future<void> _checkAdminAccess(BuildContext context) async {
-    final navigator = Navigator.of(context);
-    final passwordController = TextEditingController();
-    final verified = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('管理员验证'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('请输入管理员密码 (默认: admin)'),
-            const SizedBox(height: 16),
-            TextField(
-              controller: passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                labelText: '密码',
-              ),
-              autofocus: true,
-              onSubmitted: (value) {
-                Navigator.of(ctx).pop(value == 'admin');
-              },
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.of(ctx).pop(passwordController.text == 'admin');
-            },
-            child: const Text('确认'),
-          ),
-        ],
-      ),
-    );
-
-    if (verified == true) {
-      if (!mounted) return;
-      navigator.pop(); // Close drawer
-      navigator.push(
-        MaterialPageRoute(builder: (_) => const AdminDashboardPage()),
-      );
-    } else if (verified == false) {
-       // do nothing or show error
-       if (!mounted) return;
-       // We can optionally show a snackbar if explicitly failed (not cancelled)
-       // But verified is bool?, assume false is cancel/fail.
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -246,43 +189,11 @@ class _HomeDrawerState extends ConsumerState<HomeDrawer> {
             // 功能入口区域
             ListTile(
               contentPadding: const EdgeInsetsDirectional.only(start: 12, end: 0),
-              leading: Icon(Icons.analytics_outlined, color: Theme.of(context).colorScheme.primary),
-              title: const Text('数据分析'),
-              onTap: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AnalyticsPage()));
-              },
-            ),
-            ListTile(
-              contentPadding: const EdgeInsetsDirectional.only(start: 12, end: 0),
               leading: Icon(Icons.compare_arrows, color: Theme.of(context).colorScheme.primary),
               title: const Text('商品对比'),
               onTap: () {
                 Navigator.of(context).pop();
                 Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProductComparisonPage()));
-              },
-            ),
-            ListTile(
-              contentPadding: const EdgeInsetsDirectional.only(start: 12, end: 0),
-              leading: Icon(Icons.admin_panel_settings_outlined, color: Theme.of(context).colorScheme.primary),
-              title: const Text('管理后台'),
-              onTap: () => _checkAdminAccess(context),
-            ),
-            const Divider(),
-            // AI服务商设置入口
-            ListTile(
-              contentPadding: const EdgeInsetsDirectional.only(start: 12, end: 0),
-              leading: Icon(Icons.smart_toy, color: Theme.of(context).colorScheme.primary),
-              title: const Text('AI 服务商设置'),
-              subtitle: Text(
-                '配置API Key和模型',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-              onTap: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AiProviderSettingsPage()));
               },
             ),
             if (_isMultiSelect)
