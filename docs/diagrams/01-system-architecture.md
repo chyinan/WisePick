@@ -1,95 +1,31 @@
 # 图1：系统整体架构图
 
 ```mermaid
-graph LR
-    %% 用户设备
-    subgraph 客户端平台
-        DEV["Windows / macOS\nLinux / Android / iOS"]
+graph TB
+    subgraph CLIENT["Flutter 客户端  ·  多平台"]
+        UI["UI 层\n聊天 / 搜索 / 购物车 / 比价"]
+        BIZ["业务层  ·  Riverpod"]
+        DATA["数据层\nApiClient + Hive 本地存储"]
+        UI --> BIZ --> DATA
     end
 
-    %% Flutter 客户端
-    subgraph Flutter客户端
-        subgraph UI["UI 层"]
-            U1[聊天推荐]
-            U2[商品搜索]
-            U3[购物车]
-            U4[价格监控]
-            U5[决策比价]
-        end
-
-        subgraph BIZ["业务层 · Riverpod + Services"]
-            B1[ChatService]
-            B2[ProductService]
-            B3[CartService]
-            B4[PriceHistoryService]
-            B5[DecisionService]
-        end
-
-        subgraph INFRA["弹性基础设施"]
-            I1[CircuitBreaker]
-            I2[RetryPolicy]
-            I3[RateLimiter]
-            I4[SelfHealingService]
-        end
-
-        subgraph DATA["数据访问层"]
-            D1[ApiClient]
-            D2[(Hive 本地存储)]
-            D3[TaobaoAdapter]
-            D4[JdAdapter]
-            D5[PddAdapter]
-        end
+    subgraph ADMIN["管理员后台\nFlutter Web"]
     end
 
-    %% 管理后台
-    subgraph 管理员后台
-        ADM["wisepick_admin\nFlutter Web"]
-    end
-
-    %% 后端
-    subgraph 后端代理服务["后端代理服务  ·  Dart/Shelf  ·  :9527"]
-        subgraph API["API 路由"]
-            A1["/auth"]
-            A2["/sync"]
-            A3["/analytics · /admin"]
-            A4["/chat · /sign · /products"]
-        end
-
-        subgraph SVC["业务处理"]
-            S1[认证 · JWT]
-            S2[同步 · 冲突解决]
-            S3[分析 · 管理]
-            S4[AI代理 · 签名 · 转链]
-        end
-
+    subgraph SERVER["后端代理服务  ·  Dart/Shelf  ·  :9527"]
+        AUTH["认证  ·  JWT"]
+        SYNC["数据同步  ·  冲突解决"]
+        PROXY["AI 代理  ·  商品签名转链"]
         PG[(PostgreSQL)]
+        AUTH & SYNC --> PG
     end
 
-    %% 第三方
-    subgraph 第三方服务
-        EXT1[OpenAI API]
-        EXT2[淘宝联盟]
-        EXT3[京东联盟]
-        EXT4[拼多多]
+    subgraph EXT["第三方服务"]
+        AI["OpenAI API"]
+        SHOP["淘宝 / 京东 / 拼多多"]
     end
 
-    %% 连接关系
-    DEV --> UI
-    UI --> BIZ
-    BIZ --> DATA
-    DATA --> INFRA
-    INFRA --> D1
-    D1 --> API
-
-    ADM --> API
-
-    A1 --> S1 --> PG
-    A2 --> S2 --> PG
-    A3 --> S3 --> PG
-    A4 --> S4
-
-    S4 --> EXT1
-    S4 --> EXT2
-    S4 --> EXT3
-    S4 --> EXT4
+    DATA -->|HTTP| SERVER
+    ADMIN -->|HTTP| SERVER
+    PROXY --> AI & SHOP
 ```

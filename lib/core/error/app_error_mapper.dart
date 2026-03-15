@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/material.dart';
 
 import 'app_error.dart';
 
@@ -168,25 +167,4 @@ class AppErrorMapper {
     }
   }
 
-  /// Returns an appropriate [IconData] for the given error type.
-  static IconData iconForType(AppErrorType type) {
-    switch (type) {
-      case AppErrorType.network:
-        return Icons.wifi_off_rounded;
-      case AppErrorType.timeout:
-        return Icons.timer_off_rounded;
-      case AppErrorType.auth:
-        return Icons.key_off_rounded;
-      case AppErrorType.rateLimit:
-        return Icons.hourglass_top_rounded;
-      case AppErrorType.serverError:
-        return Icons.cloud_off_rounded;
-      case AppErrorType.cancelled:
-        return Icons.cancel_outlined;
-      case AppErrorType.validation:
-        return Icons.edit_off_rounded;
-      case AppErrorType.unknown:
-        return Icons.error_outline_rounded;
-    }
-  }
 }

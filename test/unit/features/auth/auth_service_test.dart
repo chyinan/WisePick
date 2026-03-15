@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 import 'package:wisepick_dart_version/features/auth/auth_service.dart';
 import 'package:wisepick_dart_version/features/auth/token_manager.dart';
 

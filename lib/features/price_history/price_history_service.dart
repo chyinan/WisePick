@@ -1,5 +1,5 @@
 import 'dart:math';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:hive/hive.dart';
 
 import '../../core/storage/hive_config.dart';
 import 'price_history_model.dart';

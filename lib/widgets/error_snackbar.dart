@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/error/app_error.dart';
 import '../core/error/app_error_mapper.dart';
+import '../core/error/app_error_ui.dart';
 
 /// Show a user-friendly error snackbar with categorized icon.
 ///

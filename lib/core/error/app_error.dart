@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-
 /// Categorized error types for the entire application.
 ///
 /// Mirrors [ChatErrorType] but is usable across all modules — not just chat.
@@ -45,28 +43,6 @@ class AppError implements Exception {
     this.technicalDetail,
     this.canRetry = true,
   });
-
-  /// Convenience getter for the appropriate icon.
-  IconData get icon {
-    switch (type) {
-      case AppErrorType.network:
-        return Icons.wifi_off_rounded;
-      case AppErrorType.timeout:
-        return Icons.timer_off_rounded;
-      case AppErrorType.auth:
-        return Icons.key_off_rounded;
-      case AppErrorType.rateLimit:
-        return Icons.hourglass_top_rounded;
-      case AppErrorType.serverError:
-        return Icons.cloud_off_rounded;
-      case AppErrorType.cancelled:
-        return Icons.cancel_outlined;
-      case AppErrorType.validation:
-        return Icons.edit_off_rounded;
-      case AppErrorType.unknown:
-        return Icons.error_outline_rounded;
-    }
-  }
 
   @override
   String toString() => 'AppError(${type.name}): $userMessage';

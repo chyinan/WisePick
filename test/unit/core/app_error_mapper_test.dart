@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wisepick_dart_version/core/error/app_error.dart';
 import 'package:wisepick_dart_version/core/error/app_error_mapper.dart';
+import 'package:wisepick_dart_version/core/error/app_error_ui.dart';
 
 void main() {
   group('AppErrorMapper', () {

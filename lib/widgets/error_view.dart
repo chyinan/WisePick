@@ -2,6 +2,7 @@
 
 import '../core/error/app_error.dart';
 import '../core/error/app_error_mapper.dart';
+import '../core/error/app_error_ui.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ErrorView – full-page / section error widget
