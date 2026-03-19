@@ -8,6 +8,7 @@ import '../cart/cart_page.dart';
 import '../conversations/conversations_page.dart';
 import '../settings/settings_page.dart';
 import '../reliability/reliability_page.dart';
+import '../search_hotwords/search_hotwords_page.dart';
 import 'dashboard_service.dart';
 import 'widgets/stats_dashboard.dart';
 
@@ -269,22 +270,28 @@ class _DashboardPageState extends State<DashboardPage> {
             index: 3,
           ),
           _buildNavItem(
-            icon: Icons.settings_rounded,
-            label: '系统设置',
+            icon: Icons.trending_up_rounded,
+            label: '搜索热词',
             index: 4,
           ),
-          
+
+          _buildNavItem(
+            icon: Icons.settings_rounded,
+            label: '系统设置',
+            index: 5,
+          ),
+
           // 分隔线
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             child: Divider(color: Colors.white.withOpacity(0.1)),
           ),
-          
+
           // 可靠性监控
           _buildNavItem(
             icon: Icons.monitor_heart_rounded,
             label: '可靠性监控',
-            index: 5,
+            index: 6,
           ),
           
           const Spacer(),
@@ -403,8 +410,9 @@ class _DashboardPageState extends State<DashboardPage> {
       case 1: return '用户管理';
       case 2: return '购物车数据';
       case 3: return '会话记录';
-      case 4: return '系统设置';
-      case 5: return '可靠性监控';
+      case 4: return '搜索热词';
+      case 5: return '系统设置';
+      case 6: return '可靠性监控';
       default: return '管理后台';
     }
   }
@@ -506,12 +514,14 @@ class _DashboardPageState extends State<DashboardPage> {
           padding: EdgeInsets.all(32),
           child: ConversationsPage(),
         );
-      case 4: // 系统设置
+      case 4: // 搜索热词
+        return const SearchHotwordsPage();
+      case 5: // 系统设置
         return const Padding(
           padding: EdgeInsets.all(32),
           child: SettingsPage(),
         );
-      case 5: // 可靠性监控
+      case 6: // 可靠性监控
         return const ReliabilityPage();
       default: // 数据概览
         return _buildDashboardContent();

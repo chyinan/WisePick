@@ -43,7 +43,10 @@ class AdminService {
     router.put('/settings', _handleUpdateSettings);
     router.get('/sessions', _handleGetSessions);
     router.delete('/sessions/<id>', _handleDeleteSession);
-    
+
+    // 搜索热词
+    router.get('/search-hotwords', _handleSearchHotwords);
+
     return router;
   }
 
@@ -1123,6 +1126,133 @@ class AdminService {
       }), headers: _corsHeaders);
     } catch (e) {
       print('[AdminService] Error getting sessions: $e');
+      return Response.internalServerError(
+        body: jsonEncode({'error': e.toString()}),
+        headers: _corsHeaders,
+      );
+    }
+  }
+
+  // ============================================================
+  // 搜索热词聚合
+  // ============================================================
+
+  /// 获取搜索热词统计
+  /// 从 messages.keywords (JSONB 数组) 中展开并聚合关键词频次
+  Future<Response> _handleSearchHotwords(Request request) async {
+    try {
+      final limit = int.tryParse(request.url.queryParameters['limit'] ?? '20') ?? 20;
+      final safeLimit = limit.clamp(1, 100);
+      final startDate = request.url.queryParameters['start_date'];
+      final endDate = request.url.queryParameters['end_date'];
+
+      var dateFilter = '';
+      final params = <String, dynamic>{'limit': safeLimit};
+      if (startDate != null && endDate != null) {
+        dateFilter = 'AND m.created_at >= @startDate AND m.created_at <= @endDate';
+        params['startDate'] = DateTime.parse(startDate);
+        params['endDate'] = DateTime.parse(endDate);
+      }
+
+      // 展开 JSONB 数组，聚合关键词频次
+      final hotwords = await db.queryAll('''
+        SELECT
+          kw.keyword,
+          COUNT(*) AS count
+        FROM messages m,
+          jsonb_array_elements_text(
+            CASE
+              WHEN jsonb_typeof(m.keywords) = 'array' THEN m.keywords
+              ELSE '[]'::jsonb
+            END
+          ) AS kw(keyword)
+        WHERE m.keywords IS NOT NULL
+          AND jsonb_typeof(m.keywords) = 'array'
+          AND jsonb_array_length(m.keywords) > 0
+          $dateFilter
+        GROUP BY kw.keyword
+        ORDER BY count DESC
+        LIMIT @limit
+      ''', parameters: params);
+
+      // 总搜索次数（含关键词的消息数）
+      final totalResult = await db.queryOne('''
+        SELECT COUNT(*) AS count
+        FROM messages m
+        WHERE m.keywords IS NOT NULL
+          AND jsonb_typeof(m.keywords) = 'array'
+          AND jsonb_array_length(m.keywords) > 0
+          $dateFilter
+      ''', parameters: params.containsKey('startDate')
+          ? {'startDate': params['startDate'], 'endDate': params['endDate']}
+          : null);
+
+      // 独立关键词总数
+      final uniqueResult = await db.queryOne('''
+        SELECT COUNT(DISTINCT kw.keyword) AS count
+        FROM messages m,
+          jsonb_array_elements_text(
+            CASE
+              WHEN jsonb_typeof(m.keywords) = 'array' THEN m.keywords
+              ELSE '[]'::jsonb
+            END
+          ) AS kw(keyword)
+        WHERE m.keywords IS NOT NULL
+          AND jsonb_typeof(m.keywords) = 'array'
+          AND jsonb_array_length(m.keywords) > 0
+          $dateFilter
+      ''', parameters: params.containsKey('startDate')
+          ? {'startDate': params['startDate'], 'endDate': params['endDate']}
+          : null);
+
+      // 最近7天每日搜索量趋势
+      final trendData = await db.queryAll('''
+        SELECT
+          DATE(m.created_at) AS date,
+          COUNT(*) AS count
+        FROM messages m
+        WHERE m.keywords IS NOT NULL
+          AND jsonb_typeof(m.keywords) = 'array'
+          AND jsonb_array_length(m.keywords) > 0
+          AND m.created_at >= CURRENT_DATE - INTERVAL '6 days'
+        GROUP BY DATE(m.created_at)
+        ORDER BY date
+      ''');
+
+      // 构建完整7天趋势（补零）
+      final List<Map<String, dynamic>> trend = [];
+      for (int i = 6; i >= 0; i--) {
+        final date = DateTime.now().subtract(Duration(days: i));
+        final dateStr =
+            '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+        int dayCount = 0;
+        for (final row in trendData) {
+          final rowDate = (row['date'] as DateTime).toIso8601String().substring(0, 10);
+          if (rowDate == dateStr) {
+            dayCount = row['count'] as int;
+            break;
+          }
+        }
+        trend.add({
+          'date': dateStr,
+          'label': '${date.month}/${date.day}',
+          'count': dayCount,
+        });
+      }
+
+      final hotwordList = hotwords.map((row) => {
+        'keyword': row['keyword'] as String,
+        'count': row['count'] as int,
+      }).toList();
+
+      return Response.ok(jsonEncode({
+        'hotwords': hotwordList,
+        'totalSearches': totalResult?['count'] ?? 0,
+        'uniqueKeywords': uniqueResult?['count'] ?? 0,
+        'trend': trend,
+      }), headers: _corsHeaders);
+    } catch (e) {
+      print('[AdminService] Error getting search hotwords: $e');
       return Response.internalServerError(
         body: jsonEncode({'error': e.toString()}),
         headers: _corsHeaders,
