@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>快淘帮 WisePick · 系统功能模块图</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+}
+
+body {
+  background: #faf9f7;
+  font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  color: #1a1a1a;
+  padding: 40px 60px;
+  overflow: auto;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 40px;
+  border-bottom: 2px solid #1a1a1a;
+  padding-bottom: 16px;
+}
+.header h1 {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.header .sub {
+  font-size: 12px;
+  color: #888;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* ── SVG 容器 ── */
+svg {
+  display: block;
+  margin: 0 auto;
+  background: #fff;
+  border: 1px solid #ddd;
+}
+
+/* ── 节点样式 ── */
+.node-box {
+  fill: #fff;
+  stroke: #1a1a1a;
+  stroke-width: 1.5;
+}
+.node-box.root {
+  fill: #1a1a1a;
+}
+.node-box.l1 {
+  fill: #f0ede8;
+  stroke-width: 2;
+}
+.node-box.l2 {
+  fill: #faf9f7;
+}
+
+.node-text {
+  font-size: 13px;
+  font-weight: 500;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+.node-text.root {
+  fill: #fff;
+  font-weight: 700;
+  font-size: 14px;
+}
+.node-text.l1 {
+  font-weight: 700;
+  font-size: 12px;
+}
+.node-text.l2 {
+  font-size: 11px;
+}
+
+/* ── 连接线 ── */
+.connector {
+  stroke: #555;
+  stroke-width: 1.5;
+  fill: none;
+}
+
+/* ── 色条 ── */
+.color-bar {
+  stroke: none;
+}
+.color-bar.d1 { fill: #3d3d3d; }
+.color-bar.d2 { fill: #5a7a9e; }
+.color-bar.d3 { fill: #6a9e6a; }
+.color-bar.d4 { fill: #9e7a4a; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>快淘帮 WisePick</h1>
+  <span class="sub">系统功能模块图</span>
+</div>
+
+<svg width="1400" height="700" viewBox="0 0 1400 700">
+
+  <!-- ── 根节点 ── -->
+  <rect class="node-box root" x="40" y="300" width="100" height="60" rx="4"/>
+  <text class="node-text root" x="90" y="330">WisePick</text>
+
+  <!-- ── 连接线：根 → L1 ── -->
+  <line class="connector" x1="140" y1="330" x2="200" y2="330"/>
+
+  <!-- ── 第一层：4 个域 ── -->
+  <!-- 域 1：用户与系统中心 -->
+  <g id="domain1">
+    <!-- 域节点 -->
+    <rect class="node-box l1" x="200" y="80" width="140" height="50" rx="4"/>
+    <rect class="color-bar d1" x="200" y="80" width="4" height="50"/>
+    <text class="node-text l1" x="270" y="105">用户与系统中心</text>
+
+    <!-- 连接线：根 → 域 -->
+    <line class="connector" x1="140" y1="330" x2="200" y2="105"/>
+
+    <!-- 子模块 1.1 -->
+    <line class="connector" x1="340" y1="95" x2="380" y2="95"/>
+    <rect class="node-box l2" x="380" y="80" width="100" height="40" rx="3"/>
+    <text class="node-text l2" x="430" y="100">用户认证</text>
+
+    <!-- 子模块 1.2 -->
+    <line class="connector" x1="340" y1="105" x2="380" y2="135"/>
+    <rect class="node-box l2" x="380" y="120" width="100" height="40" rx="3"/>
+    <text class="node-text l2" x="430" y="140">系统设置</text>
+
+    <!-- 子模块 1.3 -->
+    <line class="connector" x1="340" y1="115" x2="380" y2="175"/>
+    <rect class="node-box l2" x="380" y="160" width="100" height="40" rx="3"/>
+    <text class="node-text l2" x="430" y="180">管理员后台</text>
+  </g>
+
+  <!-- 域 2：核心搜索与 AI -->
+  <g id="domain2">
+    <!-- 域节点 -->
+    <rect class="node-box l1" x="200" y="250" width="140" height="50" rx="4"/>
+    <rect class="color-bar d2" x="200" y="250" width="4" height="50"/>
+    <text class="node-text l1" x="270" y="275">核心搜索与 AI</text>
+
+    <!-- 连接线：根 → 域 -->
+    <line class="connector" x1="140" y1="330" x2="200" y2="275"/>
+
+    <!-- 子模块 2.1 -->
+    <line class="connector" x1="340" y1="265" x2="380" y2="265"/>
+    <rect class="node-box l2" x="380" y="250" width="100" height="40" rx="3"/>
+    <text class="node-text l2" x="430" y="270">商品搜索</text>
+
+    <!-- 子模块 2.2 -->
+    <line class="connector" x1="340" y1="285" x2="380" y2="305"/>
+    <rect class="node-box l2" x="380" y="290" width="100" height="40" rx="3"/>
+    <text class="node-text l2" x="430" y="310">AI 聊天推荐</text>
+  </g>
+
+  <!-- 域 3：购物助手 -->
+  <g id="domain3">
+    <!-- 域节点 -->
+    <rect class="node-box l1" x="200" y="420" width="140" height="50" rx="4"/>
+    <rect class="color-bar d3" x="200" y="420" width="4" height="50"/>
+    <text class="node-text l1" x="270" y="445">购物助手</text>
+
+    <!-- 连接线：根 → 域 -->
+    <line class="connector" x1="140" y1="330" x2="200" y2="445"/>
+
+    <!-- 子模块 3.1 -->
+    <line class="connector" x1="340" y1="435" x2="380" y2="435"/>
+    <rect class="node-box l2" x="380" y="420" width="100" height="40" rx="3"/>
+    <text class="node-text l2" x="430" y="440">购物车管理</text>
+
+    <!-- 子模块 3.2 -->
+    <line class="connector" x1="340" y1="455" x2="380" y2="475"/>
+    <rect class="node-box l2" x="380" y="460" width="100" height="40" rx="3"/>
+    <text class="node-text l2" x="430" y="480">价格历史</text>
+  </g>
+
+  <!-- 域 4：决策分析 -->
+  <g id="domain4">
+    <!-- 域节点 -->
+    <rect class="node-box l1" x="200" y="590" width="140" height="50" rx="4"/>
+    <rect class="color-bar d4" x="200" y="590" width="4" height="50"/>
+    <text class="node-text l1" x="270" y="615">决策分析</text>
+
+    <!-- 连接线：根 → 域 -->
+    <line class="connector" x1="140" y1="330" x2="200" y2="615"/>
+
+    <!-- 子模块 4.1 -->
+    <line class="connector" x1="340" y1="605" x2="380" y2="605"/>
+    <rect class="node-box l2" x="380" y="590" width="100" height="40" rx="3"/>
+    <text class="node-text l2" x="430" y="610">数据分析</text>
+
+    <!-- 子模块 4.2 -->
+    <line class="connector" x1="340" y1="625" x2="380" y2="645"/>
+    <rect class="node-box l2" x="380" y="630" width="100" height="40" rx="3"/>
+    <text class="node-text l2" x="430" y="650">购物决策</text>
+  </g>
+
+</svg>
+
+</body>
+</html>

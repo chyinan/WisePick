@@ -1,0 +1,63 @@
+<svg viewBox="0 0 1280 720" width="1280" height="720" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1280" height="720" fill="#FFFFFF"/>
+  <defs>
+    <linearGradient id="titleGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FF6B35"/>
+      <stop offset="100%" stop-color="#004E89"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="1280" height="8" fill="#FF6B35"/>
+
+  <!-- 页面标题 -->
+  <text x="640" y="100" font-family="Microsoft YaHei, Arial, sans-serif" font-size="56" font-weight="bold" text-anchor="middle" fill="url(#titleGradient)">
+    我们的与众不同
+  </text>
+
+  <!-- 三个核心优势 -->
+  <!-- 第一列 -->
+  <rect x="80" y="180" width="320" height="480" fill="#F5F5F5" rx="8"/>
+  <text x="240" y="240" font-family="Microsoft YaHei, Arial, sans-serif" font-size="32" font-weight="bold" text-anchor="middle" fill="#FF6B35">
+    ✓
+  </text>
+  <text x="240" y="310" font-family="Microsoft YaHei, Arial, sans-serif" font-size="28" font-weight="bold" text-anchor="middle" fill="#333333">
+    完整闭环
+  </text>
+  <text x="240" y="370" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" text-anchor="middle" fill="#666666">
+    聚合+AI+比价
+  </text>
+  <text x="240" y="410" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" text-anchor="middle" fill="#666666">
+    竞品只有1-2个
+  </text>
+
+  <!-- 第二列 -->
+  <rect x="480" y="180" width="320" height="480" fill="#F5F5F5" rx="8"/>
+  <text x="640" y="240" font-family="Microsoft YaHei, Arial, sans-serif" font-size="32" font-weight="bold" text-anchor="middle" fill="#FF6B35">
+    ✓
+  </text>
+  <text x="640" y="310" font-family="Microsoft YaHei, Arial, sans-serif" font-size="28" font-weight="bold" text-anchor="middle" fill="#333333">
+    真正多平台
+  </text>
+  <text x="640" y="370" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" text-anchor="middle" fill="#666666">
+    不是简单爬虫
+  </text>
+  <text x="640" y="410" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" text-anchor="middle" fill="#666666">
+    深度整合
+  </text>
+
+  <!-- 第三列 -->
+  <rect x="880" y="180" width="320" height="480" fill="#F5F5F5" rx="8"/>
+  <text x="1040" y="240" font-family="Microsoft YaHei, Arial, sans-serif" font-size="32" font-weight="bold" text-anchor="middle" fill="#FF6B35">
+    ✓
+  </text>
+  <text x="1040" y="310" font-family="Microsoft YaHei, Arial, sans-serif" font-size="28" font-weight="bold" text-anchor="middle" fill="#333333">
+    AI 理解意图
+  </text>
+  <text x="1040" y="370" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" text-anchor="middle" fill="#666666">
+    不是关键词匹配
+  </text>
+  <text x="1040" y="410" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" text-anchor="middle" fill="#666666">
+    真正智能推荐
+  </text>
+
+  <rect x="0" y="712" width="1280" height="8" fill="#FF6B35"/>
+</svg>

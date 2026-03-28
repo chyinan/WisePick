@@ -1,4 +1,5 @@
-﻿import 'dart:convert';
+﻿// pattern: Imperative Shell
+import 'dart:convert';
 import 'dart:developer' as dev;
 
 import 'package:flutter/material.dart';
@@ -16,6 +17,7 @@ import '../products/product_detail_page.dart';
 import '../products/keyword_prompt.dart';
 import '../products/search_service.dart';
 import '../products/product_model.dart';
+import 'keyword_search_merge.dart';
 import 'widgets/streaming_text.dart';
 
 /// 聊天页面组件
@@ -683,38 +685,17 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           final List<ProductModel> tbList = List<ProductModel>.from(tbMeta['products'] ?? []);
           final List<ProductModel> pddList = List<ProductModel>.from(pddMeta['products'] ?? []);
 
-          final merged = <ProductModel>[];
-          final seenIds = <String>{};
+          dev.log('搜索结果统计: JD=${jdList.length}, TB=${tbList.length}, PDD=${pddList.length}', name: 'ChatPage');
+          if (jdList.isNotEmpty) dev.log('JD 商品: ${jdList.map((p) => '${p.id}(${p.platform})').join(', ')}', name: 'ChatPage');
+          if (tbList.isNotEmpty) dev.log('TB 商品: ${tbList.map((p) => '${p.id}(${p.platform})').join(', ')}', name: 'ChatPage');
+          if (pddList.isNotEmpty) dev.log('PDD 商品: ${pddList.map((p) => '${p.id}(${p.platform})').join(', ')}', name: 'ChatPage');
 
-          int jdAdded = 0;
-          for (final it in jdList) {
-            if (jdAdded >= 5) break;
-            if (it.id.isNotEmpty && !seenIds.contains(it.id)) {
-              merged.add(it);
-              seenIds.add(it.id);
-              jdAdded += 1;
-            }
-          }
-          int tbAdded = 0;
-          for (final it in tbList) {
-            if (tbAdded >= 5) break;
-            if (it.id.isNotEmpty && !seenIds.contains(it.id)) {
-              merged.add(it);
-              seenIds.add(it.id);
-              tbAdded += 1;
-            }
-          }
-          int pddAdded = 0;
-          for (final it in pddList) {
-            if (pddAdded >= 4) break;
-            if (it.id.isNotEmpty && !seenIds.contains(it.id)) {
-              merged.add(it);
-              seenIds.add(it.id);
-              pddAdded += 1;
-            }
-          }
-
-          final List<ProductModel> results = merged;
+          final List<ProductModel> results = mergeKeywordSearchResults(
+            jdList: jdList,
+            tbList: tbList,
+            pddList: pddList,
+          );
+          dev.log('合并后结果: ${results.map((p) => '${p.id}(${p.platform})').join(', ')}', name: 'ChatPage');
           final attempts = (jdMeta['attempts'] ?? []) + (tbMeta['attempts'] ?? []) + (pddMeta['attempts'] ?? []);
 
           if (!mounted) return;

@@ -1,0 +1,41 @@
+<svg viewBox="0 0 1280 720" width="1280" height="720" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1280" height="720" fill="#FFFFFF"/>
+  <defs>
+    <linearGradient id="titleGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FF6B35"/>
+      <stop offset="100%" stop-color="#004E89"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="1280" height="8" fill="#FF6B35"/>
+
+  <!-- 页面标题 -->
+  <text x="640" y="80" font-family="Microsoft YaHei, Arial, sans-serif" font-size="56" font-weight="bold" text-anchor="middle" fill="url(#titleGradient)">
+    越用越懂你
+  </text>
+
+  <!-- 左列：文字说明 -->
+  <text x="100" y="180" font-family="Microsoft YaHei, Arial, sans-serif" font-size="32" font-weight="bold" fill="#333333">
+    个性化推荐
+  </text>
+  <text x="100" y="240" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" fill="#666666">
+    系统学习用户偏好
+  </text>
+  <text x="100" y="280" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" fill="#666666">
+    主动推荐符合品味的商品
+  </text>
+
+  <text x="100" y="360" font-family="Microsoft YaHei, Arial, sans-serif" font-size="32" font-weight="bold" fill="#333333">
+    优势
+  </text>
+  <text x="100" y="420" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" fill="#666666">
+    发现新品 • 提升体验 • 增加粘性
+  </text>
+
+  <!-- 右列：产品截图占位符 -->
+  <rect x="700" y="140" width="520" height="540" fill="#F5F5F5" rx="8" stroke="#DDDDDD" stroke-width="2"/>
+  <text x="960" y="420" font-family="Microsoft YaHei, Arial, sans-serif" font-size="32" text-anchor="middle" fill="#999999">
+    [产品截图：个性化推荐页.png]
+  </text>
+
+  <rect x="0" y="712" width="1280" height="8" fill="#FF6B35"/>
+</svg>

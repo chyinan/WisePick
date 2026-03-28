@@ -1,0 +1,39 @@
+<svg viewBox="0 0 1280 720" width="1280" height="720" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景 -->
+  <rect width="1280" height="720" fill="#FFFFFF"/>
+
+  <!-- 装饰渐变背景 -->
+  <defs>
+    <radialGradient id="bgDecor" cx="80%" cy="20%" r="50%">
+      <stop offset="0%" stop-color="#004E89" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#004E89" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="titleGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FF6B35"/>
+      <stop offset="100%" stop-color="#004E89"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1280" height="720" fill="url(#bgDecor)"/>
+
+  <!-- 顶部装饰条 -->
+  <rect x="0" y="0" width="1280" height="8" fill="#FF6B35"/>
+
+  <!-- 主标题 -->
+  <text x="640" y="200" font-family="Microsoft YaHei, Arial, sans-serif" font-size="84" font-weight="bold" text-anchor="middle" fill="url(#titleGradient)">
+    购物决策困境
+  </text>
+
+  <!-- 副标题 -->
+  <text x="640" y="320" font-family="Microsoft YaHei, Arial, sans-serif" font-size="40" text-anchor="middle" fill="#333333">
+    为什么买个东西这么累？
+  </text>
+
+  <!-- 三个痛点 -->
+  <text x="640" y="420" font-family="Microsoft YaHei, Arial, sans-serif" font-size="32" text-anchor="middle" fill="#666666">
+    信息分散 → 难以比价 → 容易踩坑
+  </text>
+
+  <!-- 底部装饰 -->
+  <rect x="0" y="712" width="1280" height="8" fill="#FF6B35"/>
+</svg>

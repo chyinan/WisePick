@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WisePick 业务流程图</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 40px;
+            color: #333;
+        }
+
+        .flow-section {
+            background: white;
+            padding: 30px;
+            margin-bottom: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .flow-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+
+        svg {
+            display: block;
+            margin: 0 auto;
+            background: #fafafa;
+            border-radius: 4px;
+        }
+
+        .flow-box {
+            fill: white;
+            stroke: #333;
+            stroke-width: 2;
+        }
+
+        .flow-diamond {
+            fill: white;
+            stroke: #333;
+            stroke-width: 2;
+        }
+
+        .flow-circle {
+            fill: white;
+            stroke: #333;
+            stroke-width: 2;
+        }
+
+        .flow-text {
+            font-size: 14px;
+            text-anchor: middle;
+            dominant-baseline: middle;
+            fill: #333;
+        }
+
+        .flow-arrow {
+            stroke: #333;
+            stroke-width: 2;
+            fill: none;
+            marker-end: url(#arrowhead);
+        }
+
+        .flow-label {
+            font-size: 12px;
+            fill: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>WisePick 业务流程图</h1>
+
+        <!-- 流程图1: 多平台搜索聚合 -->
+        <div class="flow-section">
+            <div class="flow-title">1. 多平台搜索聚合流程</div>
+            <svg width="400" height="700" viewBox="0 0 400 700">
+                <defs>
+                    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                        <polygon points="0 0, 10 3, 0 6" fill="#333" />
+                    </marker>
+                </defs>
+
+                <!-- 开始 -->
+                <circle cx="200" cy="30" r="20" class="flow-circle"/>
+                <text x="200" y="30" class="flow-text">开始</text>
+
+                <!-- 箭头 -->
+                <line x1="200" y1="50" x2="200" y2="80" class="flow-arrow"/>
+
+                <!-- 用户输入关键词 -->
+                <rect x="120" y="80" width="160" height="50" rx="5" class="flow-box"/>
+                <text x="200" y="107" class="flow-text">用户输入商品关键词</text>
+
+                <!-- 箭头 -->
+                <line x1="200" y1="130" x2="200" y2="160" class="flow-arrow"/>
+
+                <!-- 发送搜索请求 -->
+                <rect x="120" y="160" width="160" height="50" rx="5" class="flow-box"/>
+                <text x="200" y="187" class="flow-text">发送搜索请求</text>
+
+                <!-- 箭头 -->
+                <line x1="200" y1="210" x2="200" y2="240" class="flow-arrow"/>
+
+                <!-- 并发请求多平台 -->
+                <rect x="120" y="240" width="160" height="50" rx="5" class="flow-box"/>
+                <text x="200" y="267" class="flow-text">并发请求多平台API</text>
+
+                <!-- 箭头 -->
+                <line x1="200" y1="290" x2="200" y2="320" class="flow-arrow"/>
+
+                <!-- 获取返回数据 -->
+                <rect x="120" y="320" width="160" height="50" rx="5" class="flow-box"/>
+                <text x="200" y="347" class="flow-text">获取各平台返回数据</text>
+
+                <!-- 箭头 -->
+                <line x1="200" y1="370" x2="200" y2="400" class="flow-arrow"/>
+
+                <!-- 判断：数据格式是否统一 -->
+                <polygon points="200,400 260,440 200,480 140,440" class="flow-diamond"/>
+                <text x="200" y="440" class="flow-text">数据格式</text>
+                <text x="200" y="455" class="flow-text">是否统一？</text>
+
+                <!-- 否 - 数据标准化 -->
+                <line x1="140" y1="440" x2="80" y2="440" class="flow-arrow"/>
+                <text x="110" y="435" class="flow-label">否</text>
+                <rect x="20" y="415" width="120" height="50" rx="5" class="flow-box"/>
+                <text x="80" y="442" class="flow-text">数据标准化</text>
+                <line x1="80" y1="415" x2="80" y2="360" class="flow-arrow"/>
+                <line x1="80" y1="360" x2="120" y2="360" class="flow-arrow"/>
+
+                <!-- 是 - 继续 -->
+                <line x1="200" y1="480" x2="200" y2="510" class="flow-arrow"/>
+                <text x="210" y="500" class="flow-label">是</text>
+
+                <!-- 合并商品数据 -->
+                <rect x="120" y="510" width="160" height="50" rx="5" class="flow-box"/>
+                <text x="200" y="537" class="flow-text">合并商品数据</text>
+
+                <!-- 箭头 -->
+                <line x1="200" y1="560" x2="200" y2="590" class="flow-arrow"/>
+
+                <!-- 排序 -->
+                <rect x="120" y="590" width="160" height="50" rx="5" class="flow-box"/>
+                <text x="200" y="617" class="flow-text">排序（价格/销量/评分）</text>
+
+                <!-- 箭头 -->
+                <line x1="200" y1="640" x2="200" y2="670" class="flow-arrow"/>
+
+                <!-- 结束 -->
+                <circle cx="200" cy="690" r="20" class="flow-circle"/>
+                <text x="200" y="690" class="flow-text">结束</text>
+            </svg>
+        </div>
+
+        <!-- 流程图2: AI聊天推荐 -->
+        <div class="flow-section">
+            <div class="flow-title">2. AI 聊天推荐流程</div>
+            <svg width="400" height="750" viewBox="0 0 400 750">
+                <defs>
+                    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                        <polygon points="0 0, 10 3, 0 6" fill="#333" />
+                    </marker>
+                </defs>
+
+                <!-- 开始 -->
+                <circle cx="200" cy="30" r="20" class="flow-circle"/>
+                <text x="200" y="30" class="flow-text">开始</text>
+
+                <!-- 箭头 -->
+                <line x1="200" y1="50" x2="200" y2="80" class="flow-arrow"/>
+
+                <!-- 用户输入问题 -->
+                <rect x="120" y="80" width="160" height="50" rx="5" class="flow-box"/>
+                <text x="200" y="107" class="flow-text">用户输入问题</text>
+
+                <!-- 箭头 -->
+                <line x1="200" y1="130" x2="200" y2="160" class="flow-arrow"/>
+
+                <!-- 读取历史会话 -->
+                <rect x="120" y="160" width="160" height="50" rx="5" class="flow-box"/>
+                <text x="200" y="187" class="flow-text">读取历史会话记录</text>
+
+                <!-- 箭头 -->
+                <line x1="200" y1="210" x2="200" y2="240" class="flow-arrow"/>
+
+                <!-- 构建Prompt -->
+                <rect x="120" y="240" width="160" height="50" rx="5" class="flow-box"/>
+                <text x="200" y="267" class="flow-text">构建 Prompt</text>
+
+                <!-- 箭头 -->
+                <line x1="200" y1="290" x2="200" y2="320" class="flow-arrow"/>
+
+                <!-- 调用大模型API -->
+                <rect x="120" y="320" width="160" height="50" rx="5" class="flow-box"/>
+                <text x="200" y="347" class="flow-text">调用大模型 API</text>
+
+                <!-- 箭头 -->
+                <line x1="200" y1="370" x2="200" y2="400" class="flow-arrow"/>
+
+                <!-- 判断：是否返回成功 -->
+                <polygon points="200,400 260,440 200,480 140,440" class="flow-diamond"/>
+                <text x="200" y="440" class="flow-text">返回</text>
+                <text x="200" y="455" class="flow-text">成功？</text>
+
+                <!-- 否 - 返回错误 -->
+                <line x1="140" y1="440" x2="80" y2="440" class="flow-arrow"/>
+                <text x="110" y="435" class="flow-label">否</text>
+                <rect x="20" y="415" width="120" height="50" rx="5" class="flow-box"/>
+                <text x="80" y="442" class="flow-text">返回错误信息</text>
+                <line x1="80" y1="415" x2="80" y2="360" class="flow-arrow"/>
+                <line x1="80" y1="360" x2="120" y2="360" class="flow-arrow"/>
+
+                <!-- 是 - 继续 -->
+                <line x1="200" y1="480" x2="200" y2="510" class="flow-arrow"/>
+                <text x="210" y="500" class="flow-label">是</text>
+
+                <!-- 接收流式响应 -->
+                <rect x="120" y="510" width="160" height="50" rx="5" class="flow-box"/>
+                <text x="200" y="537" class="flow-text">接收流式响应</text>
+
+                <!-- 箭头 -->
+                <line x1="200" y1="560" x2="200" y2="590" class="flow-arrow"/>
+
+                <!-- 解析推荐商品 -->
+                <rect x="120" y="590" width="160" height="50" rx="5" class="flow-box"/>
+                <text x="200" y="617" class="flow-text">解析推荐商品信息</text>
+
+                <!-- 箭头 -->
+                <line x1="200" y1="640" x2="200" y2="670" class="flow-arrow"/>
+
+                <!-- 更新会话记录 -->
+                <rect x="120" y="670" width="160" height="50" rx="5" class="flow-box"/>
+                <text x="200" y="697" class="flow-text">更新会话记录</text>
+
+                <!-- 箭头 -->
+                <line x1="200" y1="720" x2="200" y2="750" class="flow-arrow"/>
+
+                <!-- 结束 -->
+                <circle cx="200" cy="770" r="20" class="flow-circle"/>
+                <text x="200" y="770" class="flow-text">结束</text>
+            </svg>
+        </div>
+
+        <!-- 流程图3: 购物车管理 -->
+        <div class="flow-section">
+            <div class="flow-title">3. 购物车管理流程</div>
+            <svg width="500" height="750" viewBox="0 0 500 750">
+                <defs>
+                    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                        <polygon points="0 0, 10 3, 0 6" fill="#333" />
+                    </marker>
+                </defs>
+
+                <!-- 开始 -->
+                <circle cx="250" cy="30" r="20" class="flow-circle"/>
+                <text x="250" y="30" class="flow-text">开始</text>
+
+                <!-- 箭头 -->
+                <line x1="250" y1="50" x2="250" y2="80" class="flow-arrow"/>
+
+                <!-- 用户操作 -->
+                <rect x="170" y="80" width="160" height="50" rx="5" class="flow-box"/>
+                <text x="250" y="107" class="flow-text">用户操作购物车</text>
+
+                <!-- 箭头 -->
+                <line x1="250" y1="130" x2="250" y2="160" class="flow-arrow"/>
+
+                <!-- 判断：操作类型 -->
+                <polygon points="250,160 330,210 250,260 170,210" class="flow-diamond"/>
+                <text x="250" y="210" class="flow-text">操作类型？</text>
+
+                <!-- 删除商品 -->
+                <line x1="170" y1="210" x2="80" y2="210" class="flow-arrow"/>
+                <text x="125" y="205" class="flow-label">删除</text>
+                <rect x="20" y="185" width="120" height="50" rx="5" class="flow-box"/>
+                <text x="80" y="212" class="flow-text">删除商品</text>
+                <line x1="80" y1="235" x2="80" y2="320" class="flow-arrow"/>
+
+                <!-- 修改数量 -->
+                <line x1="250" y1="260" x2="250" y2="290" class="flow-arrow"/>
+                <text x="260" y="280" class="flow-label">修改</text>
+                <rect x="170" y="290" width="160" height="50" rx="5" class="flow-box"/>
+                <text x="250" y="317" class="flow-text">修改商品数量</text>
+                <line x1="250" y1="340" x2="250" y2="360" class="flow-arrow"/>
+
+                <!-- 添加商品 -->
+                <line x1="330" y1="210" x2="420" y2="210" class="flow-arrow"/>
+                <text x="375" y="205" class="flow-label">添加</text>
+                <rect x="360" y="185" width="120" height="50" rx="5" class="flow-box"/>
+                <text x="420" y="212" class="flow-text">添加商品</text>
+                <line x1="420" y1="235" x2="420" y2="320" class="flow-arrow"/>
+
+                <!-- 汇聚点 -->
+                <line x1="80" y1="320" x2="250" y2="320" class="flow-arrow"/>
+                <line x1="420" y1="320" x2="250" y2="320" class="flow-arrow"/>
+                <line x1="250" y1="360" x2="250" y2="380" class="flow-arrow"/>
+
+                <!-- 更新本地存储 -->
+                <rect x="170" y="380" width="160" height="50" rx="5" class="flow-box"/>
+                <text x="250" y="407" class="flow-text">更新本地存储</text>
+
+                <!-- 箭头 -->
+                <line x1="250" y1="430" x2="250" y2="460" class="flow-arrow"/>
+
+                <!-- 判断：是否需要同步 -->
+                <polygon points="250,460 310,500 250,540 190,500" class="flow-diamond"/>
+                <text x="250" y="500" class="flow-text">需要同步</text>
+                <text x="250" y="515" class="flow-text">到云端？</text>
+
+                <!-- 是 - 同步 -->
+                <line x1="250" y1="540" x2="250" y2="570" class="flow-arrow"/>
+                <text x="260" y="560" class="flow-label">是</text>
+                <rect x="170" y="570" width="160" height="50" rx="5" class="flow-box"/>
+                <text x="250" y="597" class="flow-text">同步到云端</text>
+
+                <!-- 否 - 跳过 -->
+                <line x1="190" y1="500" x2="100" y2="500" class="flow-arrow"/>
+                <text x="145" y="495" class="flow-label">否</text>
+                <line x1="100" y1="500" x2="100" y2="595" class="flow-arrow"/>
+                <line x1="100" y1="595" x2="170" y2="595" class="flow-arrow"/>
+
+                <!-- 箭头 -->
+                <line x1="250" y1="620" x2="250" y2="650" class="flow-arrow"/>
+
+                <!-- 结束 -->
+                <circle cx="250" cy="670" r="20" class="flow-circle"/>
+                <text x="250" y="670" class="flow-text">结束</text>
+            </svg>
+        </div>
+
+    </div>
+</body>
+</html>

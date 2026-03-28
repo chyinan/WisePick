@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720">
+  <rect width="1280" height="720" fill="#FFFFFF" />
+  <defs>
+    <linearGradient id="titleGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FF6B35" />
+      <stop offset="100%" stop-color="#004E89" />
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="1280" height="8" fill="#FF6B35" />
+
+  
+  <text x="640" y="100" font-family="Microsoft YaHei, Arial, sans-serif" font-size="56" font-weight="bold" text-anchor="middle" fill="url(#titleGradient)">
+    一站式智能选品助手
+  </text>
+
+  
+  
+  <path fill="#F5F5F5" d="M88,180 H392 A8,8 0 0 1 400,188 V652 A8,8 0 0 1 392,660 H88 A8,8 0 0 1 80,652 V188 A8,8 0 0 1 88,180 Z" />
+  <text x="240" y="240" font-family="Microsoft YaHei, Arial, sans-serif" font-size="40" font-weight="bold" text-anchor="middle" fill="#FF6B35">
+    🔍
+  </text>
+  <text x="240" y="310" font-family="Microsoft YaHei, Arial, sans-serif" font-size="32" font-weight="bold" text-anchor="middle" fill="#333333">
+    聚合搜索
+  </text>
+  <text x="240" y="380" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" text-anchor="middle" fill="#666666">
+    一次搜索
+  </text>
+  <text x="240" y="420" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" text-anchor="middle" fill="#666666">
+    三个平台
+  </text>
+  <text x="240" y="460" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" text-anchor="middle" fill="#666666">
+    同时出结果
+  </text>
+
+  
+  <path fill="#F5F5F5" d="M488,180 H792 A8,8 0 0 1 800,188 V652 A8,8 0 0 1 792,660 H488 A8,8 0 0 1 480,652 V188 A8,8 0 0 1 488,180 Z" />
+  <text x="640" y="240" font-family="Microsoft YaHei, Arial, sans-serif" font-size="40" font-weight="bold" text-anchor="middle" fill="#FF6B35">
+    💬
+  </text>
+  <text x="640" y="310" font-family="Microsoft YaHei, Arial, sans-serif" font-size="32" font-weight="bold" text-anchor="middle" fill="#333333">
+    AI 推荐
+  </text>
+  <text x="640" y="380" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" text-anchor="middle" fill="#666666">
+    像聊天一样
+  </text>
+  <text x="640" y="420" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" text-anchor="middle" fill="#666666">
+    选商品
+  </text>
+  <text x="640" y="460" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" text-anchor="middle" fill="#666666">
+    不用自己对比
+  </text>
+
+  
+  <path fill="#F5F5F5" d="M888,180 H1192 A8,8 0 0 1 1200,188 V652 A8,8 0 0 1 1192,660 H888 A8,8 0 0 1 880,652 V188 A8,8 0 0 1 888,180 Z" />
+  <text x="1040" y="240" font-family="Microsoft YaHei, Arial, sans-serif" font-size="40" font-weight="bold" text-anchor="middle" fill="#FF6B35">
+    💰
+  </text>
+  <text x="1040" y="310" font-family="Microsoft YaHei, Arial, sans-serif" font-size="32" font-weight="bold" text-anchor="middle" fill="#333333">
+    智能比价
+  </text>
+  <text x="1040" y="380" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" text-anchor="middle" fill="#666666">
+    自动找最便宜
+  </text>
+  <text x="1040" y="420" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" text-anchor="middle" fill="#666666">
+    看价格历史
+  </text>
+  <text x="1040" y="460" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" text-anchor="middle" fill="#666666">
+    避免踩坑
+  </text>
+
+  <rect x="0" y="712" width="1280" height="8" fill="#FF6B35" />
+</svg>

@@ -291,7 +291,7 @@ class ProductComparisonPage extends ConsumerWidget {
                         _buildDataRow(
                             '销量',
                             data.products
-                                .map((p) => _formatSales(p.sales))
+                                .map((p) => _formatSales(p.sales, p.platform))
                                 .toList(),
                             _findHighestSalesIndex(data.products),
                             cellWidth: productColWidth),
@@ -403,7 +403,11 @@ class ProductComparisonPage extends ConsumerWidget {
     return index;
   }
 
-  String _formatSales(int sales) {
+  String _formatSales(int sales, String platform) {
+    // 淘宝销量为0时显示"暂无"
+    if (platform == 'taobao' && sales == 0) {
+      return '暂无';
+    }
     if (sales >= 10000) {
       return '${(sales / 10000).toStringAsFixed(1)}万+';
     }

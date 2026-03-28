@@ -1,9 +1,9 @@
 # 快淘帮 WisePick - 数据库架构文档
 
-**版本**: 1.0  
-**创建日期**: 2026-01-22  
-**最后更新**: 2026-01-22  
-**文档状态**: 正式版  
+**版本**: 1.1
+**创建日期**: 2026-01-22
+**最后更新**: 2026-03-21
+**文档状态**: 正式版
 **架构师**: Winston (Architect Agent)
 
 ---
@@ -74,33 +74,36 @@
 ### 3.1 整体架构
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    PostgreSQL Database                        │
-│                                                               │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │           用户认证模块                                │    │
-│  │  ┌──────────────┐  ┌──────────────┐                │    │
-│  │  │    users     │  │user_sessions │                │    │
-│  │  └──────────────┘  └──────────────┘                │    │
-│  └─────────────────────────────────────────────────────┘    │
-│                                                               │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │           数据同步模块                                │    │
-│  │  ┌──────────────┐  ┌──────────────┐                │    │
-│  │  │cart_items    │  │conversations │                │    │
-│  │  └──────────────┘  └──────────────┘                │    │
-│  │  ┌──────────────┐  ┌──────────────┐                │    │
-│  │  │  messages    │  │sync_versions │                │    │
-│  │  └──────────────┘  └──────────────┘                │    │
-│  └─────────────────────────────────────────────────────┘    │
-│                                                               │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │           安全模块                                    │    │
-│  │  ┌──────────────┐  ┌──────────────┐                │    │
-│  │  │login_attempts│  │email_verif.. │                │    │
-│  │  └──────────────┘  └──────────────┘                │    │
-│  └─────────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                      PostgreSQL Database                          │
+│                                                                    │
+│  ┌──────────────────────────────────────────────────────────┐    │
+│  │           用户认证模块                                     │    │
+│  │  ┌──────────────┐  ┌──────────────┐                      │    │
+│  │  │    users     │  │user_sessions │                      │    │
+│  │  └──────────────┘  └──────────────┘                      │    │
+│  └──────────────────────────────────────────────────────────┘    │
+│                                                                    │
+│  ┌──────────────────────────────────────────────────────────┐    │
+│  │           数据同步模块                                     │    │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │    │
+│  │  │cart_items    │  │conversations │  │price_history │   │    │
+│  │  └──────────────┘  └──────────────┘  └──────────────┘   │    │
+│  │  ┌──────────────┐  ┌──────────────┐                      │    │
+│  │  │  messages    │  │sync_versions │                      │    │
+│  │  └──────────────┘  └──────────────┘                      │    │
+│  └──────────────────────────────────────────────────────────┘    │
+│                                                                    │
+│  ┌──────────────────────────────────────────────────────────┐    │
+│  │           安全模块                                         │    │
+│  │  ┌──────────────┐  ┌──────────────┐                      │    │
+│  │  │login_attempts│  │email_verif.. │                      │    │
+│  │  └──────────────┘  └──────────────┘                      │    │
+│  │  ┌──────────────┐  ┌────────────────────┐               │    │
+│  │  │security_ques.│  │password_reset_tok. │               │    │
+│  │  └──────────────┘  └────────────────────┘               │    │
+│  └──────────────────────────────────────────────────────────┘    │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ### 3.2 核心设计原则
@@ -388,6 +391,100 @@
 - 使用后标记 used_at，防止重复使用
 - 支持多种验证类型
 
+### 4.9 安全问题表 (user_security_questions)
+
+**表名**: `user_security_questions`
+
+**用途**: 存储用户安全问题，用于密码找回验证
+
+**字段定义**:
+
+| 字段名 | 类型 | 约束 | 说明 |
+|--------|------|------|------|
+| id | UUID | PRIMARY KEY | 记录唯一标识 |
+| user_id | UUID | NOT NULL, FK → users(id) | 用户 ID |
+| question | VARCHAR(500) | NOT NULL | 安全问题内容 |
+| answer_hash | VARCHAR(255) | NOT NULL | 答案哈希（bcrypt） |
+| question_order | INTEGER | NOT NULL, DEFAULT 1 | 问题顺序编号 |
+| created_at | TIMESTAMP WITH TIME ZONE | DEFAULT NOW() | 创建时间 |
+| updated_at | TIMESTAMP WITH TIME ZONE | DEFAULT NOW() | 更新时间 |
+
+**索引**:
+- `idx_security_questions_user`: 用户 ID 索引
+
+**唯一约束**:
+- `(user_id, question_order)`: 确保每个用户的每个问题顺序号唯一
+
+**触发器**:
+- `update_security_questions_updated_at`: 自动更新 updated_at 字段
+
+**设计说明**:
+- 答案使用 bcrypt 加密存储，与密码同等安全级别
+- 支持多个安全问题（通过 question_order 区分）
+- 用于密码找回流程中的身份验证
+
+### 4.10 密码重置令牌表 (password_reset_tokens)
+
+**表名**: `password_reset_tokens`
+
+**用途**: 存储密码重置令牌，用于密码找回流程
+
+**字段定义**:
+
+| 字段名 | 类型 | 约束 | 说明 |
+|--------|------|------|------|
+| id | UUID | PRIMARY KEY | 记录唯一标识 |
+| user_id | UUID | NOT NULL, FK → users(id) | 用户 ID |
+| token | VARCHAR(255) | NOT NULL, UNIQUE | 重置令牌 |
+| verified | BOOLEAN | DEFAULT FALSE | 安全问题是否已验证通过 |
+| expires_at | TIMESTAMP WITH TIME ZONE | NOT NULL | 过期时间 |
+| used_at | TIMESTAMP WITH TIME ZONE | NULL | 使用时间 |
+| created_at | TIMESTAMP WITH TIME ZONE | DEFAULT NOW() | 创建时间 |
+
+**索引**:
+- `idx_password_reset_token`: 令牌索引（唯一）
+- `idx_password_reset_user`: 用户 ID 索引
+
+**设计说明**:
+- 令牌具有有效期，过期后不可使用
+- 使用后标记 used_at，防止重复使用
+- verified 字段标记安全问题验证状态
+- 每次发起密码重置时，旧令牌会被删除
+
+### 4.11 价格历史表 (price_history)
+
+**表名**: `price_history`
+
+**用途**: 记录商品价格变化历史，用于价格趋势分析和价格监控
+
+**字段定义**:
+
+| 字段名 | 类型 | 约束 | 说明 |
+|--------|------|------|------|
+| id | UUID | PRIMARY KEY | 记录唯一标识 |
+| product_id | VARCHAR(100) | NOT NULL | 商品 ID（平台唯一标识） |
+| platform | VARCHAR(20) | NOT NULL | 平台标识（taobao/jd/pdd） |
+| price | DECIMAL(12, 2) | NOT NULL | 价格 |
+| original_price | DECIMAL(12, 2) | NULL | 原价 |
+| coupon | DECIMAL(12, 2) | DEFAULT 0 | 优惠券金额 |
+| final_price | DECIMAL(12, 2) | NULL | 最终价格 |
+| title | VARCHAR(500) | NULL | 商品标题 |
+| source | VARCHAR(50) | DEFAULT 'auto' | 数据来源（auto/manual/scraper） |
+| recorded_at | TIMESTAMP WITH TIME ZONE | DEFAULT NOW() | 价格记录时间 |
+| created_at | TIMESTAMP WITH TIME ZONE | DEFAULT NOW() | 创建时间 |
+
+**索引**:
+- `idx_price_history_product`: 商品 ID 索引
+- `idx_price_history_product_platform`: 商品+平台复合索引
+- `idx_price_history_recorded`: 商品+记录时间索引（用于时间范围查询）
+- `idx_price_history_platform`: 平台索引
+
+**设计说明**:
+- 不与用户关联，记录商品本身的价格变化
+- 支持多数据来源（自动采集、手动录入、爬虫）
+- 可按商品+平台查询价格趋势
+- 与 cart_items 表的 initial_price/current_price 配合实现价格监控
+
 ---
 
 ## 5. 数据同步机制
@@ -557,6 +654,19 @@ $$ LANGUAGE plpgsql;
 - `idx_msg_sync`: 会话+版本号索引
 - `idx_msg_created`: 会话+创建时间索引（用于排序）
 
+**安全问题表索引**:
+- `idx_security_questions_user`: 用户 ID 索引
+
+**密码重置令牌表索引**:
+- `idx_password_reset_token`: 令牌唯一索引
+- `idx_password_reset_user`: 用户 ID 索引
+
+**价格历史表索引**:
+- `idx_price_history_product`: 商品 ID 索引
+- `idx_price_history_product_platform`: 商品+平台复合索引
+- `idx_price_history_recorded`: 商品+记录时间索引
+- `idx_price_history_platform`: 平台索引
+
 ### 7.3 索引优化建议
 
 **定期维护**:
@@ -580,6 +690,8 @@ $$ LANGUAGE plpgsql;
 server/lib/database/migrations/
 ├── 001_create_user_tables.sql      # 初始表结构
 ├── 002_fix_constraints.sql         # 修复约束
+├── 003_add_security_questions.sql  # 安全问题和密码重置令牌
+├── 004_create_price_history.sql    # 价格历史表
 └── ...
 ```
 
@@ -614,6 +726,15 @@ server/lib/database/migrations/
 - 修复缺失的列
 - 添加唯一约束
 - 清理重复数据
+
+**003_add_security_questions.sql**:
+- 创建安全问题表 (user_security_questions)
+- 创建密码重置令牌表 (password_reset_tokens)
+- 创建相关索引和触发器
+
+**004_create_price_history.sql**:
+- 创建价格历史表 (price_history)
+- 创建商品+平台+时间等多维度索引
 
 ### 8.4 迁移执行流程
 
@@ -790,10 +911,11 @@ server/lib/database/migrations/
 ### 13.3 未来扩展
 
 **可能的新表**:
-- `price_history`: 价格历史记录表
 - `user_preferences`: 用户偏好表
 - `analytics_events`: 分析事件表
 - `admin_logs`: 管理员操作日志表
+- `product_favorites`: 用户收藏商品表
+- `notification_records`: 通知推送记录表
 
 ---
 
@@ -808,7 +930,8 @@ server/lib/database/migrations/
 3. **软删除**: 重要数据支持软删除，便于恢复
 4. **版本同步**: 支持多设备数据同步的版本控制机制
 5. **JSONB 存储**: 灵活数据使用 JSONB，保持扩展性
-6. **安全设计**: 密码加密、SQL 注入防护、访问控制
+6. **安全设计**: 密码加密、安全问题验证、SQL 注入防护、访问控制
+7. **价格监控**: 价格历史表支持商品价格趋势分析
 
 ### 14.2 技术优势
 
@@ -857,6 +980,7 @@ server/lib/database/migrations/
 | 版本 | 日期 | 变更内容 | 作者 |
 |------|------|----------|------|
 | 1.0 | 2026-01-22 | 初始数据库架构文档 | Winston (Architect) |
+| 1.1 | 2026-03-21 | 补充 user_security_questions、password_reset_tokens、price_history 三个表的文档；更新架构图、索引列表、迁移文件目录；修正未来扩展章节 | Claude Code |
 
 ---
 
@@ -866,4 +990,100 @@ server/lib/database/migrations/
 
 ---
 
-*本文档基于项目实际数据库设计和迁移脚本编写，反映了当前数据库的真实架构状态。*
+## 16. 本地存储设计（Hive NoSQL）
+
+### 16.1 技术选型
+
+客户端采用 **Hive 2.x** 作为本地持久化方案。Hive 是专为 Flutter/Dart 设计的轻量级键值数据库，数据以二进制格式存储在设备本地，无需网络连接即可读写，适合移动端和桌面端的离线优先场景。
+
+与 SQLite 相比，Hive 无需编写 SQL、无 ORM 映射开销，读写性能更高；与 SharedPreferences 相比，Hive 支持复杂对象序列化和大数据量存储。
+
+### 16.2 存储结构
+
+Hive 以 **Box（盒子）** 为基本存储单元，每个 Box 对应一个独立的本地文件，类似关系型数据库中的"表"，但存储的是键值对而非行列结构。
+
+本项目共定义 **11 个 Box**，按职责划分如下：
+
+| Box 名称 | 存储内容 | 数据类型 |
+|----------|----------|----------|
+| `settings` | 应用配置（主题、API Key、AI 模型参数、管理员密码哈希等） | `Map<String, dynamic>` |
+| `cart_box` | 购物车商品列表 | `List<ProductModel>` |
+| `conversations` | AI 聊天会话记录（含消息历史） | `Map<String, dynamic>` |
+| `favorites` | 用户收藏的商品 | `List<ProductModel>` |
+| `promo_cache` | 电商平台推广链接缓存 | `Map<String, String>` |
+| `taobao_item_cache` | 淘宝商品详情缓存 | `Map<String, dynamic>` |
+| `pdd_item_cache` | 拼多多商品详情缓存 | `Map<String, dynamic>` |
+| `jdPriceCache` | 京东商品价格缓存 | `Box<double>` |
+| `auth` | 用户登录态（Token、用户信息） | `Map<String, dynamic>` |
+| `sync_meta` | 云端同步元数据（最后同步时间、版本号） | `Map<String, dynamic>` |
+| `cart_ops_log` | 购物车操作离线队列（断网时暂存） | `List<Map>` |
+
+### 16.3 核心数据模型
+
+商品数据（`ProductModel`）是唯一注册了 **TypeAdapter** 的强类型模型，由 `hive_generator` 自动生成二进制序列化代码，读写效率最高：
+
+| 字段 | 类型 | HiveField | 说明 |
+|------|------|-----------|------|
+| `id` | String | 0 | 平台商品唯一 ID |
+| `platform` | String | 1 | 来源平台（taobao / jd / pdd） |
+| `title` | String | 2 | 商品标题 |
+| `price` | double | 3 | 原始价格 |
+| `originalPrice` | double | 4 | 划线原价 |
+| `coupon` | double | 5 | 优惠券面额 |
+| `finalPrice` | double | 6 | 券后到手价 |
+| `imageUrl` | String | 7 | 商品主图 URL |
+| `sales` | int | 8 | 销量 |
+| `rating` | double | 9 | 评分（0.0 ~ 1.0） |
+| `shopTitle` | String | 10 | 店铺名称 |
+| `link` | String | 11 | 推广链接或口令 |
+| `commission` | double | 12 | 佣金比例 |
+| `description` | String | 13 | 商品副标题/描述 |
+
+聊天消息（`ChatMessage`）和会话（`Conversation`）以 `Map` 序列化方式存储，便于字段扩展而无需迁移。
+
+### 16.4 Settings Box 配置项
+
+`settings` Box 存储所有应用级配置，Key 常量定义如下：
+
+| Key 常量 | 说明 |
+|----------|------|
+| `theme_mode` | 主题模式（light / dark / system） |
+| `openai_api_key` | OpenAI API Key |
+| `openai_base_url` | AI 接口地址 |
+| `selected_model` | 当前选用的 AI 模型 |
+| `max_tokens` | AI 最大输出 Token 数 |
+| `use_mock_ai` | 是否启用 Mock AI 模式 |
+| `price_notification_enabled` | 是否开启价格降价通知 |
+| `admin_password_hash` | 管理员密码 bcrypt 哈希 |
+| `admin_password_needs_reset` | 是否需要重置管理员密码 |
+| `proxy_url` | 网络代理地址 |
+| `jd_pid` | 京东联盟推广位 ID |
+| `pdd_uid` | 拼多多联盟用户 ID |
+
+### 16.5 离线优先架构
+
+本地 Hive 与云端 PostgreSQL 形成双层存储架构：
+
+```
+用户操作
+   ↓
+写入 Hive（立即生效，用户无感知延迟）
+   ↓
+SyncService 检测网络状态
+   ├── 在线 → 推送至后端 PostgreSQL
+   └── 离线 → 写入 cart_ops_log 离线队列
+              网络恢复后自动重试
+```
+
+**冲突解决策略**：采用 Last Write Wins（最后写入优先），以 `sync_meta` Box 中记录的时间戳为判断依据，与服务端 `sync_versions` 表协同工作。
+
+### 16.6 初始化流程
+
+应用启动时，`HiveConfig.init()` 按以下顺序执行：
+
+1. `Hive.initFlutter()` — 初始化存储路径
+2. `_registerAdapters()` — 注册 `ProductModelAdapter`（typeId: 0）
+3. `_openBoxes()` — 并发预打开 6 个常用 Box
+4. `_initAdminPassword()` — 首次启动时生成默认管理员密码哈希
+
+---

@@ -24,13 +24,20 @@ final productComparisonProvider = FutureProvider.autoDispose<ProductComparison?>
 /// 单个商品评分 Provider
 final productScoreProvider = FutureProvider.autoDispose.family<PurchaseDecisionScore, Map<String, dynamic>>((ref, product) async {
   final service = ref.watch(decisionServiceProvider);
-  
+
+  final platform = product['platform'] as String? ?? '';
+  final sales = (product['sales'] as num?)?.toInt() ?? 0;
+
+  // 检测销量数据是否可用：淘宝且 sales == 0 时，视为数据不可用
+  final salesAvailable = !(platform == 'taobao' && sales == 0);
+
   return service.calculateScore(
     price: (product['price'] as num?)?.toDouble() ?? 0,
     originalPrice: (product['originalPrice'] as num?)?.toDouble(),
     rating: (product['rating'] as num?)?.toDouble() ?? 0,
-    sales: (product['sales'] as num?)?.toInt() ?? 0,
-    platform: product['platform'] as String? ?? '',
+    sales: sales,
+    platform: platform,
+    salesAvailable: salesAvailable,
   );
 });
 

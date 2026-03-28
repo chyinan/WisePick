@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720">
+  <rect width="1280" height="720" fill="#FFFFFF" />
+  <defs>
+    <linearGradient id="titleGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FF6B35" />
+      <stop offset="100%" stop-color="#004E89" />
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="1280" height="8" fill="#FF6B35" />
+
+  
+  <text x="640" y="100" font-family="Microsoft YaHei, Arial, sans-serif" font-size="56" font-weight="bold" text-anchor="middle" fill="url(#titleGradient)">
+    可持续的商业价值
+  </text>
+
+  
+  
+  <path fill="#F5F5F5" d="M88,180 H392 A8,8 0 0 1 400,188 V652 A8,8 0 0 1 392,660 H88 A8,8 0 0 1 80,652 V188 A8,8 0 0 1 88,180 Z" />
+  <text x="240" y="240" font-family="Microsoft YaHei, Arial, sans-serif" font-size="40" font-weight="bold" text-anchor="middle" fill="#FF6B35">
+    💰
+  </text>
+  <text x="240" y="310" font-family="Microsoft YaHei, Arial, sans-serif" font-size="28" font-weight="bold" text-anchor="middle" fill="#333333">
+    佣金分成
+  </text>
+  <text x="240" y="370" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" text-anchor="middle" fill="#666666">
+    与电商平台
+  </text>
+  <text x="240" y="410" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" text-anchor="middle" fill="#666666">
+    合作
+  </text>
+
+  
+  <path fill="#F5F5F5" d="M488,180 H792 A8,8 0 0 1 800,188 V652 A8,8 0 0 1 792,660 H488 A8,8 0 0 1 480,652 V188 A8,8 0 0 1 488,180 Z" />
+  <text x="640" y="240" font-family="Microsoft YaHei, Arial, sans-serif" font-size="40" font-weight="bold" text-anchor="middle" fill="#FF6B35">
+    🎯
+  </text>
+  <text x="640" y="310" font-family="Microsoft YaHei, Arial, sans-serif" font-size="28" font-weight="bold" text-anchor="middle" fill="#333333">
+    精准广告
+  </text>
+  <text x="640" y="370" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" text-anchor="middle" fill="#666666">
+    品牌方投放
+  </text>
+  <text x="640" y="410" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" text-anchor="middle" fill="#666666">
+    精准推荐
+  </text>
+
+  
+  <path fill="#F5F5F5" d="M888,180 H1192 A8,8 0 0 1 1200,188 V652 A8,8 0 0 1 1192,660 H888 A8,8 0 0 1 880,652 V188 A8,8 0 0 1 888,180 Z" />
+  <text x="1040" y="240" font-family="Microsoft YaHei, Arial, sans-serif" font-size="40" font-weight="bold" text-anchor="middle" fill="#FF6B35">
+    👑
+  </text>
+  <text x="1040" y="310" font-family="Microsoft YaHei, Arial, sans-serif" font-size="28" font-weight="bold" text-anchor="middle" fill="#333333">
+    高级会员
+  </text>
+  <text x="1040" y="370" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" text-anchor="middle" fill="#666666">
+    VIP 用户享受
+  </text>
+  <text x="1040" y="410" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" text-anchor="middle" fill="#666666">
+    更多权益
+  </text>
+
+  <rect x="0" y="712" width="1280" height="8" fill="#FF6B35" />
+</svg>

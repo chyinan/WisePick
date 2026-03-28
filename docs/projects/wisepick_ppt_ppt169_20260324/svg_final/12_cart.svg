@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720">
+  <rect width="1280" height="720" fill="#FFFFFF" />
+  <defs>
+    <linearGradient id="titleGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FF6B35" />
+      <stop offset="100%" stop-color="#004E89" />
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="1280" height="8" fill="#FF6B35" />
+
+  
+  <text x="640" y="80" font-family="Microsoft YaHei, Arial, sans-serif" font-size="56" font-weight="bold" text-anchor="middle" fill="url(#titleGradient)">
+    多平台商品统一管理
+  </text>
+
+  
+  <text x="100" y="180" font-family="Microsoft YaHei, Arial, sans-serif" font-size="32" font-weight="bold" fill="#333333">
+    购物车管理
+  </text>
+  <text x="100" y="240" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" fill="#666666">
+    在 WisePick 中统一管理
+  </text>
+  <text x="100" y="280" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" fill="#666666">
+    来自三个平台的购物车
+  </text>
+
+  <text x="100" y="360" font-family="Microsoft YaHei, Arial, sans-serif" font-size="32" font-weight="bold" fill="#333333">
+    优势
+  </text>
+  <text x="100" y="420" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" fill="#666666">
+    不用在多个 App 切换
+  </text>
+  <text x="100" y="460" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" fill="#666666">
+    统一结算 • 便捷管理
+  </text>
+
+  
+  <path fill="#F5F5F5" stroke="#DDDDDD" stroke-width="2" d="M708,140 H1212 A8,8 0 0 1 1220,148 V672 A8,8 0 0 1 1212,680 H708 A8,8 0 0 1 700,672 V148 A8,8 0 0 1 708,140 Z" />
+  <text x="960" y="420" font-family="Microsoft YaHei, Arial, sans-serif" font-size="32" text-anchor="middle" fill="#999999">
+    [产品截图：购物车.png]
+  </text>
+
+  <rect x="0" y="712" width="1280" height="8" fill="#FF6B35" />
+</svg>

@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>快淘帮 WisePick · 系统架构图</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #fff;
+  font-family: 'PingFang SC', 'Microsoft YaHei', 'Segoe UI', sans-serif;
+  color: #222;
+  padding: 48px 56px 64px;
+}
+h1 { font-size: 18px; font-weight: 700; color: #111; margin-bottom: 4px; }
+.meta { font-size: 12px; color: #999; margin-bottom: 36px; }
+
+/* ── 整体布局 ── */
+.arch {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0;
+}
+
+/* 主体（层列表 + 中间箭头） */
+.main-col {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+
+/* 右侧竖向标注列 */
+.side-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-left: 8px;
+  align-items: stretch;
+}
+.side-tag {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0 10px;
+  border-radius: 4px;
+  letter-spacing: 2px;
+  flex: 1;
+}
+
+/* ── 每一层 ── */
+.layer {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+/* 层标签（左侧） */
+.layer-label {
+  width: 72px;
+  min-width: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.5;
+  padding: 16px 6px;
+  border-radius: 4px 0 0 4px;
+}
+
+/* 层内容区 */
+.layer-body {
+  flex: 1;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-radius: 0 4px 4px 0;
+}
+
+/* 模块行 */
+.mod-row {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* 单个模块盒子 */
+.mod {
+  border: 1.5px solid rgba(0,0,0,0.25);
+  border-radius: 4px;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 500;
+  background: rgba(255,255,255,0.55);
+  text-align: center;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.mod.wide {
+  flex: 1;
+  min-width: 160px;
+}
+.mod.full {
+  width: 100%;
+  text-align: center;
+}
+
+/* 数据库圆柱样式 */
+.cylinder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.cyl-body {
+  border: 1.5px solid rgba(0,0,0,0.25);
+  border-radius: 4px;
+  padding: 10px 24px;
+  font-size: 13px;
+  font-weight: 600;
+  background: rgba(255,255,255,0.55);
+  text-align: center;
+  position: relative;
+  min-width: 100px;
+}
+.cyl-body::before {
+  content: '';
+  display: block;
+  width: 100%;
+  height: 10px;
+  border: 1.5px solid rgba(0,0,0,0.2);
+  border-radius: 50%;
+  position: absolute;
+  top: -6px; left: -1.5px;
+  background: rgba(255,255,255,0.7);
+}
+.cyl-label { font-size: 12px; color: rgba(0,0,0,0.5); margin-top: 2px; }
+
+/* 层间箭头 */
+.layer-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  padding-left: 72px;
+}
+.layer-arrow svg { display: block; }
+
+/* 颜色主题 */
+/* 用户层 - 青绿 */
+.l-user { border-color: #4db6ac; }
+.l-user .layer-label { background: #4db6ac; color: #fff; }
+.l-user .layer-body { background: #e0f2f1; }
+
+/* 接入层 - 橙 */
+.l-access { border-color: #ffb74d; }
+.l-access .layer-label { background: #ffb74d; color: #fff; }
+.l-access .layer-body { background: #fff3e0; }
+
+/* 业务层 - 绿 */
+.l-biz { border-color: #66bb6a; }
+.l-biz .layer-label { background: #66bb6a; color: #fff; }
+.l-biz .layer-body { background: #e8f5e9; }
+
+/* 服务层 - 绿（深一点） */
+.l-svc { border-color: #43a047; }
+.l-svc .layer-label { background: #43a047; color: #fff; }
+.l-svc .layer-body { background: #c8e6c9; }
+
+/* 数据层 - 蓝紫 */
+.l-data { border-color: #7986cb; }
+.l-data .layer-label { background: #7986cb; color: #fff; }
+.l-data .layer-body { background: #e8eaf6; }
+
+/* 基础设施层 - 蓝 */
+.l-infra { border-color: #64b5f6; }
+.l-infra .layer-label { background: #64b5f6; color: #fff; }
+.l-infra .layer-body { background: #e3f2fd; }
+
+/* 侧边标注颜色 */
+.side-log  { background: #c8e6c9; color: #2e7d32; border: 1.5px solid #66bb6a; }
+.side-auth { background: #ffcdd2; color: #c62828; border: 1.5px solid #ef9a9a; }
+</style>
+</head>
+<body>
+
+<h1>快淘帮 WisePick · 系统架构图</h1>
+<p class="meta">分层架构 · 自上而下数据流</p>
+
+<div class="arch">
+  <div class="main-col">
+
+    <!-- 用户层 -->
+    <div class="layer l-user">
+      <div class="layer-label">用户层</div>
+      <div class="layer-body">
+        <div class="mod-row">
+          <div class="mod wide">Windows 桌面端</div>
+          <div class="mod wide">macOS / Linux</div>
+          <div class="mod wide">Android / iOS</div>
+          <div class="mod wide">管理员 Web 后台</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 箭头 -->
+    <div class="layer-arrow">
+      <svg width="24" height="32" viewBox="0 0 24 32">
+        <line x1="12" y1="0" x2="12" y2="24" stroke="#888" stroke-width="1.5"/>
+        <polygon points="6,20 18,20 12,30" fill="#888"/>
+      </svg>
+    </div>
+
+    <!-- 接入层 -->
+    <div class="layer l-access">
+      <div class="layer-label">接入层</div>
+      <div class="layer-body">
+        <div class="mod-row">
+          <div class="mod full">Flutter 应用框架（Material Design 3）· Riverpod 状态管理 · Dio HTTP 客户端</div>
+        </div>
+        <div class="mod-row">
+          <div class="mod wide">路由管理（app.dart）</div>
+          <div class="mod wide">主题 / 国际化</div>
+          <div class="mod wide">错误边界处理</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 箭头 -->
+    <div class="layer-arrow">
+      <svg width="24" height="32" viewBox="0 0 24 32">
+        <line x1="12" y1="0" x2="12" y2="24" stroke="#888" stroke-width="1.5"/>
+        <polygon points="6,20 18,20 12,30" fill="#888"/>
+      </svg>
+    </div>
+
+    <!-- 业务层 -->
+    <div class="layer l-biz">
+      <div class="layer-label">业务层</div>
+      <div class="layer-body">
+        <div class="mod-row">
+          <div class="mod wide">AI 聊天模块<br><span style="font-size:11px;opacity:.7">chat/</span></div>
+          <div class="mod wide">商品搜索模块<br><span style="font-size:11px;opacity:.7">products/</span></div>
+          <div class="mod wide">购物车模块<br><span style="font-size:11px;opacity:.7">cart/</span></div>
+          <div class="mod wide">价格历史模块<br><span style="font-size:11px;opacity:.7">price_history/</span></div>
+        </div>
+        <div class="mod-row">
+          <div class="mod wide">数据分析模块<br><span style="font-size:11px;opacity:.7">analytics/</span></div>
+          <div class="mod wide">购物决策模块<br><span style="font-size:11px;opacity:.7">decision/</span></div>
+          <div class="mod wide">用户认证模块<br><span style="font-size:11px;opacity:.7">auth/</span></div>
+          <div class="mod wide">管理员模块<br><span style="font-size:11px;opacity:.7">admin/</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 箭头 -->
+    <div class="layer-arrow">
+      <svg width="24" height="32" viewBox="0 0 24 32">
+        <line x1="12" y1="0" x2="12" y2="24" stroke="#888" stroke-width="1.5"/>
+        <polygon points="6,20 18,20 12,30" fill="#888"/>
+      </svg>
+    </div>
+
+    <!-- 服务层 -->
+    <div class="layer l-svc">
+      <div class="layer-label">服务层</div>
+      <div class="layer-body">
+        <div class="mod-row">
+          <div class="mod wide">ChatService<br><span style="font-size:11px;opacity:.7">流式 AI 对话</span></div>
+          <div class="mod wide">ProductService<br><span style="font-size:11px;opacity:.7">多平台适配器</span></div>
+          <div class="mod wide">CartService<br><span style="font-size:11px;opacity:.7">购物车管理</span></div>
+          <div class="mod wide">AuthService<br><span style="font-size:11px;opacity:.7">JWT 认证</span></div>
+        </div>
+        <div class="mod-row">
+          <div class="mod wide">SyncService<br><span style="font-size:11px;opacity:.7">离线队列同步</span></div>
+          <div class="mod wide">PriceRefreshService<br><span style="font-size:11px;opacity:.7">价格监控</span></div>
+          <div class="mod wide">NotificationService<br><span style="font-size:11px;opacity:.7">价格变动通知</span></div>
+          <div class="mod wide">AiPromptService<br><span style="font-size:11px;opacity:.7">Prompt 构建</span></div>
+        </div>
+        <div class="mod-row">
+          <div class="mod wide">Dart Shelf 代理服务器（:9527）<br><span style="font-size:11px;opacity:.7">AI 代理 · 签名服务 · 转链服务 · 管理 API</span></div>
+          <div class="mod wide">ApiClient（Dio）<br><span style="font-size:11px;opacity:.7">重试 · 熔断器 · 限流</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 箭头 -->
+    <div class="layer-arrow">
+      <svg width="24" height="32" viewBox="0 0 24 32">
+        <line x1="12" y1="0" x2="12" y2="24" stroke="#888" stroke-width="1.5"/>
+        <polygon points="6,20 18,20 12,30" fill="#888"/>
+      </svg>
+    </div>
+
+    <!-- 数据层 -->
+    <div class="layer l-data">
+      <div class="layer-label">数据层</div>
+      <div class="layer-body">
+        <div class="mod-row" style="align-items:flex-end;gap:32px;justify-content:center">
+          <div class="cylinder">
+            <div class="cyl-body" style="margin-top:10px">Hive<br><span style="font-size:11px;font-weight:400">本地 NoSQL</span></div>
+            <div class="cyl-label">settings · cart · conversations<br>price_history · promo_cache</div>
+          </div>
+          <div class="cylinder">
+            <div class="cyl-body" style="margin-top:10px">PostgreSQL<br><span style="font-size:11px;font-weight:400">云端关系型</span></div>
+            <div class="cyl-label">users · cart_items · messages<br>conversations · sync_versions</div>
+          </div>
+          <div class="cylinder">
+            <div class="cyl-body" style="margin-top:10px">内存缓存<br><span style="font-size:11px;font-weight:400">运行时</span></div>
+            <div class="cyl-label">推广链接缓存<br>价格缓存（30min）</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 箭头 -->
+    <div class="layer-arrow">
+      <svg width="24" height="32" viewBox="0 0 24 32">
+        <line x1="12" y1="0" x2="12" y2="24" stroke="#888" stroke-width="1.5"/>
+        <polygon points="6,20 18,20 12,30" fill="#888"/>
+      </svg>
+    </div>
+
+    <!-- 基础设施层 -->
+    <div class="layer l-infra">
+      <div class="layer-label">基础<br>设施层</div>
+      <div class="layer-body">
+        <div class="mod-row">
+          <div class="mod wide">Windows / macOS / Linux 宿主机</div>
+          <div class="mod wide">Android / iOS 设备</div>
+          <div class="mod wide">Linux 服务器（后端）</div>
+        </div>
+        <div class="mod-row">
+          <div class="mod wide">OpenAI API / 兼容服务</div>
+          <div class="mod wide">淘宝联盟 API</div>
+          <div class="mod wide">京东联盟 API</div>
+          <div class="mod wide">拼多多开放平台 API</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main-col -->
+
+  <!-- 右侧竖向标注 -->
+  <div class="side-col">
+    <div class="side-tag side-log">日志记录</div>
+    <div class="side-tag side-auth">权限控制</div>
+  </div>
+
+</div><!-- /arch -->
+
+</body>
+</html>

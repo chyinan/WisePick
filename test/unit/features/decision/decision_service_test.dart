@@ -212,4 +212,116 @@ void main() {
       expect(product.sales, equals(5000));
     });
   });
+
+  // ─── 淘宝销量缺失时的评分算法 ──────────────────────────────────────────────
+
+  group('淘宝销量缺失时的评分算法', () {
+    test('淘宝商品 sales=0 时，salesAvailable=false，salesScore=12.5', () {
+      final score = svc.calculateScore(
+        price: 100,
+        originalPrice: null,
+        rating: 0,
+        sales: 0,
+        platform: 'taobao',
+        salesAvailable: false,
+      );
+      expect(score.salesScore, equals(12.5));
+    });
+
+    test('淘宝商品 sales=0, rating=0 时，ratingScore=15（中性分）', () {
+      final score = svc.calculateScore(
+        price: 100,
+        originalPrice: null,
+        rating: 0,
+        sales: 0,
+        platform: 'taobao',
+        salesAvailable: false,
+      );
+      expect(score.ratingScore, equals(15));
+    });
+
+    test('淘宝商品无销量数据时，totalScore ≈ 58.5（中规中矩）', () {
+      final score = svc.calculateScore(
+        price: 100,
+        originalPrice: null,
+        rating: 0,
+        sales: 0,
+        platform: 'taobao',
+        salesAvailable: false,
+      );
+      // 价格18 + 评价15 + 销量12.5 + 平台13 = 58.5
+      expect(score.totalScore, closeTo(58.5, 0.1));
+      expect(score.level, ScoreLevel.average);
+    });
+
+    test('淘宝商品无销量数据时，reasoning 包含"销量数据暂无"说明', () {
+      final score = svc.calculateScore(
+        price: 100,
+        originalPrice: null,
+        rating: 0,
+        sales: 0,
+        platform: 'taobao',
+        salesAvailable: false,
+      );
+      expect(score.reasoning, contains('销量数据暂无'));
+    });
+
+    test('淘宝商品无销量数据时，销量维度描述为"销量数据暂无"', () {
+      final score = svc.calculateScore(
+        price: 100,
+        originalPrice: null,
+        rating: 0,
+        sales: 0,
+        platform: 'taobao',
+        salesAvailable: false,
+      );
+      final salesDetail = score.details.firstWhere((d) => d.dimension == '销量');
+      expect(salesDetail.description, equals('销量数据暂无'));
+    });
+
+    test('compareProducts 自动检测淘宝 sales=0 为数据不可用', () async {
+      final comparison = await svc.compareProducts([
+        {
+          'id': 'taobao-1',
+          'title': '淘宝商品',
+          'platform': 'taobao',
+          'price': 100.0,
+          'sales': 0,
+          'rating': 0.0,
+        }
+      ]);
+      final product = comparison.products.first;
+      // 验证评分是否为中规中矩
+      expect(product.decisionScore.totalScore, closeTo(58.5, 0.1));
+      expect(product.decisionScore.level, ScoreLevel.average);
+    });
+
+    test('淘宝商品有销量时，salesAvailable=true，正常计算', () {
+      final score = svc.calculateScore(
+        price: 100,
+        originalPrice: null,
+        rating: 0,
+        sales: 1000,
+        platform: 'taobao',
+        salesAvailable: true,
+      );
+      // sales=1000 时 salesScore ≈ 4 + ln(1000)*1.8 ≈ 4 + 6.9*1.8 ≈ 16.4
+      expect(score.salesScore, greaterThan(12.5));
+      expect(score.reasoning, isNot(contains('销量数据暂无')));
+    });
+
+    test('京东商品 sales=0 时，salesAvailable=true（京东数据不同），正常计算', () {
+      final score = svc.calculateScore(
+        price: 100,
+        originalPrice: null,
+        rating: 0,
+        sales: 0,
+        platform: 'jd',
+        salesAvailable: true,
+      );
+      // 京东 sales=0 时不视为数据不可用
+      expect(score.salesScore, equals(0));
+      expect(score.reasoning, isNot(contains('销量数据暂无')));
+    });
+  });
 }

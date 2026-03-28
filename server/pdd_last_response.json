@@ -1,0 +1,9 @@
+{
+  "error_response": {
+    "error_msg": "业务服务错误",
+    "sub_msg": "未传入已经授权备案过的相关参数(pid/custom_parameters)，授权备案说明链接：https://jinbao.pinduoduo.com/qa-system?questionId=204",
+    "sub_code": "60001",
+    "error_code": 50001,
+    "request_id": "17747129902588023"
+  }
+}

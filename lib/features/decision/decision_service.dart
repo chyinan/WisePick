@@ -21,6 +21,7 @@ class DecisionService {
     required String platform,
     double? averageHistoryPrice,
     double? lowestHistoryPrice,
+    bool salesAvailable = true,
   }) {
     // 价格评分 (0-30)
     final priceScore = _calculatePriceScore(
@@ -31,10 +32,10 @@ class DecisionService {
     );
 
     // 评价评分 (0-30)
-    final ratingScore = _calculateRatingScore(rating, sales);
+    final ratingScore = _calculateRatingScore(rating, sales, salesAvailable: salesAvailable);
 
     // 销量评分 (0-25)
-    final salesScore = _calculateSalesScore(sales);
+    final salesScore = _calculateSalesScore(sales, available: salesAvailable);
 
     // 平台评分 (0-15)
     final platformScore = _calculatePlatformScore(platform);
@@ -49,6 +50,7 @@ class DecisionService {
       rating: rating,
       sales: sales,
       platform: platform,
+      salesAvailable: salesAvailable,
     );
 
     // 详细分析
@@ -69,7 +71,7 @@ class DecisionService {
         dimension: '销量',
         score: salesScore,
         maxScore: 25,
-        description: _getSalesDescription(salesScore),
+        description: _getSalesDescription(salesScore, available: salesAvailable),
       ),
       ScoreDetail(
         dimension: '平台',
@@ -102,12 +104,15 @@ class DecisionService {
       if (platform == 'jd' && sales <= 100 && sales > 0) {
         // 将sales的值作为rating使用 (96 -> 96.0)
         rating = sales.toDouble();
-        
+
         // 既然sales字段被占用了好评率，真实的销量就未知了
         // 我们根据好评率给予一个估算的保底销量，避免评分过低
         // 只有畅销品才会有展示出的高好评率
-        sales = 5000; 
+        sales = 5000;
       }
+
+      // 检测销量数据是否可用：淘宝且 sales == 0 时，视为数据不可用
+      final salesAvailable = !(platform == 'taobao' && sales == 0);
 
       final score = calculateScore(
         price: (p['price'] as num?)?.toDouble() ?? 0,
@@ -115,6 +120,7 @@ class DecisionService {
         rating: rating,
         sales: sales,
         platform: platform,
+        salesAvailable: salesAvailable,
       );
 
       return ComparisonProduct(
@@ -236,10 +242,13 @@ class DecisionService {
     return min(score, 30);
   }
 
-  double _calculateRatingScore(double rating, int sales) {
+  double _calculateRatingScore(double rating, int sales, {bool salesAvailable = true}) {
     // 如果没有评分数据 (rating <= 0)，但销量很高，说明是好东西
     // 很多电商平台API可能不返回rating字段，导致rating为0
     if (rating <= 0.01) {
+       // 销量数据不可用时，给中性分
+       if (!salesAvailable) return 15;
+
        if (sales > 10000) return 28; // 销量过万无差评，默认为好
        if (sales > 1000) return 24;
        if (sales > 100) return 18; // 销量一般，给及格 (60% = 18/30)
@@ -281,24 +290,27 @@ class DecisionService {
     return 3;
   }
 
-  double _calculateSalesScore(int sales) {
+  double _calculateSalesScore(int sales, {bool available = true}) {
     // 使用对数评分来平滑销量差异
     // 销量 10 => ln(10) ≈ 2.3
     // 销量 100 => ln(100) ≈ 4.6
     // 销量 1000 => ln(1000) ≈ 6.9
     // 销量 10000 => ln(10000) ≈ 9.2
     // 销量 100000 => ln(100000) ≈ 11.5
-    
+
+    // 数据不可用时返回中性分：12.5/25 = 50%
+    if (!available) return 12.5;
+
     if (sales <= 0) return 0;
-    
+
     // 基础分 4 分，加上对数增长
     // 系数 1.8 使得 10万销量大约能得 4 + 11.5 * 1.8 ≈ 25分
     // 100销量 ≈ 4 + 4.6 * 1.8 ≈ 12分
     // 即使销量只有几十，也不至于0分
-    
+
     double logSales = log(sales);
     double score = 4.0 + logSales * 1.8;
-    
+
     return min(score, 25.0);
   }
 
@@ -329,6 +341,7 @@ class DecisionService {
     required double rating,
     required int sales,
     required String platform,
+    bool salesAvailable = true,
   }) {
     final totalScore = priceScore + ratingScore + salesScore + platformScore;
     final parts = <String>[];
@@ -365,7 +378,14 @@ class DecisionService {
       parts.add('销量表现良好');
     }
 
-    return parts.join('，') + '。';
+    var reasoning = parts.join('，') + '。';
+
+    // 销量数据不可用时追加说明
+    if (!salesAvailable) {
+      reasoning += '（销量数据暂无，评分基于价格与评价）';
+    }
+
+    return reasoning;
   }
 
   String _getPriceDescription(double score) {
@@ -382,7 +402,8 @@ class DecisionService {
     return '用户评价较差';
   }
 
-  String _getSalesDescription(double score) {
+  String _getSalesDescription(double score, {bool available = true}) {
+    if (!available) return '销量数据暂无';
     if (score >= 22) return '销量火爆，市场认可';
     if (score >= 15) return '销量不错';
     if (score >= 8) return '销量一般';

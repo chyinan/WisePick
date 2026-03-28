@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720">
+  <rect width="1280" height="720" fill="#FFFFFF" />
+  <defs>
+    <linearGradient id="titleGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FF6B35" />
+      <stop offset="100%" stop-color="#004E89" />
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="1280" height="8" fill="#FF6B35" />
+
+  
+  <text x="640" y="100" font-family="Microsoft YaHei, Arial, sans-serif" font-size="56" font-weight="bold" text-anchor="middle" fill="url(#titleGradient)">
+    我们的下一步
+  </text>
+
+  
+  
+  <path fill="#F5F5F5" stroke="#FF6B35" stroke-width="3" d="M88,200 H392 A8,8 0 0 1 400,208 V592 A8,8 0 0 1 392,600 H88 A8,8 0 0 1 80,592 V208 A8,8 0 0 1 88,200 Z" />
+  <text x="240" y="260" font-family="Microsoft YaHei, Arial, sans-serif" font-size="32" font-weight="bold" text-anchor="middle" fill="#FF6B35">
+    Phase 1
+  </text>
+  <text x="240" y="310" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" text-anchor="middle" fill="#333333">
+    现在
+  </text>
+  <text x="240" y="360" font-family="Microsoft YaHei, Arial, sans-serif" font-size="20" text-anchor="middle" fill="#666666">
+    完善核心功能
+  </text>
+  <text x="240" y="400" font-family="Microsoft YaHei, Arial, sans-serif" font-size="20" text-anchor="middle" fill="#666666">
+    积累用户
+  </text>
+
+  
+  <polygon points="420,400 460,400 440,420" fill="#FF6B35" />
+  <line x1="420" y1="400" x2="460" y2="400" stroke="#FF6B35" stroke-width="3" />
+
+  
+  <path fill="#F5F5F5" stroke="#004E89" stroke-width="3" d="M488,200 H792 A8,8 0 0 1 800,208 V592 A8,8 0 0 1 792,600 H488 A8,8 0 0 1 480,592 V208 A8,8 0 0 1 488,200 Z" />
+  <text x="640" y="260" font-family="Microsoft YaHei, Arial, sans-serif" font-size="32" font-weight="bold" text-anchor="middle" fill="#004E89">
+    Phase 2
+  </text>
+  <text x="640" y="310" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" text-anchor="middle" fill="#333333">
+    6 个月
+  </text>
+  <text x="640" y="360" font-family="Microsoft YaHei, Arial, sans-serif" font-size="20" text-anchor="middle" fill="#666666">
+    接入更多平台
+  </text>
+  <text x="640" y="400" font-family="Microsoft YaHei, Arial, sans-serif" font-size="20" text-anchor="middle" fill="#666666">
+    优化 AI 推荐
+  </text>
+
+  
+  <polygon points="820,400 860,400 840,420" fill="#004E89" />
+  <line x1="820" y1="400" x2="860" y2="400" stroke="#004E89" stroke-width="3" />
+
+  
+  <path fill="#F5F5F5" stroke="#2ECC71" stroke-width="3" d="M888,200 H1192 A8,8 0 0 1 1200,208 V592 A8,8 0 0 1 1192,600 H888 A8,8 0 0 1 880,592 V208 A8,8 0 0 1 888,200 Z" />
+  <text x="1040" y="260" font-family="Microsoft YaHei, Arial, sans-serif" font-size="32" font-weight="bold" text-anchor="middle" fill="#2ECC71">
+    Phase 3
+  </text>
+  <text x="1040" y="310" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" text-anchor="middle" fill="#333333">
+    1 年
+  </text>
+  <text x="1040" y="360" font-family="Microsoft YaHei, Arial, sans-serif" font-size="20" text-anchor="middle" fill="#666666">
+    品牌合作
+  </text>
+  <text x="1040" y="400" font-family="Microsoft YaHei, Arial, sans-serif" font-size="20" text-anchor="middle" fill="#666666">
+    海外扩展
+  </text>
+
+  <rect x="0" y="712" width="1280" height="8" fill="#FF6B35" />
+</svg>

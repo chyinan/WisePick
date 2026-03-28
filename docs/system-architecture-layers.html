@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>快淘帮 WisePick · 系统架构图</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #f5f5f0;
+  font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  padding: 48px 56px 64px;
+  color: #1a1a1a;
+}
+
+/* ── 外框 ── */
+.diagram {
+  display: inline-flex;
+  flex-direction: row;
+  gap: 16px;
+  border: 1.5px solid #aaa;
+  padding: 20px;
+  background: #fff;
+}
+
+/* ── 左侧主体（层级区） ── */
+.layers {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── 每一行 ── */
+.row {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 12px;
+}
+
+/* ── 层标签（左侧实线蓝色盒子） ── */
+.layer-label {
+  width: 72px;
+  flex-shrink: 0;
+  background: #c8daf5;
+  border: 1.5px solid #7aaad8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: #1a3a5c;
+  padding: 8px 4px;
+  text-align: center;
+}
+
+/* ── 右侧内容区 ── */
+.row-content {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+}
+
+/* ── 虚线盒子 ── */
+.chip {
+  border: 1.5px dashed #888;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 400;
+  color: #222;
+  background: #fff;
+  white-space: nowrap;
+  border-radius: 2px;
+}
+.chip.wide {
+  flex: 1;
+  text-align: center;
+}
+
+/* ── 右侧工具栏 ── */
+.tools-panel {
+  width: 110px;
+  flex-shrink: 0;
+  border: 1.5px solid #a8c8a0;
+  background: #eaf4e8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 10px;
+}
+.tools-panel .tool-title {
+  background: #c8daf5;
+  border: 1.5px solid #7aaad8;
+  width: 100%;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: #1a3a5c;
+  padding: 8px 4px;
+}
+.tools-panel .chip {
+  width: 100%;
+  text-align: center;
+  padding: 7px 8px;
+  font-size: 12px;
+}
+
+/* ── 图注 ── */
+.caption {
+  margin-top: 24px;
+  text-align: center;
+}
+.caption span {
+  display: inline-block;
+  border: 1.5px solid #c0392b;
+  padding: 8px 32px;
+  font-family: 'Noto Serif SC', serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1a1a;
+  letter-spacing: 1px;
+}
+</style>
+</head>
+<body>
+
+<div class="diagram">
+
+  <!-- 左侧层级 -->
+  <div class="layers">
+
+    <!-- 用户层 -->
+    <div class="row">
+      <div class="layer-label">用户层</div>
+      <div class="row-content">
+        <div class="chip">Windows 桌面端</div>
+        <div class="chip">macOS / Linux</div>
+        <div class="chip">Android / iOS</div>
+        <div class="chip">管理员 Web 后台</div>
+      </div>
+    </div>
+
+    <!-- 接入层 -->
+    <div class="row">
+      <div class="layer-label">接入层</div>
+      <div class="row-content">
+        <div class="chip">Flutter 框架</div>
+        <div class="chip">Riverpod 状态管理</div>
+        <div class="chip">GoRouter 路由</div>
+      </div>
+    </div>
+
+    <!-- 业务层 -->
+    <div class="row">
+      <div class="layer-label">业务层</div>
+      <div class="row-content">
+        <div class="chip">用户认证</div>
+        <div class="chip">商品搜索</div>
+        <div class="chip">AI 聊天推荐</div>
+        <div class="chip">购物车管理</div>
+        <div class="chip">价格历史</div>
+        <div class="chip">数据分析</div>
+        <div class="chip">购物决策</div>
+        <div class="chip">系统设置</div>
+      </div>
+    </div>
+
+    <!-- 服务层 -->
+    <div class="row">
+      <div class="layer-label">服务层</div>
+      <div class="row-content">
+        <div class="chip">ApiClient</div>
+        <div class="chip">Shelf 代理服务器</div>
+        <div class="chip">JWT 认证服务</div>
+        <div class="chip">OpenAI / DeepSeek</div>
+        <div class="chip">淘宝 / 京东 / 拼多多 API</div>
+      </div>
+    </div>
+
+    <!-- 数据层 -->
+    <div class="row">
+      <div class="layer-label">数据层</div>
+      <div class="row-content">
+        <div class="chip">PostgreSQL</div>
+        <div class="chip">Hive 本地存储</div>
+        <div class="chip">内存缓存</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 右侧工具栏 -->
+  <div class="tools-panel">
+    <div class="tool-title">工具</div>
+    <div class="chip">Flutter</div>
+    <div class="chip">Dart</div>
+    <div class="chip">Git</div>
+    <div class="chip">Postman</div>
+    <div class="chip">VS Code</div>
+    <div class="chip">Docker</div>
+  </div>
+
+</div>
+
+<div class="caption">
+  <span>图 · 快淘帮 WisePick 系统架构图</span>
+</div>
+
+</body>
+</html>

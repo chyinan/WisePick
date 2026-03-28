@@ -1,0 +1,72 @@
+<svg viewBox="0 0 1280 720" width="1280" height="720" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1280" height="720" fill="#FFFFFF"/>
+  <defs>
+    <linearGradient id="titleGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FF6B35"/>
+      <stop offset="100%" stop-color="#004E89"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="1280" height="8" fill="#FF6B35"/>
+
+  <!-- 页面标题 -->
+  <text x="640" y="100" font-family="Microsoft YaHei, Arial, sans-serif" font-size="56" font-weight="bold" text-anchor="middle" fill="url(#titleGradient)">
+    用户能得到什么
+  </text>
+
+  <!-- 三个用户角色 -->
+  <!-- 第一列 -->
+  <rect x="80" y="180" width="320" height="480" fill="#F5F5F5" rx="8"/>
+  <text x="240" y="240" font-family="Microsoft YaHei, Arial, sans-serif" font-size="40" font-weight="bold" text-anchor="middle" fill="#FF6B35">
+    👤
+  </text>
+  <text x="240" y="310" font-family="Microsoft YaHei, Arial, sans-serif" font-size="28" font-weight="bold" text-anchor="middle" fill="#333333">
+    普通消费者
+  </text>
+  <text x="240" y="370" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" text-anchor="middle" fill="#666666">
+    省时间
+  </text>
+  <text x="240" y="410" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" text-anchor="middle" fill="#666666">
+    省钱
+  </text>
+  <text x="240" y="450" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" text-anchor="middle" fill="#666666">
+    买得放心
+  </text>
+
+  <!-- 第二列 -->
+  <rect x="480" y="180" width="320" height="480" fill="#F5F5F5" rx="8"/>
+  <text x="640" y="240" font-family="Microsoft YaHei, Arial, sans-serif" font-size="40" font-weight="bold" text-anchor="middle" fill="#FF6B35">
+    💼
+  </text>
+  <text x="640" y="310" font-family="Microsoft YaHei, Arial, sans-serif" font-size="28" font-weight="bold" text-anchor="middle" fill="#333333">
+    职业买手
+  </text>
+  <text x="640" y="370" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" text-anchor="middle" fill="#666666">
+    数据支持
+  </text>
+  <text x="640" y="410" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" text-anchor="middle" fill="#666666">
+    效率提升
+  </text>
+  <text x="640" y="450" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" text-anchor="middle" fill="#666666">
+    成本优化
+  </text>
+
+  <!-- 第三列 -->
+  <rect x="880" y="180" width="320" height="480" fill="#F5F5F5" rx="8"/>
+  <text x="1040" y="240" font-family="Microsoft YaHei, Arial, sans-serif" font-size="40" font-weight="bold" text-anchor="middle" fill="#FF6B35">
+    🎁
+  </text>
+  <text x="1040" y="310" font-family="Microsoft YaHei, Arial, sans-serif" font-size="28" font-weight="bold" text-anchor="middle" fill="#333333">
+    礼物选手
+  </text>
+  <text x="1040" y="370" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" text-anchor="middle" fill="#666666">
+    快速找到
+  </text>
+  <text x="1040" y="410" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" text-anchor="middle" fill="#666666">
+    合适礼物
+  </text>
+  <text x="1040" y="450" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" text-anchor="middle" fill="#666666">
+    避免踩坑
+  </text>
+
+  <rect x="0" y="712" width="1280" height="8" fill="#FF6B35"/>
+</svg>

@@ -33,19 +33,23 @@ class SearchService {
     final List items = body['products'] ?? [];
     final products = items.map((m) => ProductModel.fromMap(Map<String, dynamic>.from(m))).toList();
     try {
-      final raw = body['raw_jd'] ?? body['raw'] ?? body;
-      if (raw is Map) {
-        final Map<String, dynamic> rawMap = Map<String, dynamic>.from(raw);
-        final jdRootDynamic = rawMap['jingdong_search_ware_responce'];
-        if (jdRootDynamic is Map) {
-          final Map<String, dynamic> jdRoot = Map<String, dynamic>.from(jdRootDynamic);
-          final List<ProductModel> jdProducts = _mapJdSearchWare(jdRoot);
-          if (jdProducts.isNotEmpty) {
-            final ids = products.map((p) => p.id).toSet();
-            for (final jp in jdProducts) {
-              if (!ids.contains(jp.id)) {
-                products.add(jp);
-                ids.add(jp.id);
+      // 仅在 platform 为空或 'jd' 时才从 raw_jd 提取 JD 商品，防止污染 taobao/pdd 结果
+      final shouldMergeJd = platform == null || platform.isEmpty || platform.toLowerCase() == 'jd';
+      if (shouldMergeJd) {
+        final raw = body['raw_jd'] ?? body['raw'] ?? body;
+        if (raw is Map) {
+          final Map<String, dynamic> rawMap = Map<String, dynamic>.from(raw);
+          final jdRootDynamic = rawMap['jingdong_search_ware_responce'];
+          if (jdRootDynamic is Map) {
+            final Map<String, dynamic> jdRoot = Map<String, dynamic>.from(jdRootDynamic);
+            final List<ProductModel> jdProducts = _mapJdSearchWare(jdRoot);
+            if (jdProducts.isNotEmpty) {
+              final ids = products.map((p) => p.id).toSet();
+              for (final jp in jdProducts) {
+                if (!ids.contains(jp.id)) {
+                  products.add(jp);
+                  ids.add(jp.id);
+                }
               }
             }
           }

@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720">
+  <rect width="1280" height="720" fill="#FFFFFF" />
+  <defs>
+    <linearGradient id="titleGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FF6B35" />
+      <stop offset="100%" stop-color="#004E89" />
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="1280" height="8" fill="#FF6B35" />
+
+  
+  <text x="640" y="80" font-family="Microsoft YaHei, Arial, sans-serif" font-size="56" font-weight="bold" text-anchor="middle" fill="url(#titleGradient)">
+    市场对比：我们的优势
+  </text>
+
+  
+  <path fill="#F5F5F5" stroke="#DDDDDD" stroke-width="2" d="M88,140 H1192 A8,8 0 0 1 1200,148 V672 A8,8 0 0 1 1192,680 H88 A8,8 0 0 1 80,672 V148 A8,8 0 0 1 88,140 Z" />
+
+  
+  <path fill="#004E89" d="M88,140 H1192 A8,8 0 0 1 1200,148 V192 A8,8 0 0 1 1192,200 H88 A8,8 0 0 1 80,192 V148 A8,8 0 0 1 88,140 Z" />
+  <text x="280" y="185" font-family="Microsoft YaHei, Arial, sans-serif" font-size="28" font-weight="bold" text-anchor="middle" fill="#FFFFFF">功能</text>
+  <text x="520" y="185" font-family="Microsoft YaHei, Arial, sans-serif" font-size="28" font-weight="bold" text-anchor="middle" fill="#FFFFFF">淘宝</text>
+  <text x="760" y="185" font-family="Microsoft YaHei, Arial, sans-serif" font-size="28" font-weight="bold" text-anchor="middle" fill="#FFFFFF">京东</text>
+  <text x="1000" y="185" font-family="Microsoft YaHei, Arial, sans-serif" font-size="28" font-weight="bold" text-anchor="middle" fill="#FFFFFF">拼多多</text>
+  <text x="1200" y="185" font-family="Microsoft YaHei, Arial, sans-serif" font-size="28" font-weight="bold" text-anchor="middle" fill="#FFFFFF">WisePick</text>
+
+  
+  <line x1="80" y1="220" x2="1200" y2="220" stroke="#DDDDDD" stroke-width="1" />
+  <text x="280" y="255" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" text-anchor="middle" fill="#333333">多平台聚合</text>
+  <text x="520" y="255" font-family="Microsoft YaHei, Arial, sans-serif" font-size="28" text-anchor="middle" fill="#E74C3C">✗</text>
+  <text x="760" y="255" font-family="Microsoft YaHei, Arial, sans-serif" font-size="28" text-anchor="middle" fill="#E74C3C">✗</text>
+  <text x="1000" y="255" font-family="Microsoft YaHei, Arial, sans-serif" font-size="28" text-anchor="middle" fill="#E74C3C">✗</text>
+  <text x="1200" y="255" font-family="Microsoft YaHei, Arial, sans-serif" font-size="28" text-anchor="middle" fill="#2ECC71">✓</text>
+
+  
+  <line x1="80" y1="300" x2="1200" y2="300" stroke="#DDDDDD" stroke-width="1" />
+  <text x="280" y="335" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" text-anchor="middle" fill="#333333">AI 聊天推荐</text>
+  <text x="520" y="335" font-family="Microsoft YaHei, Arial, sans-serif" font-size="28" text-anchor="middle" fill="#E74C3C">✗</text>
+  <text x="760" y="335" font-family="Microsoft YaHei, Arial, sans-serif" font-size="28" text-anchor="middle" fill="#E74C3C">✗</text>
+  <text x="1000" y="335" font-family="Microsoft YaHei, Arial, sans-serif" font-size="28" text-anchor="middle" fill="#E74C3C">✗</text>
+  <text x="1200" y="335" font-family="Microsoft YaHei, Arial, sans-serif" font-size="28" text-anchor="middle" fill="#2ECC71">✓</text>
+
+  
+  <line x1="80" y1="380" x2="1200" y2="380" stroke="#DDDDDD" stroke-width="1" />
+  <text x="280" y="415" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" text-anchor="middle" fill="#333333">跨平台比价</text>
+  <text x="520" y="415" font-family="Microsoft YaHei, Arial, sans-serif" font-size="28" text-anchor="middle" fill="#E74C3C">✗</text>
+  <text x="760" y="415" font-family="Microsoft YaHei, Arial, sans-serif" font-size="28" text-anchor="middle" fill="#E74C3C">✗</text>
+  <text x="1000" y="415" font-family="Microsoft YaHei, Arial, sans-serif" font-size="28" text-anchor="middle" fill="#E74C3C">✗</text>
+  <text x="1200" y="415" font-family="Microsoft YaHei, Arial, sans-serif" font-size="28" text-anchor="middle" fill="#2ECC71">✓</text>
+
+  
+  <line x1="80" y1="460" x2="1200" y2="460" stroke="#DDDDDD" stroke-width="1" />
+  <text x="280" y="495" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" text-anchor="middle" fill="#333333">价格历史</text>
+  <text x="520" y="495" font-family="Microsoft YaHei, Arial, sans-serif" font-size="28" text-anchor="middle" fill="#E74C3C">✗</text>
+  <text x="760" y="495" font-family="Microsoft YaHei, Arial, sans-serif" font-size="28" text-anchor="middle" fill="#E74C3C">✗</text>
+  <text x="1000" y="495" font-family="Microsoft YaHei, Arial, sans-serif" font-size="28" text-anchor="middle" fill="#E74C3C">✗</text>
+  <text x="1200" y="495" font-family="Microsoft YaHei, Arial, sans-serif" font-size="28" text-anchor="middle" fill="#2ECC71">✓</text>
+
+  <rect x="0" y="712" width="1280" height="8" fill="#FF6B35" />
+</svg>

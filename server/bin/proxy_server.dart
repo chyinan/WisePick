@@ -18,6 +18,7 @@ import 'package:wisepick_proxy_server/price_history/price_history_service.dart';
 import 'package:wisepick_proxy_server/decision/decision_service.dart';
 import 'package:wisepick_proxy_server/admin/admin_service.dart';
 import 'package:wisepick_proxy_server/reliability/reliability_api.dart';
+import 'package:wisepick_proxy_server/proxy/product_merge.dart';
 
 // NOTE: veapi support removed per user request
 
@@ -974,8 +975,12 @@ Future<void> runServer(List<String> args) async {
         } catch (_) {}
         source = 'taobao';
       } else {
-        // fallback to JD when configured
-        if ((platformParam == 'jd' || !useTaobao) && useJd) {
+        // fallback to JD only when:
+        // 1. caller explicitly requested JD, OR
+        // 2. no platform specified AND Taobao is not configured
+        // Do NOT fallback to JD if caller explicitly requested taobao or pdd
+        final shouldFallbackToJd = (platformParam.isEmpty && !useTaobao) || platformParam == 'jd';
+        if (shouldFallbackToJd && useJd) {
           // If the caller requested JD or Taobao is not configured, prefer JD
           try {
             final uri = Uri.parse(
@@ -2250,10 +2255,10 @@ Future<void> runServer(List<String> args) async {
       } catch (_) {}
 
       // Force-merge: if backend already fetched raw jingdong.search.ware response,
-      // always try to parse its Paragraph list and append JD products to `products`.
-      // This ensures JD items are included even when Taobao results exist.
+      // only append JD products when platform is empty or explicitly 'jd'.
+      // This prevents JD contamination of Taobao/PDD-specific requests.
       try {
-        if (body.containsKey('jingdong_search_ware_responce')) {
+        if ((platformParam.isEmpty || platformParam == 'jd') && body.containsKey('jingdong_search_ware_responce')) {
           final rawJd =
               body['jingdong_search_ware_responce'] as Map<String, dynamic>;
           List<dynamic>? paras;
@@ -2362,48 +2367,9 @@ Future<void> runServer(List<String> args) async {
         } catch (_) {}
       }
 
-      // Deduplicate products by normalized title (and fallback to id when title empty)
-      String normalize(String? s) {
-        if (s == null) return '';
-        return s
-            .replaceAll(RegExp(r'[^0-9a-zA-Z\u4e00-\u9fa5]+'), '')
-            .toLowerCase();
-      }
-
-      double score(Map p) {
-        double score = 0.0;
-        try {
-          if ((p['link'] as String?)?.isNotEmpty ?? false) score += 100000.0;
-          score += ((p['commission'] as num?)?.toDouble() ?? 0.0) * 100.0;
-          score += ((p['sales'] as num?)?.toDouble() ?? 0.0) / 1000.0;
-          // prefer lower final price slightly
-          score -= ((p['final_price'] as num?)?.toDouble() ??
-                  ((p['price'] as num?)?.toDouble() ?? 0.0)) /
-              10000.0;
-        } catch (_) {}
-        return score;
-      }
-
-      final Map<String, List<Map<String, dynamic>>> groups = {};
-      for (final p in products) {
-        try {
-          final key = normalize(p['title'] as String? ?? '');
-          final k = (key.isEmpty) ? ('id:' + (p['id']?.toString() ?? '')) : key;
-          groups.putIfAbsent(k, () => []).add(p);
-        } catch (_) {}
-      }
-
-      final merged = <Map<String, dynamic>>[];
-      for (final entry in groups.entries) {
-        final list = entry.value;
-        if (list.length == 1)
-          merged.add(list.first);
-        else {
-          list.sort((a, b) => score(b).compareTo(score(a)));
-          // pick top-scoring as representative
-          merged.add(list.first);
-        }
-      }
+      // 同平台去重：仅在「平台 + 归一化标题 + 价格」一致时合并。
+      // 跨平台保留，满足同款比价需求。
+      final merged = deduplicateWithinPlatformByTitleAndPrice(products);
 
       // If we used jd_search as the source, only set missing platform fields to 'jd'.
       // Avoid overwriting existing platform values produced by other mappers (e.g. taobao).
@@ -2440,8 +2406,11 @@ Future<void> runServer(List<String> args) async {
         merged.sort((a, b) => cmpByField('sales', a, b));
       } else {
         // default: score desc
-        merged.sort((a, b) => score(b).compareTo(score(a)));
+        merged.sort((a, b) => productScore(b).compareTo(productScore(a)));
       }
+
+      // 京东价格数据暂不稳定，统一将京东商品后置，避免影响主列表浏览。
+      final reordered = moveJdProductsToEnd(merged);
 
       // paging
       final page = int.tryParse((params['page'] ??
@@ -2458,10 +2427,10 @@ Future<void> runServer(List<String> args) async {
           20;
       final start = (page - 1) * pageSize;
       List<Map<String, dynamic>> finalProducts;
-      if (start < 0 || start >= merged.length)
+      if (start < 0 || start >= reordered.length)
         finalProducts = [];
       else
-        finalProducts = merged.skip(start).take(pageSize).toList();
+        finalProducts = reordered.skip(start).take(pageSize).toList();
 
       // For any JD product missing price, attempt a lightweight HTML fetch of the mobile item page
       // Do this in limited concurrency batches and cache results in _priceCache to avoid repeated fetches.

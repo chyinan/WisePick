@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720">
+  <rect width="1280" height="720" fill="#FFFFFF" />
+  <defs>
+    <linearGradient id="titleGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FF6B35" />
+      <stop offset="100%" stop-color="#004E89" />
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="1280" height="8" fill="#FF6B35" />
+
+  
+  <text x="640" y="100" font-family="Microsoft YaHei, Arial, sans-serif" font-size="56" font-weight="bold" text-anchor="middle" fill="url(#titleGradient)">
+    电商购物的新时代
+  </text>
+
+  
+  <text x="100" y="200" font-family="Microsoft YaHei, Arial, sans-serif" font-size="32" font-weight="bold" fill="#333333">
+    市场数据
+  </text>
+
+  <text x="100" y="260" font-family="Microsoft YaHei, Arial, sans-serif" font-size="32" fill="#666666">
+    中国网购用户：9 亿+
+  </text>
+
+  <text x="100" y="320" font-family="Microsoft YaHei, Arial, sans-serif" font-size="32" fill="#666666">
+    人均逛平台数：3+ 个
+  </text>
+
+  
+  <path fill="#F5F5F5" d="M708,180 H1192 A8,8 0 0 1 1200,188 V572 A8,8 0 0 1 1192,580 H708 A8,8 0 0 1 700,572 V188 A8,8 0 0 1 708,180 Z" />
+
+  
+  <rect x="750" y="450" width="80" height="100" fill="#FF6B35" />
+  <text x="790" y="570" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" text-anchor="middle" fill="#333333">
+    9亿用户
+  </text>
+
+  <rect x="900" y="350" width="80" height="200" fill="#004E89" />
+  <text x="940" y="570" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" text-anchor="middle" fill="#333333">
+    3+平台
+  </text>
+
+  
+  <text x="100" y="620" font-family="Microsoft YaHei, Arial, sans-serif" font-size="32" font-weight="bold" fill="#FF6B35">
+    痛点：信息孤岛 → 决策成本高 → 容易被割韭菜
+  </text>
+
+  <rect x="0" y="712" width="1280" height="8" fill="#FF6B35" />
+</svg>
