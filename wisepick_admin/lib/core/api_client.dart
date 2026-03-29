@@ -106,9 +106,15 @@ class ApiClient {
     _setupInterceptors();
   }
   
-  /// 重置单例（仅用于测试）
-  static void resetForTesting() {
+  /// 重置单例
+  static void reset() {
     _instance = null;
+  }
+
+  /// 切换服务器地址，重建单例
+  static void reconfigure(String baseUrl) {
+    _instance = null;
+    ApiClient(baseUrl: baseUrl);
   }
 
   void _setupInterceptors() {

@@ -1,10 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'core/auth/login_page.dart';
+import 'core/api_client.dart';
+import 'core/server_config_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
   // 允许 google_fonts 在本地字体不可用时从网络加载，避免 AssetManifest.json 404 报错
   GoogleFonts.config.allowRuntimeFetching = true;
+
+  // 读取已保存的服务器地址并初始化 ApiClient
+  final savedUrl = await ServerConfigService.getSavedUrl();
+  ApiClient(baseUrl: savedUrl);
+
   runApp(const WisePickAdminApp());
 }
 

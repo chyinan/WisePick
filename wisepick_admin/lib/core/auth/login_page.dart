@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'auth_service.dart';
 import '../api_client.dart';
+import '../server_config_dialog.dart';
+import '../server_config_service.dart';
 import '../../features/dashboard/dashboard_page.dart';
 
 /// 登录页面
@@ -16,21 +18,27 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordController = TextEditingController();
   final _focusNode = FocusNode();
 
-  // 同步初始化以避免 late 变量在异步操作中的时序问题
-  final ApiClient _apiClient = ApiClient();
-  late final AuthService _authService;
+  // 使用 getter 确保切换服务器后拿到新实例
+  ApiClient get _apiClient => ApiClient();
+  AuthService get _authService => AuthService(_apiClient);
 
   bool _isLoading = false;
   String? _errorMessage;
   bool _obscurePassword = true;
   bool _isInitialized = false;
+  String _currentServerUrl = ServerConfigService.defaultUrl;
 
   @override
   void initState() {
     super.initState();
-    // AuthService 依赖 ApiClient，在 initState 中同步初始化
-    _authService = AuthService(_apiClient);
+    _loadServerUrl();
     _checkExistingSession();
+  }
+
+  /// 加载当前服务器地址用于显示
+  Future<void> _loadServerUrl() async {
+    final url = await ServerConfigService.getSavedUrl();
+    if (mounted) setState(() => _currentServerUrl = url);
   }
 
   /// 检查是否已有有效会话，如有则直接跳转
@@ -150,6 +158,8 @@ class _LoginPageState extends State<LoginPage> {
                     ],
                     const SizedBox(height: 24),
                     _buildLoginButton(),
+                    const SizedBox(height: 16),
+                    _buildServerConfigButton(),
                   ],
                 ),
               ),
@@ -192,6 +202,14 @@ class _LoginPageState extends State<LoginPage> {
           style: TextStyle(
             fontSize: 14,
             color: Colors.grey[600],
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          _currentServerUrl,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey[400],
           ),
         ),
       ],
@@ -272,6 +290,21 @@ class _LoginPageState extends State<LoginPage> {
                 '登录',
                 style: TextStyle(fontSize: 16),
               ),
+      ),
+    );
+  }
+
+  Widget _buildServerConfigButton() {
+    return Center(
+      child: TextButton.icon(
+        onPressed: () async {
+          final switched = await ServerConfigDialog.show(context);
+          if (switched == true) {
+            _loadServerUrl();
+          }
+        },
+        icon: const Icon(Icons.settings, size: 16),
+        label: const Text('服务器配置', style: TextStyle(fontSize: 13)),
       ),
     );
   }
