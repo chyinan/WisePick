@@ -800,22 +800,24 @@ class ChatStateNotifier extends StateNotifier<ChatState> {
     // 则异步启动一次独立的 LLM 调用，根据用户消息生成标题。
     if (!state.isTitleLocked) {
       final userMsgForTitle = text;
-      unawaited(() async {
+      Future.microtask(() async {
         try {
           final generated = await service.generateConversationTitle(userMsgForTitle);
           if (generated.trim().isNotEmpty) {
             // 仅在标题仍未被锁定时才更新（防止并发情况下覆盖已有标题）
             if (!state.isTitleLocked) {
               state = state.copyWith(currentConversationTitle: generated, isTitleLocked: true);
-              saveCurrentConversation().catchError((e, st) {
-      log('saveCurrentConversation failed: $e', name: 'ChatProviders', error: e, stackTrace: st as StackTrace?);
-    });
+              try {
+                await saveCurrentConversation();
+              } catch (e, st) {
+                log('saveCurrentConversation failed: $e', name: 'ChatProviders', error: e, stackTrace: st);
+              }
             }
           }
         } catch (e, st) {
           log('Fallback title generation failed: $e', name: 'ChatProviders', error: e, stackTrace: st);
         }
-      }());
+      });
     }
 
     // persist conversation after adding AI message
