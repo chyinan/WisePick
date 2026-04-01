@@ -177,101 +177,127 @@ class _ProductCardState extends ConsumerState<ProductCard>
       child: InkWell(
         onTap: widget.onTap,
         hoverColor: theme.colorScheme.primary.withValues(alpha: 0.04),
-        child: SizedBox(
-          height: 120, // 固定高度，保持整齐
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 图片区域（使用缓存图片组件）
-              CachedProductImage(
-                imageUrl: widget.product.imageUrl,
-                width: 120,
-                height: 120,
-                fit: BoxFit.cover,
-                borderRadius: 12,
-              ),
-              
-              // 内容区域
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // 标题
-                      Text(
-                        widget.product.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontSize: 15,
-                          height: 1.3,
-                        ),
-                      ),
-                      
-                      // 底部栏：价格 + 平台 + 操作
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            // 手机端 (<400px)：缩小图片；平板端：保持适中；桌面端：保持固定
+            final maxWidth = constraints.maxWidth;
+            final bool isNarrowMobile = maxWidth < 400;
+            final bool isMobile = maxWidth < 600;
+
+            // 图片尺寸响应式
+            final imageSize = isNarrowMobile ? 90.0 : (isMobile ? 100.0 : 120.0);
+            // 固定高度随图片等比缩放
+            final cardHeight = imageSize;
+            // 价格字体大小响应式
+            final priceFontSize = isNarrowMobile ? 14.0 : (isMobile ? 16.0 : 18.0);
+            // 下架价格字体
+            final offShelfPriceFontSize = isNarrowMobile ? 10.0 : 12.0;
+
+            return SizedBox(
+              height: cardHeight,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 图片区域（使用缓存图片组件）
+                  CachedProductImage(
+                    imageUrl: widget.product.imageUrl,
+                    width: imageSize,
+                    height: cardHeight,
+                    fit: BoxFit.cover,
+                    borderRadius: 12,
+                  ),
+
+                  // 内容区域
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.all(isNarrowMobile ? 8.0 : 12.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          // 价格
+                          // 标题（手机端减少行数）
                           Text(
-                            _getPriceText(widget.product),
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              color: _isOffShelf(widget.product) 
-                                  ? theme.colorScheme.error 
-                                  : theme.colorScheme.primary,
-                              fontWeight: FontWeight.bold,
-                              fontSize: _isOffShelf(widget.product) ? 12 : 18,
+                            widget.product.title,
+                            maxLines: isNarrowMobile ? 1 : 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontSize: isNarrowMobile ? 13.0 : 15.0,
+                              height: 1.3,
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          
-                          // 平台标签
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: platformColor.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: platformColor.withValues(alpha: 0.5), width: 0.5),
-                            ),
-                            child: Text(
-                              platformName,
-                              style: TextStyle(
-                                color: platformColor,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
+
+                          // 底部栏：价格 + 平台 + 操作
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              // 价格
+                              Text(
+                                _getPriceText(widget.product),
+                                style: theme.textTheme.titleLarge?.copyWith(
+                                  color: _isOffShelf(widget.product)
+                                      ? theme.colorScheme.error
+                                      : theme.colorScheme.primary,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: _isOffShelf(widget.product)
+                                      ? offShelfPriceFontSize
+                                      : priceFontSize,
+                                ),
                               ),
-                            ),
-                          ),
-                          
-                          const Spacer(),
-                          
-                          // 收藏按钮 (如果提供)
-                          if (widget.onFavorite != null)
-                            Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(20),
-                                onTap: () => widget.onFavorite?.call(widget.product),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Icon(
-                                    Icons.favorite_border,
-                                    size: 20,
-                                    color: theme.colorScheme.secondary,
+                              SizedBox(width: isNarrowMobile ? 4.0 : 8.0),
+
+                              // 平台标签（手机端更小）
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: isNarrowMobile ? 4.0 : 6.0,
+                                  vertical: isNarrowMobile ? 1.0 : 2.0,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: platformColor.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(
+                                    color: platformColor.withValues(alpha: 0.5),
+                                    width: 0.5,
+                                  ),
+                                ),
+                                child: Text(
+                                  platformName,
+                                  style: TextStyle(
+                                    color: platformColor,
+                                    fontSize: isNarrowMobile ? 9.0 : 10.0,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ),
-                            ),
+
+                              const Spacer(),
+
+                              // 收藏按钮 (如果提供)
+                              if (widget.onFavorite != null)
+                                Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(20),
+                                    onTap: () => widget.onFavorite?.call(widget.product),
+                                    child: Padding(
+                                      padding: EdgeInsets.all(isNarrowMobile ? 4.0 : 8.0),
+                                      child: Icon(
+                                        Icons.favorite_border,
+                                        size: isNarrowMobile ? 16.0 : 20.0,
+                                        color: theme.colorScheme.secondary,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
                         ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
@@ -428,82 +454,104 @@ class _ProductCardState extends ConsumerState<ProductCard>
       child: InkWell(
         onTap: widget.onTap,
         hoverColor: theme.colorScheme.primary.withValues(alpha: 0.04),
-        child: SizedBox(
-          height: 100, // 更紧凑的高度
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 图片区域（更小，使用缓存图片组件）
-              CachedProductImage(
-                imageUrl: widget.product.imageUrl,
-                width: 100,
-                height: 100,
-                fit: BoxFit.cover,
-                borderRadius: 8,
-                errorIconSize: 24,
-              ),
-              
-              // 内容区域
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(10.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // 标题（单行）
-                      Text(
-                        widget.product.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontSize: 14,
-                          height: 1.3,
-                        ),
-                      ),
-                      
-                      // 底部栏：价格 + 平台
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final maxWidth = constraints.maxWidth;
+            final bool isNarrowMobile = maxWidth < 300;
+            final bool isMobile = maxWidth < 450;
+
+            // 图片尺寸响应式：窄屏手机更小
+            final imageSize = isNarrowMobile ? 70.0 : (isMobile ? 80.0 : 100.0);
+            final cardHeight = imageSize;
+            final priceFontSize = isNarrowMobile ? 12.0 : (isMobile ? 14.0 : 16.0);
+            final offShelfPriceSize = isNarrowMobile ? 9.0 : 11.0;
+
+            return SizedBox(
+              height: cardHeight,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 图片区域（更小，使用缓存图片组件）
+                  CachedProductImage(
+                    imageUrl: widget.product.imageUrl,
+                    width: imageSize,
+                    height: cardHeight,
+                    fit: BoxFit.cover,
+                    borderRadius: 8,
+                    errorIconSize: isNarrowMobile ? 18.0 : 24.0,
+                  ),
+
+                  // 内容区域
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.all(isNarrowMobile ? 6.0 : 10.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          // 价格
+                          // 标题（单行）
                           Text(
-                            _getPriceText(widget.product),
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              color: _isOffShelf(widget.product) 
-                                  ? theme.colorScheme.error 
-                                  : theme.colorScheme.primary,
-                              fontWeight: FontWeight.bold,
-                              fontSize: _isOffShelf(widget.product) ? 11 : 16,
+                            widget.product.title,
+                            maxLines: isNarrowMobile ? 1 : 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontSize: isNarrowMobile ? 12.0 : 14.0,
+                              height: 1.3,
                             ),
                           ),
-                          const SizedBox(width: 6),
-                          
-                          // 平台标签（更小）
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                            decoration: BoxDecoration(
-                              color: platformColor.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(3),
-                              border: Border.all(color: platformColor.withValues(alpha: 0.5), width: 0.5),
-                            ),
-                            child: Text(
-                              platformName,
-                              style: TextStyle(
-                                color: platformColor,
-                                fontSize: 9,
-                                fontWeight: FontWeight.w600,
+
+                          // 底部栏：价格 + 平台
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              // 价格
+                              Text(
+                                _getPriceText(widget.product),
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  color: _isOffShelf(widget.product)
+                                      ? theme.colorScheme.error
+                                      : theme.colorScheme.primary,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: _isOffShelf(widget.product)
+                                      ? offShelfPriceSize
+                                      : priceFontSize,
+                                ),
                               ),
-                            ),
+                              SizedBox(width: isNarrowMobile ? 4.0 : 6.0),
+
+                              // 平台标签（更小）
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: isNarrowMobile ? 2.0 : 4.0,
+                                  vertical: 1.0,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: platformColor.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(3),
+                                  border: Border.all(
+                                    color: platformColor.withValues(alpha: 0.5),
+                                    width: 0.5,
+                                  ),
+                                ),
+                                child: Text(
+                                  platformName,
+                                  style: TextStyle(
+                                    color: platformColor,
+                                    fontSize: isNarrowMobile ? 8.0 : 9.0,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
