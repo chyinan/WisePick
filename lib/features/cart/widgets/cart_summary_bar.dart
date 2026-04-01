@@ -63,46 +63,64 @@ class CartSummaryBar extends ConsumerWidget {
     final allSelected =
         list.isNotEmpty && list.every((m) => sel[m['id']] == true);
 
-    return Row(
-      children: [
-        Semantics(
-          label: '全选所有商品',
-          child: Checkbox(
-            value: allSelected,
-            onChanged: (v) {
-              final map = <String, bool>{};
-              for (final m in list) map[m['id']] = v ?? false;
-              ref.read(cartSelectionProvider.notifier).state = map;
-            },
-          ),
-        ),
-        const Text('全选'),
-        const Spacer(),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          mainAxisSize: MainAxisSize.min,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool isNarrowMobile = constraints.maxWidth < 360;
+
+        return Row(
           children: [
-            Text('合计: ¥${total.toStringAsFixed(2)}',
-                style: theme.textTheme.titleMedium?.copyWith(
-                    color: theme.colorScheme.primary,
-                    fontWeight: FontWeight.bold)),
-            Text('已选 $count 件', style: theme.textTheme.bodySmall),
+            if (!isNarrowMobile)
+              Semantics(
+                label: '全选所有商品',
+                child: Checkbox(
+                  value: allSelected,
+                  onChanged: (v) {
+                    final map = <String, bool>{};
+                    for (final m in list) map[m['id']] = v ?? false;
+                    ref.read(cartSelectionProvider.notifier).state = map;
+                  },
+                ),
+              ),
+            if (!isNarrowMobile) const Text('全选'),
+            if (!isNarrowMobile) const Spacer(),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('合计: ¥${total.toStringAsFixed(2)}',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: isNarrowMobile ? 14 : null)),
+                  Text('已选 $count 件',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                          fontSize: isNarrowMobile ? 11 : null)),
+                ],
+              ),
+            ),
+            SizedBox(width: isNarrowMobile ? 8 : 16),
+            Semantics(
+              label: '去结算，已选 $count 件商品，合计 ¥${total.toStringAsFixed(2)}',
+              button: true,
+              enabled: count > 0,
+              child: ElevatedButton(
+                onPressed: count > 0
+                    ? () => _showCheckoutDialog(
+                        context, list, ref.read(cartSelectionProvider))
+                    : null,
+                style: ElevatedButton.styleFrom(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isNarrowMobile ? 12 : 16,
+                    vertical: isNarrowMobile ? 8 : 12,
+                  ),
+                ),
+                child: Text(isNarrowMobile ? '结算' : '去结算'),
+              ),
+            ),
           ],
-        ),
-        const SizedBox(width: 16),
-        Semantics(
-          label: '去结算，已选 $count 件商品，合计 ¥${total.toStringAsFixed(2)}',
-          button: true,
-          enabled: count > 0,
-          child: ElevatedButton(
-            onPressed: count > 0
-                ? () => _showCheckoutDialog(
-                    context, list, ref.read(cartSelectionProvider))
-                : null,
-            child: const Text('去结算'),
-          ),
-        ),
-      ],
+        );
+      },
     );
   }
 
