@@ -423,110 +423,153 @@ class _CartGroupCard extends ConsumerWidget {
                       final bool isNarrowMobile = maxWidth < 360;
                       final bool isMobile = maxWidth < 480;
 
-                      // 数量控制按钮和复选框的尺寸响应式
+                      // 复选框尺寸响应式
                       final checkboxWidth = isNarrowMobile ? 40.0 : (isMobile ? 44.0 : 48.0);
-                      final qtyButtonSize = isNarrowMobile ? 28.0 : 32.0;
-                      final qtyIconSize = isNarrowMobile ? 14.0 : 16.0;
-                      final qtyTextStyle = Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500);
-                      final qtyContainerWidth = isNarrowMobile ? 24.0 : 28.0;
 
-                      return Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // 复选框
-                          SizedBox(
-                            width: checkboxWidth,
-                            child: Consumer(builder: (context, ref, _) {
-                              final sel = ref.watch(cartSelectionProvider);
-                              return Checkbox(
-                                value: sel[p.id] ?? false,
-                                onChanged: (v) {
-                                  final map = Map<String, bool>.from(sel);
-                                  map[p.id] = v ?? false;
-                                  ref.read(cartSelectionProvider.notifier).state = map;
-                                },
-                              );
-                            }),
-                          ),
-                          // 商品卡片
-                          Expanded(
-                            child: ProductCard(
-                              product: p,
-                              expandToFullWidth: true,
-                              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProductDetailPage(product: p))),
+                      // 手机端：水平数量控制 "- 1 +" 放在价格下方
+                      // PC 端：保持垂直布局在右侧
+                      if (isMobile) {
+                        // 手机端布局：复选框 + 商品信息（含价格下方数量控制）
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // 复选框
+                            SizedBox(
+                              width: checkboxWidth,
+                              child: Consumer(builder: (context, ref, _) {
+                                final sel = ref.watch(cartSelectionProvider);
+                                return Checkbox(
+                                  value: sel[p.id] ?? false,
+                                  onChanged: (v) {
+                                    final map = Map<String, bool>.from(sel);
+                                    map[p.id] = v ?? false;
+                                    ref.read(cartSelectionProvider.notifier).state = map;
+                                  },
+                                );
+                              }),
                             ),
-                          ),
-                          // 数量控制（手机端缩小）
-                          SizedBox(
-                            width: qtyButtonSize + 4,
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Material(
-                                  color: Colors.transparent,
-                                  child: InkWell(
-                                    borderRadius: BorderRadius.circular(4),
-                                    onTap: () {
-                                      ref.read(cartServiceProvider).setQuantity(p.id, qty + 1);
-                                      ref.invalidate(cartItemsProvider);
-                                    },
-                                    child: Container(
-                                      width: qtyButtonSize,
-                                      height: qtyButtonSize,
-                                      decoration: BoxDecoration(
-                                        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: Icon(Icons.add, size: qtyIconSize),
-                                    ),
-                                  ),
-                                ),
-                                Container(
-                                  width: qtyContainerWidth,
-                                  padding: const EdgeInsets.symmetric(vertical: 2),
-                                  decoration: BoxDecoration(
-                                    border: Border.symmetric(
-                                      horizontal: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
-                                    ),
-                                  ),
-                                  child: Text('$qty', textAlign: TextAlign.center, style: qtyTextStyle),
-                                ),
-                                Material(
-                                  color: Colors.transparent,
-                                  child: InkWell(
-                                    borderRadius: BorderRadius.circular(4),
-                                    onTap: qty > 1
-                                      ? () {
-                                          ref.read(cartServiceProvider).setQuantity(p.id, qty - 1);
-                                          ref.invalidate(cartItemsProvider);
-                                        }
-                                      : null,
-                                    child: Container(
-                                      width: qtyButtonSize,
-                                      height: qtyButtonSize,
-                                      decoration: BoxDecoration(
-                                        border: Border.all(
-                                          color: qty > 1
-                                            ? Theme.of(context).colorScheme.outlineVariant
-                                            : Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+                            // 商品信息 + 数量控制
+                            Expanded(
+                              child: ProductCard(
+                                product: p,
+                                expandToFullWidth: true,
+                                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProductDetailPage(product: p))),
+                              ),
+                            ),
+                            // 删除按钮
+                            IconButton(
+                              icon: Icon(Icons.delete_outline, size: 20, color: Theme.of(context).colorScheme.error),
+                              onPressed: () => _confirmDelete(context, ref, p),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                          ],
+                        );
+                      } else {
+                        // PC 端布局：保持原有样式（垂直数量控制在右侧）
+                        final qtyButtonSize = 32.0;
+                        final qtyIconSize = 16.0;
+                        final qtyTextStyle = Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500);
+                        final qtyContainerWidth = 28.0;
+
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // 复选框
+                            SizedBox(
+                              width: checkboxWidth,
+                              child: Consumer(builder: (context, ref, _) {
+                                final sel = ref.watch(cartSelectionProvider);
+                                return Checkbox(
+                                  value: sel[p.id] ?? false,
+                                  onChanged: (v) {
+                                    final map = Map<String, bool>.from(sel);
+                                    map[p.id] = v ?? false;
+                                    ref.read(cartSelectionProvider.notifier).state = map;
+                                  },
+                                );
+                              }),
+                            ),
+                            // 商品卡片
+                            Expanded(
+                              child: ProductCard(
+                                product: p,
+                                expandToFullWidth: true,
+                                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProductDetailPage(product: p))),
+                              ),
+                            ),
+                            // 数量控制（PC 端垂直布局）
+                            SizedBox(
+                              width: qtyButtonSize + 4,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(4),
+                                      onTap: () {
+                                        ref.read(cartServiceProvider).setQuantity(p.id, qty + 1);
+                                        ref.invalidate(cartItemsProvider);
+                                      },
+                                      child: Container(
+                                        width: qtyButtonSize,
+                                        height: qtyButtonSize,
+                                        decoration: BoxDecoration(
+                                          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                                          borderRadius: BorderRadius.circular(4),
                                         ),
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: Icon(
-                                        Icons.remove,
-                                        size: qtyIconSize,
-                                        color: qty > 1
-                                          ? null
-                                          : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                                        child: Icon(Icons.add, size: qtyIconSize),
                                       ),
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          )
-                        ],
-                      );
+                                  Container(
+                                    width: qtyContainerWidth,
+                                    padding: const EdgeInsets.symmetric(vertical: 2),
+                                    decoration: BoxDecoration(
+                                      border: Border.symmetric(
+                                        horizontal: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+                                      ),
+                                    ),
+                                    child: Text('$qty', textAlign: TextAlign.center, style: qtyTextStyle),
+                                  ),
+                                  Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(4),
+                                      onTap: qty > 1
+                                        ? () {
+                                            ref.read(cartServiceProvider).setQuantity(p.id, qty - 1);
+                                            ref.invalidate(cartItemsProvider);
+                                          }
+                                        : null,
+                                      child: Container(
+                                        width: qtyButtonSize,
+                                        height: qtyButtonSize,
+                                        decoration: BoxDecoration(
+                                          border: Border.all(
+                                            color: qty > 1
+                                              ? Theme.of(context).colorScheme.outlineVariant
+                                              : Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+                                          ),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Icon(
+                                          Icons.remove,
+                                          size: qtyIconSize,
+                                          color: qty > 1
+                                            ? null
+                                            : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          ],
+                        );
+                      }
                     },
                   ),
                 ),
@@ -537,4 +580,32 @@ class _CartGroupCard extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// 确认删除对话框
+void _confirmDelete(BuildContext context, WidgetRef ref, ProductModel p) {
+  showDialog(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('确认删除'),
+      content: Text('确定要删除 "${p.title}" 吗？'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('取消'),
+        ),
+        FilledButton(
+          onPressed: () {
+            ref.read(cartServiceProvider).removeItem(p.id);
+            ref.invalidate(cartItemsProvider);
+            Navigator.pop(ctx);
+          },
+          style: FilledButton.styleFrom(
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+          child: const Text('删除'),
+        ),
+      ],
+    ),
+  );
 }
