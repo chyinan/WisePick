@@ -208,19 +208,21 @@ class _ProductCardState extends ConsumerState<ProductCard>
             final outerPadding = EdgeInsets.symmetric(
             horizontal: isNarrowMobile ? 8.0 : 12.0,
             vertical: isNarrowMobile ? 8.0 : 10.0);
-        return Padding(
-          padding: outerPadding,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 图片区域（使用缓存图片组件）
-              CachedProductImage(
-                imageUrl: widget.product.imageUrl,
-                width: imageSize,
-                height: imageSize,
-                fit: BoxFit.cover,
-                borderRadius: 12,
-              ),
+        return SizedBox(
+          height: imageSize,
+          child: Padding(
+            padding: outerPadding,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 图片区域（使用缓存图片组件）
+                CachedProductImage(
+                  imageUrl: widget.product.imageUrl,
+                  width: imageSize,
+                  height: imageSize,
+                  fit: BoxFit.cover,
+                  borderRadius: 12,
+                ),
 
               const SizedBox(width: 8),
 
@@ -312,6 +314,7 @@ class _ProductCardState extends ConsumerState<ProductCard>
                 ),
               ),
             ],
+          ),
           ),
         );
           },
