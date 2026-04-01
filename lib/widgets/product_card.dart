@@ -49,8 +49,10 @@ class ProductCard extends ConsumerStatefulWidget {
     this.onTap,
     this.onFavorite,
     this.expandToFullWidth = false,
+    this.quantity,
+    this.onQuantityChanged,
   }) : mode = ProductCardMode.compact;
-  
+
   /// 展开模式构造函数
   const ProductCard.expanded({
     super.key,
@@ -58,8 +60,10 @@ class ProductCard extends ConsumerStatefulWidget {
     this.onTap,
     this.onFavorite,
     this.expandToFullWidth = true,
+    this.quantity,
+    this.onQuantityChanged,
   }) : mode = ProductCardMode.expanded;
-  
+
   /// 聊天嵌入模式构造函数
   const ProductCard.chat({
     super.key,
@@ -67,6 +71,8 @@ class ProductCard extends ConsumerStatefulWidget {
     this.onTap,
     this.onFavorite,
     this.expandToFullWidth = false,
+    this.quantity,
+    this.onQuantityChanged,
   }) : mode = ProductCardMode.chat;
 
   @override
