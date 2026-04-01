@@ -426,10 +426,9 @@ class _CartGroupCard extends ConsumerWidget {
                       // 复选框尺寸响应式
                       final checkboxWidth = isNarrowMobile ? 40.0 : (isMobile ? 44.0 : 48.0);
 
-                      // 手机端：水平数量控制 "- 1 +" 放在价格下方
-                      // PC 端：保持垂直布局在右侧
+                      // 手机端布局：使用 ProductCard.cartInline 模式，内嵌 "- 1 +" 数量控制
                       if (isMobile) {
-                        // 手机端布局：复选框 + 商品信息（含价格下方数量控制）
+                        final checkboxWidth = isNarrowMobile ? 40.0 : 44.0;
                         return Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -448,20 +447,21 @@ class _CartGroupCard extends ConsumerWidget {
                                 );
                               }),
                             ),
-                            // 商品信息 + 数量控制
+                            // 商品卡片（含内嵌数量控制）
                             Expanded(
-                              child: ProductCard(
-                                product: p,
-                                expandToFullWidth: true,
-                                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProductDetailPage(product: p))),
+                              child: SizedBox(
+                                height: isNarrowMobile ? 130.0 : 145.0,
+                                child: ProductCard(
+                                  product: p,
+                                  mode: ProductCardMode.cartInline,
+                                  quantity: qty,
+                                  onQuantityChanged: (newQty) {
+                                    ref.read(cartServiceProvider).setQuantity(p.id, newQty);
+                                    ref.invalidate(cartItemsProvider);
+                                  },
+                                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProductDetailPage(product: p))),
+                                ),
                               ),
-                            ),
-                            // 删除按钮
-                            IconButton(
-                              icon: Icon(Icons.delete_outline, size: 20, color: Theme.of(context).colorScheme.error),
-                              onPressed: () => _confirmDelete(context, ref, p),
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
                             ),
                           ],
                         );
@@ -580,32 +580,4 @@ class _CartGroupCard extends ConsumerWidget {
       ),
     );
   }
-}
-
-/// 确认删除对话框
-void _confirmDelete(BuildContext context, WidgetRef ref, ProductModel p) {
-  showDialog(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      title: const Text('确认删除'),
-      content: Text('确定要删除 "${p.title}" 吗？'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx),
-          child: const Text('取消'),
-        ),
-        FilledButton(
-          onPressed: () {
-            ref.read(cartServiceProvider).removeItem(p.id);
-            ref.invalidate(cartItemsProvider);
-            Navigator.pop(ctx);
-          },
-          style: FilledButton.styleFrom(
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-          child: const Text('删除'),
-        ),
-      ],
-    ),
-  );
 }
