@@ -26,6 +26,7 @@ class _AiProviderSettingsPageState extends State<AiProviderSettingsPage> {
   bool _loading = false;
   bool _loadingModels = false;
   bool _testingConnection = false;
+  bool _showCustomUrl = false;
   
   List<String> _models = [];
   String? _modelError;
@@ -445,45 +446,85 @@ class _AiProviderSettingsPageState extends State<AiProviderSettingsPage> {
 
             // API Base URL 设置卡片
             _buildSectionCard(
-              title: '自定义域名',
+              title: '服务商预设',
               icon: Icons.dns,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '留空使用 OpenAI 官方域名，或输入第三方服务地址',
+                    '选择服务商快速填入 API 地址，或点击「自定义」手动输入',
                     style: textTheme.bodySmall?.copyWith(
                       color: colorScheme.onSurfaceVariant,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _baseUrlController,
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: colorScheme.surfaceContainerHighest,
-                      hintText: 'https://api.openai.com/v1',
-                      prefixIcon: const Icon(Icons.link),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 14,
-                      ),
-                    ),
-                    onChanged: (_) => setState(() {}),
-                  ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      _buildQuickUrlChip('OpenAI官方', 'https://api.openai.com/v1'),
-                      _buildQuickUrlChip('DeepSeek', 'https://api.deepseek.com'),
+                      _buildQuickUrlChip('DeepSeek', 'https://api.deepseek.com/v1'),
+                      _buildQuickUrlChip('硅基流动', 'https://api.siliconflow.cn/v1'),
+                      _buildQuickUrlChip('MiniMax', 'https://api.minimax.chat/v1'),
+                      _buildQuickUrlChip('智谱 GLM', 'https://open.bigmodel.cn/api/paas/v4'),
+                      _buildQuickUrlChip('阿里 Qwen', 'https://dashscope.aliyuncs.com/compatible-mode/v1'),
+                      _buildQuickUrlChip('OpenAI', 'https://api.openai.com/v1'),
                     ],
                   ),
+                  const SizedBox(height: 10),
+                  // 自定义按钮
+                  Row(
+                    children: [
+                      ActionChip(
+                        label: Text(_showCustomUrl ? '收起自定义' : '自定义'),
+                        avatar: Icon(
+                          _showCustomUrl ? Icons.expand_less : Icons.edit_outlined,
+                          size: 16,
+                          color: colorScheme.primary,
+                        ),
+                        backgroundColor: _showCustomUrl
+                            ? colorScheme.primaryContainer
+                            : colorScheme.surfaceContainerHighest,
+                        side: BorderSide(
+                          color: _showCustomUrl ? colorScheme.primary : Colors.transparent,
+                        ),
+                        onPressed: () => setState(() => _showCustomUrl = !_showCustomUrl),
+                      ),
+                      if (_showCustomUrl && _baseUrlController.text.isNotEmpty) ...
+                        [
+                          const SizedBox(width: 8),
+                          Text(
+                            _baseUrlController.text,
+                            style: textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                    ],
+                  ),
+                  // 自定义输入框（折叠/展开）
+                  if (_showCustomUrl) ...
+                    [
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _baseUrlController,
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: colorScheme.surfaceContainerHighest,
+                          hintText: 'https://your-api-endpoint/v1',
+                          prefixIcon: const Icon(Icons.link),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                        ),
+                        onChanged: (_) => setState(() {}),
+                      ),
+                    ],
                 ],
               ),
             ),

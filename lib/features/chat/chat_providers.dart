@@ -924,3 +924,15 @@ final chatStateNotifierProvider = StateNotifierProvider<ChatStateNotifier, ChatS
 
 /// Conversation repository provider
 final conversationRepositoryProvider = Provider<ConversationRepository>((ref) => ConversationRepository());
+
+/// 提供所有历史会话列表的 Provider
+final conversationsProvider = FutureProvider<List<ConversationModel>>((ref) async {
+  final repo = ref.watch(conversationRepositoryProvider);
+  // 监听 chatStateNotifierProvider，当保存或删除会话时，我们可以触发此 provider 重新请求数据
+  // 虽然不是最优雅的方案，但能确保数据同步
+  ref.watch(chatStateNotifierProvider);
+  return repo.listConversations();
+});
+
+/// 当前选中的会话 ID Provider
+final currentConversationIdProvider = StateProvider<String?>((ref) => null);

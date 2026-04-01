@@ -82,6 +82,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
   void dispose() {
     _openAiController.dispose();
     _baseUrlController.dispose();
+    _backendBaseController.dispose();
     _modelController.dispose();
     super.dispose();
   }

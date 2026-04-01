@@ -30,10 +30,11 @@ class PriceHistoryPage extends ConsumerWidget {
       id: productId,
       title: productTitle,
       image: productImage,
+      price: currentPrice,
     );
     
     final trendAnalysis = ref.watch(priceTrendAnalysisProvider(productInfo));
-    final buyingSuggestion = ref.watch(buyingTimeSuggestionProvider(productId));
+    final buyingSuggestion = ref.watch(buyingTimeSuggestionProvider(productInfo));
     final timeRange = ref.watch(priceHistoryTimeRangeProvider);
 
     return Scaffold(
@@ -81,7 +82,7 @@ class PriceHistoryPage extends ConsumerWidget {
                 if (confirm == true) {
                   await PriceHistoryService().clearPriceHistory(productId);
                   ref.invalidate(priceTrendAnalysisProvider(productInfo));
-                  ref.invalidate(buyingTimeSuggestionProvider(productId));
+                  ref.invalidate(buyingTimeSuggestionProvider(productInfo));
                   if (context.mounted) {
                     showSuccessSnackBar(context, '价格历史已清除');
                   }

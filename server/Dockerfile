@@ -35,6 +35,9 @@ WORKDIR /app
 # 从构建阶段复制编译好的可执行文件
 COPY --from=build /app/bin/server /app/bin/server
 
+# 复制数据库迁移文件
+COPY --from=build /app/lib/database/migrations /app/lib/database/migrations
+
 # 切换到非 root 用户
 USER appuser
 

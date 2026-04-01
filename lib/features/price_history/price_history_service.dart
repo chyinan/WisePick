@@ -105,22 +105,25 @@ class PriceHistoryService {
   }
 
   /// 获取商品价格历史
-  /// 
-  /// 返回真实记录的价格历史数据，如果没有数据则返回空列表
+  ///
+  /// 返回真实记录的价格历史数据，如果没有数据则生成 Mock 数据用于开发测试
+  /// [basePrice] 用于生成 Mock 数据时的基础价格，如果不提供则使用默认值
   Future<List<PriceHistoryRecord>> getPriceHistory({
     required String productId,
     PriceHistoryTimeRange timeRange = PriceHistoryTimeRange.month,
+    double? basePrice,
   }) async {
     final box = await _getBox();
-    
+
     List<PriceHistoryRecord> records = [];
     final dynamic data = box.get(productId);
 
     if (data != null && data is List) {
       records = data.map((e) => PriceHistoryRecord.fromMap(Map<String, dynamic>.from(e))).toList();
+    } else {
+      // 开发阶段：如果没有真实数据，生成 Mock 数据用于展示
+      records = _generateMockPriceHistory(productId, basePrice ?? 100);
     }
-    // 不再生成 Mock 数据，返回真实记录的价格历史
-    // 如果没有数据，返回空列表，UI 层会显示"暂无数据"提示
 
     return _filterByTimeRange(records, timeRange);
   }
@@ -131,10 +134,12 @@ class PriceHistoryService {
     required String productTitle,
     String? productImage,
     PriceHistoryTimeRange timeRange = PriceHistoryTimeRange.month,
+    double? basePrice,
   }) async {
     final history = await getPriceHistory(
       productId: productId,
       timeRange: timeRange,
+      basePrice: basePrice,
     );
 
     if (history.isEmpty) {
@@ -189,10 +194,12 @@ class PriceHistoryService {
   Future<BuyingTimeSuggestion> getBestBuyTime({
     required String productId,
     PriceHistoryTimeRange timeRange = PriceHistoryTimeRange.month,
+    double? basePrice,
   }) async {
     final history = await getPriceHistory(
       productId: productId,
       timeRange: timeRange,
+      basePrice: basePrice,
     );
 
     if (history.isEmpty) {
@@ -242,15 +249,17 @@ class PriceHistoryService {
 
   /// 多商品价格对比
   Future<List<PriceComparisonItem>> comparePrices({
-    required List<Map<String, String>> products, // [{id, title, platform, image?}]
+    required List<Map<String, dynamic>> products, // [{id, title, platform, image?, price?}]
     PriceHistoryTimeRange timeRange = PriceHistoryTimeRange.month,
   }) async {
     final results = <PriceComparisonItem>[];
 
     for (final product in products) {
+      final basePrice = (product['price'] as num?)?.toDouble();
       final history = await getPriceHistory(
         productId: product['id']!,
         timeRange: timeRange,
+        basePrice: basePrice,
       );
 
       final currentPrice = history.isNotEmpty ? history.last.finalPrice : 0.0;
@@ -271,6 +280,52 @@ class PriceHistoryService {
   }
 
   // ========== 私有方法 ==========
+
+  /// 生成 Mock 价格历史数据（开发阶段使用）
+  /// [basePrice] 基础价格，用于生成合理的价格浮动
+  List<PriceHistoryRecord> _generateMockPriceHistory(String productId, double basePrice) {
+    final random = Random();
+    final now = DateTime.now();
+    final records = <PriceHistoryRecord>[];
+
+    // 生成过去30天的价格数据，每天2-3条记录
+    double currentPrice = basePrice;
+
+    for (int i = 30; i >= 0; i--) {
+      final date = now.subtract(Duration(days: i));
+
+      // 每天生成 2-3 条记录
+      final recordsPerDay = 2 + random.nextInt(2);
+      for (int j = 0; j < recordsPerDay; j++) {
+        // 价格随机波动 ±3%
+        final priceVariation = (random.nextDouble() - 0.5) * 0.06;
+        currentPrice = basePrice * (1 + priceVariation);
+
+        // 原价比当前价高 8-15%
+        final originalPrice = currentPrice * (1 + 0.08 + random.nextDouble() * 0.07);
+
+        // 优惠券金额 0-5% 的价格
+        final couponAmount = currentPrice * random.nextDouble() * 0.05;
+
+        // 最终价格 = 当前价 - 优惠券
+        final finalPrice = currentPrice - couponAmount;
+
+        records.add(PriceHistoryRecord(
+          productId: productId,
+          recordedAt: date.add(Duration(hours: j * 8)),
+          price: currentPrice,
+          originalPrice: originalPrice,
+          couponAmount: couponAmount > 0.1 ? couponAmount : null,
+          finalPrice: finalPrice,
+        ));
+      }
+
+      // 基础价格缓慢变化 ±1%
+      basePrice = basePrice * (0.99 + random.nextDouble() * 0.02);
+    }
+
+    return records;
+  }
 
   List<PriceHistoryRecord> _filterByTimeRange(
     List<PriceHistoryRecord> records,

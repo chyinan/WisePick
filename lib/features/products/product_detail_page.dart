@@ -342,7 +342,12 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
       _setGalleryImages(_mergeWithPrimaryImage(fetched));
     } catch (e) {
       if (!mounted) return;
-      setState(() { _imageError = e.toString(); _isLoadingImages = false; });
+      // 只有当没有可用图片时才显示错误遮罩
+      if (_galleryImages.isEmpty) {
+        setState(() { _imageError = e.toString(); _isLoadingImages = false; });
+      } else {
+        setState(() { _isLoadingImages = false; });
+      }
     }
   }
 
@@ -378,7 +383,12 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
       _setGalleryImages(_mergeWithPrimaryImage(fetched));
     } catch (e) {
       if (!mounted) return;
-      setState(() { _imageError = e.toString(); _isLoadingImages = false; });
+      // 只有当没有可用图片时才显示错误遮罩
+      if (_galleryImages.isEmpty) {
+        setState(() { _imageError = e.toString(); _isLoadingImages = false; });
+      } else {
+        setState(() { _isLoadingImages = false; });
+      }
     }
   }
 

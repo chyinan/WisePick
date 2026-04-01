@@ -21,31 +21,33 @@ final selectedProductIdProvider = StateProvider<String?>((ref) {
 final priceTrendAnalysisProvider = FutureProvider.autoDispose.family<PriceTrendAnalysis, ProductInfo>((ref, productInfo) async {
   final service = ref.watch(priceHistoryServiceProvider);
   final timeRange = ref.watch(priceHistoryTimeRangeProvider);
-  
+
   return service.analyzePriceTrend(
     productId: productInfo.id,
     productTitle: productInfo.title,
     productImage: productInfo.image,
     timeRange: timeRange,
+    basePrice: productInfo.price,
   );
 });
 
 /// 购买时机建议 Provider
-final buyingTimeSuggestionProvider = FutureProvider.autoDispose.family<BuyingTimeSuggestion, String>((ref, productId) async {
+final buyingTimeSuggestionProvider = FutureProvider.autoDispose.family<BuyingTimeSuggestion, ProductInfo>((ref, productInfo) async {
   final service = ref.watch(priceHistoryServiceProvider);
   final timeRange = ref.watch(priceHistoryTimeRangeProvider);
-  
+
   return service.getBestBuyTime(
-    productId: productId,
+    productId: productInfo.id,
     timeRange: timeRange,
+    basePrice: productInfo.price,
   );
 });
 
 /// 多商品价格对比 Provider
-final priceComparisonProvider = FutureProvider.autoDispose.family<List<PriceComparisonItem>, List<Map<String, String>>>((ref, products) async {
+final priceComparisonProvider = FutureProvider.autoDispose.family<List<PriceComparisonItem>, List<Map<String, dynamic>>>((ref, products) async {
   final service = ref.watch(priceHistoryServiceProvider);
   final timeRange = ref.watch(priceHistoryTimeRangeProvider);
-  
+
   return service.comparePrices(
     products: products,
     timeRange: timeRange,
@@ -82,11 +84,13 @@ class ProductInfo {
   final String id;
   final String title;
   final String? image;
+  final double? price;
 
   const ProductInfo({
     required this.id,
     required this.title,
     this.image,
+    this.price,
   });
 
   @override
