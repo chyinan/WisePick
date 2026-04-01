@@ -241,17 +241,47 @@ class _DesktopCartList extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 color: theme.colorScheme.surfaceContainerLowest,
-                child: Row(
-                  children: [
-                    const SizedBox(width: 48), // Checkbox 占位
-                    const SizedBox(width: 80), // 图片占位
-                    const SizedBox(width: 16),
-                    Expanded(flex: 3, child: Text('商品信息', style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant))),
-                    SizedBox(width: 100, child: Text('单价', style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant), textAlign: TextAlign.center)),
-                    SizedBox(width: 120, child: Text('数量', style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant), textAlign: TextAlign.center)),
-                    SizedBox(width: 100, child: Text('小计', style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant), textAlign: TextAlign.center)),
-                    const SizedBox(width: 80), // 操作占位
-                  ],
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final availableWidth = constraints.maxWidth;
+                    final scale = (availableWidth / 544).clamp(0.6, 1.0);
+
+                    return Row(
+                      children: [
+                        SizedBox(width: 48 * scale),
+                        SizedBox(width: 80 * scale),
+                        SizedBox(width: 16 * scale),
+                        Expanded(
+                            flex: 3,
+                            child: Text('商品信息',
+                                style: theme.textTheme.labelMedium
+                                    ?.copyWith(
+                                        color: theme.colorScheme.onSurfaceVariant))),
+                        SizedBox(
+                            width: 100 * scale,
+                            child: Text('单价',
+                                style: theme.textTheme.labelMedium
+                                    ?.copyWith(
+                                        color: theme.colorScheme.onSurfaceVariant),
+                                textAlign: TextAlign.center)),
+                        SizedBox(
+                            width: 120 * scale,
+                            child: Text('数量',
+                                style: theme.textTheme.labelMedium
+                                    ?.copyWith(
+                                        color: theme.colorScheme.onSurfaceVariant),
+                                textAlign: TextAlign.center)),
+                        SizedBox(
+                            width: 100 * scale,
+                            child: Text('小计',
+                                style: theme.textTheme.labelMedium
+                                    ?.copyWith(
+                                        color: theme.colorScheme.onSurfaceVariant),
+                                textAlign: TextAlign.center)),
+                        SizedBox(width: 80 * scale),
+                      ],
+                    );
+                  },
                 ),
               ),
               // 商品列表
@@ -361,7 +391,9 @@ class _CartGroupCard extends ConsumerWidget {
                     const SizedBox(width: 8),
                     const Icon(Icons.store, size: 20),
                     const SizedBox(width: 8),
-                    Text(shopName, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+                    Expanded(
+                      child: Text(shopName, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
+                    ),
                  ],
                );
             }),
@@ -385,49 +417,117 @@ class _CartGroupCard extends ConsumerWidget {
                 },
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: Row(
-                    children: [
-                       Consumer(builder: (context, ref, _) {
-                          final sel = ref.watch(cartSelectionProvider);
-                          return Checkbox(
-                             value: sel[p.id] ?? false,
-                             onChanged: (v) {
-                                final map = Map<String, bool>.from(sel);
-                                map[p.id] = v ?? false;
-                                ref.read(cartSelectionProvider.notifier).state = map;
-                             },
-                          );
-                       }),
-                       Expanded(
-                          child: ProductCard(
-                             product: p, 
-                             expandToFullWidth: true, 
-                             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProductDetailPage(product: p))),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final maxWidth = constraints.maxWidth;
+                      final bool isNarrowMobile = maxWidth < 360;
+                      final bool isMobile = maxWidth < 480;
+
+                      // 数量控制按钮和复选框的尺寸响应式
+                      final checkboxWidth = isNarrowMobile ? 40.0 : (isMobile ? 44.0 : 48.0);
+                      final qtyButtonSize = isNarrowMobile ? 28.0 : 32.0;
+                      final qtyIconSize = isNarrowMobile ? 14.0 : 16.0;
+                      final qtyTextStyle = Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500);
+                      final qtyContainerWidth = isNarrowMobile ? 24.0 : 28.0;
+
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // 复选框
+                          SizedBox(
+                            width: checkboxWidth,
+                            child: Consumer(builder: (context, ref, _) {
+                              final sel = ref.watch(cartSelectionProvider);
+                              return Checkbox(
+                                value: sel[p.id] ?? false,
+                                onChanged: (v) {
+                                  final map = Map<String, bool>.from(sel);
+                                  map[p.id] = v ?? false;
+                                  ref.read(cartSelectionProvider.notifier).state = map;
+                                },
+                              );
+                            }),
                           ),
-                       ),
-                       // Quantity Controls - simplified for vertical space
-                       Column(
-                         children: [
-                            IconButton(
-                               icon: const Icon(Icons.add_circle_outline), 
-                               onPressed: () {
-                                  ref.read(cartServiceProvider).setQuantity(p.id, qty + 1);
-                                  ref.invalidate(cartItemsProvider);
-                               }
+                          // 商品卡片
+                          Expanded(
+                            child: ProductCard(
+                              product: p,
+                              expandToFullWidth: true,
+                              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProductDetailPage(product: p))),
                             ),
-                            Text('$qty'),
-                            IconButton(
-                               icon: const Icon(Icons.remove_circle_outline), 
-                               onPressed: () {
-                                  if (qty > 1) {
-                                     ref.read(cartServiceProvider).setQuantity(p.id, qty - 1);
-                                     ref.invalidate(cartItemsProvider);
-                                  }
-                               }
+                          ),
+                          // 数量控制（手机端缩小）
+                          SizedBox(
+                            width: qtyButtonSize + 4,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(4),
+                                    onTap: () {
+                                      ref.read(cartServiceProvider).setQuantity(p.id, qty + 1);
+                                      ref.invalidate(cartItemsProvider);
+                                    },
+                                    child: Container(
+                                      width: qtyButtonSize,
+                                      height: qtyButtonSize,
+                                      decoration: BoxDecoration(
+                                        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Icon(Icons.add, size: qtyIconSize),
+                                    ),
+                                  ),
+                                ),
+                                Container(
+                                  width: qtyContainerWidth,
+                                  padding: const EdgeInsets.symmetric(vertical: 2),
+                                  decoration: BoxDecoration(
+                                    border: Border.symmetric(
+                                      horizontal: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+                                    ),
+                                  ),
+                                  child: Text('$qty', textAlign: TextAlign.center, style: qtyTextStyle),
+                                ),
+                                Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(4),
+                                    onTap: qty > 1
+                                      ? () {
+                                          ref.read(cartServiceProvider).setQuantity(p.id, qty - 1);
+                                          ref.invalidate(cartItemsProvider);
+                                        }
+                                      : null,
+                                    child: Container(
+                                      width: qtyButtonSize,
+                                      height: qtyButtonSize,
+                                      decoration: BoxDecoration(
+                                        border: Border.all(
+                                          color: qty > 1
+                                            ? Theme.of(context).colorScheme.outlineVariant
+                                            : Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+                                        ),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Icon(
+                                        Icons.remove,
+                                        size: qtyIconSize,
+                                        color: qty > 1
+                                          ? null
+                                          : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                         ],
-                       )
-                    ],
+                          )
+                        ],
+                      );
+                    },
                   ),
                 ),
               );
