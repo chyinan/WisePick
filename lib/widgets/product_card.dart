@@ -204,8 +204,6 @@ class _ProductCardState extends ConsumerState<ProductCard>
 
             // 图片尺寸响应式
             final imageSize = isNarrowMobile ? 90.0 : (isMobile ? 100.0 : 120.0);
-            // 固定高度随图片等比缩放
-            final cardHeight = imageSize;
             // 价格字体大小响应式
             final priceFontSize = isNarrowMobile ? 14.0 : (isMobile ? 16.0 : 18.0);
             // 下架价格字体
@@ -488,7 +486,6 @@ class _ProductCardState extends ConsumerState<ProductCard>
 
             // 图片尺寸响应式：窄屏手机更小
             final imageSize = isNarrowMobile ? 70.0 : (isMobile ? 80.0 : 100.0);
-            final cardHeight = imageSize;
             final priceFontSize = isNarrowMobile ? 12.0 : (isMobile ? 14.0 : 16.0);
             final offShelfPriceSize = isNarrowMobile ? 9.0 : 11.0;
 
