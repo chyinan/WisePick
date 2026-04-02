@@ -1129,7 +1129,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                         setState(() {
                           _isFavorited = !currentlyFavorited;
                         });
-                        showInfoSnackBar(context, _isFavorited ? '已加入收藏' : '已取消收藏'); // ignore: use_build_context_synchronously
+                        showInfoSnackBar(context, _isFavorited ? '已加入购物车' : '已从购物车移除'); // ignore: use_build_context_synchronously
                       } catch (e, st) {
                         final appError = AppErrorMapper.mapException(e);
                         dev.log('Favorite toggle failed: ${appError.technicalDetail}', name: 'ProductDetail', error: e, stackTrace: st);
@@ -1141,14 +1141,14 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                       duration: const Duration(milliseconds: 160),
                       scale: _isFavorited ? 1.08 : 1.0,
                       child: Icon(
-                        _isFavorited ? Icons.favorite : Icons.favorite_border,
+                        _isFavorited ? Icons.shopping_cart : Icons.shopping_cart_outlined,
                         color: _isFavorited
                             ? Theme.of(context).colorScheme.primary
                             : Theme.of(context).colorScheme.primary,
                       ),
                     ),
                     label: Text(
-                      _isFavorited ? '已收藏' : '加入收藏',
+                      _isFavorited ? '已加入' : '加入购物车',
                       style: Theme.of(context).textTheme.labelLarge,
                     ),
                   ),

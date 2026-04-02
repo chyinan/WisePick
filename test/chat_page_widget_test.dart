@@ -4,8 +4,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
 import 'package:wisepick_dart_version/app.dart';
+import 'package:wisepick_dart_version/features/chat/chat_message.dart';
+import 'package:wisepick_dart_version/features/chat/chat_page.dart';
 import 'package:wisepick_dart_version/features/chat/chat_providers.dart';
 import 'package:wisepick_dart_version/features/chat/chat_service.dart';
+import 'package:wisepick_dart_version/features/products/product_model.dart';
+import 'package:wisepick_dart_version/widgets/product_card.dart';
 import 'package:wisepick_dart_version/core/api_client.dart';
 
 class _FakeChatService extends ChatService {
@@ -52,6 +56,50 @@ void main() {
 
     // 验证消息已发送（输入框已清空或消息列表有内容）
     expect(find.byType(TextField), findsWidgets);
+  });
+
+  testWidgets('ChatPage 桌面端商品卡片消息不应出现垂直溢出', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1280, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    final product = ProductModel(
+      id: 'product-1',
+      platform: 'jd',
+      title: '桌面端聊天商品卡片布局回归测试专用蓝牙降噪耳机，标题稍长以覆盖真实场景',
+      description: 'desc',
+      price: 299.0,
+      imageUrl: '',
+      sourceUrl: 'https://example.com/p/1',
+      rating: 4.6,
+      reviewCount: 128,
+    );
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: ChatPage()),
+      ),
+    );
+
+    container.read(chatStateNotifierProvider.notifier).updateMessages([
+      ChatMessage(
+        id: 'assistant-product-message',
+        text: '给你推荐这款商品',
+        isUser: false,
+        product: product,
+      ),
+    ]);
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.byType(ProductCard), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }
 

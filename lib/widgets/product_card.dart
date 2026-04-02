@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+﻿// pattern: Imperative Shell
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../features/products/product_model.dart';
 import 'cached_product_image.dart';
@@ -212,8 +213,8 @@ class _ProductCardState extends ConsumerState<ProductCard>
             final outerPadding = EdgeInsets.symmetric(
             horizontal: isNarrowMobile ? 8.0 : 12.0,
             vertical: isNarrowMobile ? 8.0 : 10.0);
-        return SizedBox(
-          height: imageSize,
+        return ConstrainedBox(
+          constraints: BoxConstraints(minHeight: imageSize + outerPadding.vertical),
           child: Padding(
             padding: outerPadding,
             child: Row(

@@ -37,7 +37,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('商品A'), findsOneWidget);
-    final addBtn = find.byIcon(Icons.add_circle_outline);
+    final addBtn = find.byIcon(Icons.add);
     expect(addBtn, findsWidgets);
     await tester.tap(addBtn.first);
 

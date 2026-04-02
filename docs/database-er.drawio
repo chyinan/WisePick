@@ -1,0 +1,155 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/25.0.2 Chrome/128.0.6613.186 Electron/32.2.5 Safari/537.36" version="25.0.2">
+  <diagram name="WisePick ER" id="wisepick-er">
+    <mxGraphModel dx="1713" dy="4020" grid="1" gridSize="20" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="4000" pageHeight="3000" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="mod_auth" value="用户认证模块" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;fontStyle=1;fontColor=#1565C0;spacing=10;" parent="1" vertex="1">
+          <mxGeometry x="100" y="40" width="140" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="e_users" value="users&#xa;═══════════════════════════════&#xa;id: UUID [PK]&#xa;email: VARCHAR(255) [UNIQUE, NN]&#xa;password_hash: VARCHAR(255) [NN]&#xa;nickname: VARCHAR(100)&#xa;avatar_url: VARCHAR(500)&#xa;email_verified: BOOLEAN&#xa;status: VARCHAR(20)&#xa;created_at: TIMESTAMP&#xa;updated_at: TIMESTAMP&#xa;last_login_at: TIMESTAMP" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontFamily=Courier New;fontSize=10;fillColor=#E3F2FD;strokeColor=#1565C0;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="80" y="80" width="320" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="e_sessions" value="user_sessions&#xa;═══════════════════════════════&#xa;id: UUID [PK]&#xa;user_id: UUID [FK → users]&#xa;device_id: VARCHAR(100) [NN]&#xa;device_name: VARCHAR(200)&#xa;device_type: VARCHAR(50)&#xa;refresh_token: VARCHAR(500) [NN]&#xa;push_token: VARCHAR(500)&#xa;ip_address: INET&#xa;user_agent: TEXT&#xa;is_active: BOOLEAN&#xa;last_active_at: TIMESTAMP&#xa;created_at: TIMESTAMP" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontFamily=Courier New;fontSize=10;fillColor=#E3F2FD;strokeColor=#1565C0;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="100" y="460" width="320" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="e_login_attempts" value="login_attempts&#xa;═══════════════════════════════&#xa;id: UUID [PK]&#xa;email: VARCHAR(255) [NN]&#xa;user_id: UUID [FK → users, NULL]&#xa;ip_address: INET&#xa;user_agent: TEXT&#xa;success: BOOLEAN&#xa;failure_reason: VARCHAR(255)&#xa;attempted_at: TIMESTAMP" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontFamily=Courier New;fontSize=10;fillColor=#E3F2FD;strokeColor=#1565C0;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="100" y="290" width="320" height="135" as="geometry" />
+        </mxCell>
+        <mxCell id="e_email_verif" value="email_verifications&#xa;═══════════════════════════════&#xa;id: UUID [PK]&#xa;email: VARCHAR(255) [NN]&#xa;code: VARCHAR(10) [NN]&#xa;type: VARCHAR(20) [NN]&#xa;expires_at: TIMESTAMP [NN]&#xa;used_at: TIMESTAMP&#xa;created_at: TIMESTAMP" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontFamily=Courier New;fontSize=10;fillColor=#E3F2FD;strokeColor=#1565C0;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="500" y="440" width="320" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="e_sec_questions" value="user_security_questions&#xa;═══════════════════════════════&#xa;id: UUID [PK]&#xa;user_id: UUID [FK → users]&#xa;question: VARCHAR(500) [NN]&#xa;answer_hash: VARCHAR(255) [NN]&#xa;question_order: INTEGER [NN]&#xa;created_at: TIMESTAMP&#xa;updated_at: TIMESTAMP" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontFamily=Courier New;fontSize=10;fillColor=#E3F2FD;strokeColor=#1565C0;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="500" y="65" width="320" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="e_pwd_reset" value="password_reset_tokens&#xa;═══════════════════════════════&#xa;id: UUID [PK]&#xa;user_id: UUID [FK → users]&#xa;token: VARCHAR(255) [UNIQUE, NN]&#xa;verified: BOOLEAN&#xa;expires_at: TIMESTAMP [NN]&#xa;used_at: TIMESTAMP&#xa;created_at: TIMESTAMP" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontFamily=Courier New;fontSize=10;fillColor=#E3F2FD;strokeColor=#1565C0;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="500" y="280" width="320" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="mod_sync" value="数据同步模块" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;fontStyle=1;fontColor=#2E7D32;spacing=10;" parent="1" vertex="1">
+          <mxGeometry x="900" y="50" width="140" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="e_cart" value="cart_items&#xa;═══════════════════════════════&#xa;id: UUID [PK]&#xa;user_id: UUID [FK → users]&#xa;product_id: VARCHAR(100) [NN]&#xa;platform: VARCHAR(20) [NN]&#xa;title: VARCHAR(500) [NN]&#xa;price: DECIMAL(12,2) [NN]&#xa;original_price: DECIMAL(12,2)&#xa;coupon: DECIMAL(12,2)&#xa;final_price: DECIMAL(12,2)&#xa;image_url: VARCHAR(1000)&#xa;shop_title: VARCHAR(200)&#xa;link: VARCHAR(2000)&#xa;description: TEXT&#xa;rating: DECIMAL(3,2)&#xa;sales: INTEGER&#xa;commission: DECIMAL(12,2)&#xa;quantity: INTEGER&#xa;initial_price: DECIMAL(12,2)&#xa;current_price: DECIMAL(12,2)&#xa;raw_data: JSONB&#xa;created_at: TIMESTAMP&#xa;updated_at: TIMESTAMP&#xa;deleted_at: TIMESTAMP (软删除)&#xa;sync_version: BIGINT" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontFamily=Courier New;fontSize=10;fillColor=#E8F5E9;strokeColor=#2E7D32;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="910" y="80" width="360" height="340" as="geometry" />
+        </mxCell>
+        <mxCell id="e_conv" value="conversations&#xa;═══════════════════════════════&#xa;id: UUID [PK]&#xa;user_id: UUID [FK → users]&#xa;client_id: VARCHAR(100) [NN]&#xa;title: VARCHAR(500)&#xa;created_at: TIMESTAMP&#xa;updated_at: TIMESTAMP&#xa;deleted_at: TIMESTAMP (软删除)&#xa;sync_version: BIGINT" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontFamily=Courier New;fontSize=10;fillColor=#E8F5E9;strokeColor=#2E7D32;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="1320" y="-20" width="320" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="fG3cxTR2SUynyXc_M8eL-3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="e_msg" target="e_sync_versions">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_msg" value="messages&#xa;═══════════════════════════════&#xa;id: UUID [PK]&#xa;conversation_id: UUID [FK → conversations]&#xa;client_id: VARCHAR(100) [NN]&#xa;role: VARCHAR(20) [NN]&#xa;content: TEXT [NN]&#xa;products: JSONB&#xa;keywords: JSONB&#xa;ai_parsed_raw: TEXT&#xa;failed: BOOLEAN&#xa;retry_for_text: TEXT&#xa;created_at: TIMESTAMP&#xa;sync_version: BIGINT" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontFamily=Courier New;fontSize=10;fillColor=#E8F5E9;strokeColor=#2E7D32;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="1320" y="180" width="320" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="e_sync_versions" value="sync_versions&#xa;═══════════════════════════════&#xa;id: UUID [PK]&#xa;user_id: UUID [FK → users]&#xa;entity_type: VARCHAR(50) [NN]&#xa;current_version: BIGINT&#xa;last_updated_at: TIMESTAMP" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontFamily=Courier New;fontSize=10;fillColor=#E8F5E9;strokeColor=#2E7D32;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="1320" y="465" width="320" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="e_price_history" value="price_history&#xa;═══════════════════════════════&#xa;id: UUID [PK]&#xa;product_id: VARCHAR(100) [NN]&#xa;platform: VARCHAR(20) [NN]&#xa;price: DECIMAL(12,2) [NN]&#xa;original_price: DECIMAL(12,2)&#xa;coupon: DECIMAL(12,2)&#xa;final_price: DECIMAL(12,2)&#xa;title: VARCHAR(500)&#xa;source: VARCHAR(50)&#xa;recorded_at: TIMESTAMP&#xa;created_at: TIMESTAMP" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontFamily=Courier New;fontSize=10;fillColor=#FFF8E1;strokeColor=#F57F17;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="910" y="450" width="360" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="mod_price" value="价格监控模块" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;fontStyle=1;fontColor=#F57F17;spacing=10;" parent="1" vertex="1">
+          <mxGeometry x="900" y="420" width="140" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="r1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#424242;strokeWidth=2;endArrow=ERmandOne;endFill=0;startArrow=ERmany;startFill=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="e_users" target="e_sessions" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="240" y="260" />
+              <mxPoint x="80" y="260" />
+              <mxPoint x="80" y="440" />
+              <mxPoint x="260" y="440" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#424242;strokeWidth=2;endArrow=ERmandOne;endFill=0;startArrow=ERmany;startFill=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="e_users" target="e_login_attempts" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="r3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#424242;strokeWidth=2;endArrow=ERmandOne;endFill=0;startArrow=ERmany;startFill=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="e_users" target="e_sec_questions" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="r4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#424242;strokeWidth=2;endArrow=ERmandOne;endFill=0;startArrow=ERmany;startFill=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="e_users" target="e_pwd_reset" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="480" y="160" />
+              <mxPoint x="480" y="350" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#424242;strokeWidth=2;endArrow=ERmandOne;endFill=0;startArrow=ERmany;startFill=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="e_users" target="e_cart" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="440" y="160" />
+              <mxPoint x="440" y="250" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#424242;strokeWidth=2;endArrow=ERmandOne;endFill=0;startArrow=ERmany;startFill=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="e_users" target="e_conv" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="420" y="160" />
+              <mxPoint x="420" y="55" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#424242;strokeWidth=2;endArrow=ERmandOne;endFill=0;startArrow=ERmany;startFill=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="e_users" target="e_sync_versions" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="500" y="160" />
+              <mxPoint x="500" y="210" />
+              <mxPoint x="860" y="210" />
+              <mxPoint x="860" y="700" />
+              <mxPoint x="1300" y="700" />
+              <mxPoint x="1300" y="545" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#424242;strokeWidth=2;endArrow=ERmandOne;endFill=0;startArrow=ERmany;startFill=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="e_conv" target="e_msg" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l1" value="1:N&#xa;持有会话" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontColor=#424242;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="280" y="425" width="80" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="l2" value="1:N&#xa;登录记录" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontColor=#424242;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="260" y="250" width="80" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="l3" value="1:N&#xa;安全问题" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontColor=#424242;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="420" y="65" width="80" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="l4" value="1:N&#xa;重置令牌" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontColor=#424242;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="420" y="360" width="80" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="l5" value="1:N&#xa;购物车项" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontColor=#424242;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="790" y="200" width="80" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="l6" value="1:N&#xa;会话" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontColor=#424242;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="1210" y="140" width="60" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="l7" value="1:N&#xa;版本跟踪" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontColor=#424242;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="1220" y="660" width="80" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="l8" value="1:N&#xa;消息" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontColor=#424242;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="1340" y="140" width="60" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="legend" value="图例" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1;fontColor=#424242;" parent="1" vertex="1">
+          <mxGeometry x="1720" y="80" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="leg_line1" value="" style="endArrow=ERmany;startArrow=ERmandOne;html=1;strokeWidth=2;strokeColor=#424242;rounded=0;" parent="1" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1720" y="130" as="sourcePoint" />
+            <mxPoint x="1840" y="130" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="leg_label1" value="1:N 关系" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontColor=#424242;" parent="1" vertex="1">
+          <mxGeometry x="1850" y="115" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="leg_box1" value="用户认证模块" style="rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;spacing=8;fontFamily=Courier New;fontSize=11;fillColor=#E3F2FD;strokeColor=#1565C0;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="1720" y="170" width="140" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="leg_box2" value="数据同步模块" style="rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;spacing=8;fontFamily=Courier New;fontSize=11;fillColor=#E8F5E9;strokeColor=#2E7D32;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="1720" y="230" width="140" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="leg_box3" value="价格监控模块" style="rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;spacing=8;fontFamily=Courier New;fontSize=11;fillColor=#FFF8E1;strokeColor=#F57F17;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="1720" y="290" width="140" height="40" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

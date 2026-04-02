@@ -1,0 +1,135 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/25.0.2 Chrome/128.0.6613.186 Electron/32.2.5 Safari/537.36" version="25.0.2">
+  <diagram id="Vvc1mD3YNT_5aHTjzebF" name="第 1 页">
+    <mxGraphModel dx="827" dy="492" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="e_user" value="用户 (Users)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;fontStyle=1" parent="1" vertex="1">
+          <mxGeometry x="520" y="360" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="e_log" value="登录记录" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc" parent="1" vertex="1">
+          <mxGeometry x="250" y="170" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e_verif" value="邮箱验证" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc" parent="1" vertex="1">
+          <mxGeometry x="530" y="130" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ques" value="安全问题" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc" parent="1" vertex="1">
+          <mxGeometry x="800" y="160" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e_token" value="重置令牌" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc" parent="1" vertex="1">
+          <mxGeometry x="830" y="365" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e_sess" value="设备会话" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc" parent="1" vertex="1">
+          <mxGeometry x="240" y="365" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e_sync" value="版本跟踪" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7" parent="1" vertex="1">
+          <mxGeometry x="530" y="600" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e_cart" value="购物车" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4" parent="1" vertex="1">
+          <mxGeometry x="240" y="520" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e_price" value="价格历史" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4" parent="1" vertex="1">
+          <mxGeometry x="20" y="520" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e_conv" value="AI 会话" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc" parent="1" vertex="1">
+          <mxGeometry x="820" y="520" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e_msg" value="AI 消息" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc" parent="1" vertex="1">
+          <mxGeometry x="1040" y="520" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="r_log" value="尝试" style="rhombus;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="380" y="240" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="r_sess" value="登录" style="rhombus;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="410" y="360" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="r_cart" value="加入" style="rhombus;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="400" y="460" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="r_conv" value="发起" style="rhombus;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="700" y="460" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="r_msg" value="包含" style="rhombus;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="950" y="515" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="r_price" value="历史" style="rhombus;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="150" y="515" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="r_verif" value="验证" style="rhombus;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="550" y="240" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="r_ques" value="设置" style="rhombus;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="710" y="240" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="r_token" value="申请" style="rhombus;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="710" y="360" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="r_sync" value="跟踪" style="rhombus;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="550" y="480" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="l1" value="1" style="endArrow=none;html=1;exitX=0;exitY=0;entryX=1;entryY=1;" parent="1" source="e_user" target="r_log" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l2" value="N" style="endArrow=none;html=1;exitX=0;exitY=0;entryX=1;entryY=1;" parent="1" source="r_log" target="e_log" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l3" value="1" style="endArrow=none;html=1;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" parent="1" source="e_user" target="r_sess" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l4" value="N" style="endArrow=none;html=1;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" parent="1" source="r_sess" target="e_sess" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l5" value="1" style="endArrow=none;html=1;exitX=0.25;exitY=1;entryX=1;entryY=0;" parent="1" source="e_user" target="r_cart" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l6" value="N" style="endArrow=none;html=1;exitX=0;exitY=1;entryX=0.5;entryY=0;" parent="1" source="r_cart" target="e_cart" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l7" value="1" style="endArrow=none;html=1;exitX=0.75;exitY=1;entryX=0;entryY=0;" parent="1" source="e_user" target="r_conv" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l8" value="N" style="endArrow=none;html=1;exitX=1;exitY=1;entryX=0.5;entryY=0;" parent="1" source="r_conv" target="e_conv" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l9" value="1" style="endArrow=none;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" parent="1" source="e_conv" target="r_msg" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l10" value="N" style="endArrow=none;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" parent="1" source="r_msg" target="e_msg" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l11" value="N" style="endArrow=none;html=1;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" parent="1" source="r_price" target="e_price" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l12" value="1" style="endArrow=none;html=1;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" parent="1" source="e_cart" target="r_price" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l13" value="1" style="endArrow=none;html=1;exitX=0.5;exitY=0;entryX=0.5;entryY=1;" parent="1" source="e_user" target="r_verif" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l14" value="N" style="endArrow=none;html=1;exitX=0.5;exitY=0;entryX=0.5;entryY=1;" parent="1" source="r_verif" target="e_verif" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l15" value="1" style="endArrow=none;html=1;exitX=1;exitY=0;entryX=0;entryY=1;" parent="1" source="e_user" target="r_ques" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l16" value="N" style="endArrow=none;html=1;exitX=1;exitY=0;entryX=0;entryY=1;" parent="1" source="r_ques" target="e_ques" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l17" value="1" style="endArrow=none;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="e_user" target="r_token" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l18" value="1" style="endArrow=none;html=1;entryX=0;entryY=0.5;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryDx=0;entryDy=0;" parent="1" source="r_token" target="e_token" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="780" y="360" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="l19" value="1" style="endArrow=none;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" source="e_user" target="r_sync" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l20" value="1" style="endArrow=none;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" source="r_sync" target="e_sync" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
