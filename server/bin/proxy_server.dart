@@ -20,6 +20,8 @@ import 'package:wisepick_proxy_server/admin/admin_service.dart';
 import 'package:wisepick_proxy_server/reliability/reliability_api.dart';
 import 'package:wisepick_proxy_server/proxy/product_merge.dart';
 
+// pattern: Imperative Shell
+
 // NOTE: veapi support removed per user request
 
 // In-memory last-return debug store. Use the endpoint /__debug/last_return to inspect.
@@ -274,6 +276,19 @@ Future<void> runServer(List<String> args) async {
             'access-control-allow-headers':
                 'Origin, Content-Type, Accept, Authorization, x-ts, X-Device-Id, X-Device-Name, X-Device-Type'
           }));
+
+  router.get(kReliabilityProbePath, (Request r) async {
+    return Response.ok(
+      jsonEncode({
+        'ok': true,
+        'timestamp': DateTime.now().toIso8601String(),
+      }),
+      headers: {
+        'content-type': 'application/json',
+        'access-control-allow-origin': '*',
+      },
+    );
+  });
 
   // Simple settings endpoint for clients to read backend_base (optional)
   router.get('/__settings', (Request r) async {
@@ -4031,7 +4046,6 @@ Future<void> runServer(List<String> args) async {
   }
 
   // 将实际端口传递给可靠性数据收集器，供压力测试使用
-  ReliabilityDataCollector.instance.setServerPort(server.port);
 }
 
 /// Interactive launcher: prompts for missing environment values and then

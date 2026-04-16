@@ -1,9 +1,13 @@
 ﻿import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:math' as math;
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
+
+// pattern: Mixed (needs refactoring)
+const String kReliabilityProbePath = '/_probe';
 
 /// 可靠性 API — 生产级实现
 ///
@@ -929,75 +933,13 @@ class ReliabilityDataCollector {
     return null;
   }
 
-  /// 服务端口，由外部设置
-  int _serverPort = 9527;
-  void setServerPort(int port) => _serverPort = port;
-
   /// 运行压力测试 — 向自身端点发送真实 HTTP 请求
-  Future<Map<String, dynamic>> runStressTest() async {
-    final client = HttpClient();
-    client.connectionTimeout = const Duration(seconds: 5);
-    final loadSteps = <Map<String, dynamic>>[];
-    final targetPath = '/api/v1/reliability/health';
-
-    for (final concurrency in [10, 50, 100, 200, 500]) {
-      final latencies = <int>[];
-      int successCount = 0;
-      int errorCount = 0;
-      final sw = Stopwatch()..start();
-
-      // 每个并发级别发送 concurrency 个并发请求
-      final futures = <Future<void>>[];
-      for (int i = 0; i < concurrency; i++) {
-        futures.add(() async {
-          final reqSw = Stopwatch()..start();
-          try {
-            final req = await client.get('127.0.0.1', _serverPort, targetPath);
-            final resp = await req.close().timeout(const Duration(seconds: 10));
-            await resp.drain<void>();
-            reqSw.stop();
-            final ms = reqSw.elapsedMilliseconds;
-            latencies.add(ms);
-            if (resp.statusCode >= 200 && resp.statusCode < 400) {
-              successCount++;
-            } else {
-              errorCount++;
-            }
-          } catch (_) {
-            reqSw.stop();
-            latencies.add(reqSw.elapsedMilliseconds);
-            errorCount++;
-          }
-        }());
-      }
-      await Future.wait(futures);
-      sw.stop();
-
-      latencies.sort();
-      final total = successCount + errorCount;
-      final durationSec = sw.elapsedMilliseconds / 1000.0;
-      final throughput = durationSec > 0 ? (total / durationSec).round() : total;
-
-      int percentile(List<int> sorted, double p) {
-        if (sorted.isEmpty) return 0;
-        final idx = ((p / 100.0) * (sorted.length - 1)).round();
-        return sorted[idx];
-      }
-
-      loadSteps.add({
-        'concurrency': concurrency,
-        'throughput': throughput,
-        'p50': percentile(latencies, 50),
-        'p95': percentile(latencies, 95),
-        'p99': percentile(latencies, 99),
-        'errorRate': total > 0
-            ? double.parse((errorCount / total).toStringAsFixed(4))
-            : 0.0,
-        'successCount': successCount,
-        'totalRequests': total,
-      });
-    }
-    client.close();
+  Future<Map<String, dynamic>> runStressTest({required Uri targetUri}) async {
+    final resolvedTargetUri = targetUri;
+    final loadSteps = await _runStressLoadGeneratorInIsolate({
+      'targetUri': resolvedTargetUri.toString(),
+      'concurrencies': [10, 50, 100, 200, 500],
+    });
 
     // 稳定性评估
     int? degradationPoint;
@@ -1063,12 +1005,11 @@ class ReliabilityDataCollector {
           '最大安全并发 $maxSafeConcurrency，综合评分 $score ($grade)',
     };
 
-    _lastStressTestResults = {
-      'loadSteps': loadSteps,
-      'chaosExperiments': <Map<String, dynamic>>[],
-      'stabilityAssessment': assessment,
-      'timestamp': DateTime.now().toIso8601String(),
-    };
+    _lastStressTestResults = _buildStoredStressTestResults(
+      loadSteps: loadSteps,
+      chaosExperiments: const <Map<String, dynamic>>[],
+      stabilityAssessment: assessment,
+    );
     return _lastStressTestResults!;
   }
 
@@ -1084,10 +1025,8 @@ class ReliabilityDataCollector {
   }
 
   /// 运行混沌测试套件 — 逐个启动已注册实验，发送真实请求，收集故障影响
-  Future<Map<String, dynamic>> runChaosTest() async {
-    final client = HttpClient();
-    client.connectionTimeout = const Duration(seconds: 5);
-    final targetPath = '/api/v1/reliability/health';
+  Future<Map<String, dynamic>> runChaosTest({required Uri targetUri}) async {
+    final resolvedTargetUri = targetUri;
     final experiments = <Map<String, dynamic>>[];
     final wasChaosEnabled = _chaosEnabled;
     final prevExperimentId = _currentExperimentId;
@@ -1108,34 +1047,15 @@ class ReliabilityDataCollector {
       _chaosLatencyInjections = 0;
       _chaosErrorInjections = 0;
 
-      int successCount = 0;
-      int failureCount = 0;
-      int retryCount = 0;
+      final runStats = await _runChaosLoadGeneratorInIsolate({
+        'targetUri': resolvedTargetUri.toString(),
+        'totalRequests': 50,
+        'maxAttempts': 3,
+      });
+      final successCount = (runStats['successCount'] as num?)?.toInt() ?? 0;
+      final failureCount = (runStats['failureCount'] as num?)?.toInt() ?? 0;
+      final retryCount = (runStats['retryCount'] as num?)?.toInt() ?? 0;
       const totalRequests = 50;
-
-      for (int i = 0; i < totalRequests; i++) {
-        int attempts = 0;
-        bool succeeded = false;
-        while (attempts < 3 && !succeeded) {
-          attempts++;
-          try {
-            final req = await client.get('127.0.0.1', _serverPort, targetPath);
-            final resp = await req.close().timeout(const Duration(seconds: 10));
-            await resp.drain<void>();
-            if (resp.statusCode >= 200 && resp.statusCode < 400) {
-              succeeded = true;
-            }
-          } catch (_) {
-            // 请求失败
-          }
-          if (!succeeded && attempts < 3) retryCount++;
-        }
-        if (succeeded) {
-          successCount++;
-        } else {
-          failureCount++;
-        }
-      }
 
       // 停止实验
       _currentExperimentId = null;
@@ -1171,15 +1091,18 @@ class ReliabilityDataCollector {
       });
     }
 
-    client.close();
-
     // 恢复之前的混沌状态
     _chaosEnabled = wasChaosEnabled;
     _currentExperimentId = prevExperimentId;
 
-    if (_lastStressTestResults != null) {
-      _lastStressTestResults!['chaosExperiments'] = experiments;
-    }
+    final existingResults = _lastStressTestResults;
+    _lastStressTestResults = _buildStoredStressTestResults(
+      loadSteps: _safeStoredLoadSteps(existingResults?['loadSteps']),
+      chaosExperiments: experiments,
+      stabilityAssessment: _safeStoredAssessment(
+        existingResults?['stabilityAssessment'],
+      ),
+    );
 
     return {
       'triggered': true,
@@ -1196,6 +1119,35 @@ class ReliabilityDataCollector {
   /// 记录混沌错误注入事件
   void recordChaosErrorInjection() {
     _chaosErrorInjections++;
+  }
+
+  Map<String, dynamic> _buildStoredStressTestResults({
+    required List<Map<String, dynamic>> loadSteps,
+    required List<Map<String, dynamic>> chaosExperiments,
+    required Map<String, dynamic>? stabilityAssessment,
+  }) {
+    return {
+      'loadSteps': loadSteps,
+      'chaosExperiments': chaosExperiments,
+      'stabilityAssessment': stabilityAssessment,
+      'timestamp': DateTime.now().toIso8601String(),
+    };
+  }
+
+  List<Map<String, dynamic>> _safeStoredLoadSteps(dynamic data) {
+    if (data is! List) return <Map<String, dynamic>>[];
+    return data
+        .whereType<Map>()
+        .map((item) => item.map((key, value) => MapEntry('$key', value)))
+        .toList();
+  }
+
+  Map<String, dynamic>? _safeStoredAssessment(dynamic data) {
+    if (data is Map<String, dynamic>) return data;
+    if (data is Map) {
+      return data.map((key, value) => MapEntry('$key', value));
+    }
+    return null;
   }
 
   /// 获取自愈动作历史 — 返回真实记录
@@ -1650,7 +1602,9 @@ class ReliabilityApiHandler {
 
     router.post('/stress-test/run', (Request r) async {
       try {
-        final results = await _collector.runStressTest();
+        final results = await _collector.runStressTest(
+          targetUri: r.requestedUri.resolve(kReliabilityProbePath),
+        );
         return Response.ok(jsonEncode({
           'success': true,
           'data': results,
@@ -1666,7 +1620,9 @@ class ReliabilityApiHandler {
     // ========== 混沌测试套件 ==========
     router.post('/chaos-test/run', (Request r) async {
       try {
-        final results = await _collector.runChaosTest();
+        final results = await _collector.runChaosTest(
+          targetUri: r.requestedUri.resolve(kReliabilityProbePath),
+        );
         return Response.ok(jsonEncode({
           'success': true,
           'data': results,
@@ -1873,4 +1829,211 @@ String _classifyRequestService(String path) {
   if (path.contains('/ai') || path.contains('/proxy') || path.contains('/chat')) return 'ai_service';
   if (path.contains('/product') || path.contains('/price')) return 'product_service';
   return 'api_gateway';
+}
+
+Future<List<Map<String, dynamic>>> _runStressLoadGeneratorInIsolate(
+  Map<String, dynamic> config,
+) async {
+  final receivePort = ReceivePort();
+  await Isolate.spawn(_stressLoadGeneratorIsolate, {
+    'sendPort': receivePort.sendPort,
+    'config': config,
+  });
+
+  final message = await receivePort.first;
+  receivePort.close();
+
+  if (message is Map && message['error'] != null) {
+    throw Exception(message['error']);
+  }
+
+  if (message is! List) {
+    throw StateError('stress load generator returned invalid payload');
+  }
+
+  return message
+      .whereType<Map>()
+      .map((item) => item.map((key, value) => MapEntry('$key', value)))
+      .toList();
+}
+
+void _stressLoadGeneratorIsolate(Map<String, dynamic> payload) async {
+  final sendPort = payload['sendPort'] as SendPort;
+  final config = (payload['config'] as Map)
+      .map((key, value) => MapEntry('$key', value));
+
+  try {
+    final result = await _runStressLoadGenerator(config);
+    sendPort.send(result);
+  } catch (e) {
+    sendPort.send({'error': e.toString()});
+  }
+}
+
+Future<List<Map<String, dynamic>>> _runStressLoadGenerator(
+  Map<String, dynamic> config,
+) async {
+  final targetUriRaw = config['targetUri']?.toString();
+  if (targetUriRaw == null || targetUriRaw.isEmpty) {
+    throw ArgumentError('targetUri is required');
+  }
+  final targetUri = Uri.parse(targetUriRaw);
+  final concurrencyLevels = (config['concurrencies'] as List? ?? const <int>[])
+      .map((item) => (item as num).toInt())
+      .toList();
+
+  final client = HttpClient();
+  client.connectionTimeout = const Duration(seconds: 5);
+  client.findProxy = (_) => 'DIRECT';
+  final loadSteps = <Map<String, dynamic>>[];
+
+  for (final concurrency in concurrencyLevels) {
+    final latencies = <int>[];
+    int successCount = 0;
+    int errorCount = 0;
+    final sw = Stopwatch()..start();
+
+    final futures = <Future<void>>[];
+    for (int i = 0; i < concurrency; i++) {
+      futures.add(() async {
+        final reqSw = Stopwatch()..start();
+        try {
+          final req = await client.getUrl(targetUri);
+          final resp = await req.close().timeout(const Duration(seconds: 10));
+          await resp.drain<void>();
+          reqSw.stop();
+          latencies.add(reqSw.elapsedMilliseconds);
+          if (resp.statusCode >= 200 && resp.statusCode < 400) {
+            successCount++;
+          } else {
+            errorCount++;
+          }
+        } catch (_) {
+          reqSw.stop();
+          latencies.add(reqSw.elapsedMilliseconds);
+          errorCount++;
+        }
+      }());
+    }
+    await Future.wait(futures);
+    sw.stop();
+
+    latencies.sort();
+    final total = successCount + errorCount;
+    final durationSec = sw.elapsedMilliseconds / 1000.0;
+    final throughput = durationSec > 0 ? (total / durationSec).round() : total;
+
+    loadSteps.add({
+      'concurrency': concurrency,
+      'throughput': throughput,
+      'p50': _percentile(latencies, 50),
+      'p95': _percentile(latencies, 95),
+      'p99': _percentile(latencies, 99),
+      'errorRate': total > 0
+          ? double.parse((errorCount / total).toStringAsFixed(4))
+          : 0.0,
+      'successCount': successCount,
+      'totalRequests': total,
+    });
+  }
+
+  client.close();
+  return loadSteps;
+}
+
+Future<Map<String, int>> _runChaosLoadGeneratorInIsolate(
+  Map<String, dynamic> config,
+) async {
+  final receivePort = ReceivePort();
+  await Isolate.spawn(_chaosLoadGeneratorIsolate, {
+    'sendPort': receivePort.sendPort,
+    'config': config,
+  });
+
+  final message = await receivePort.first;
+  receivePort.close();
+
+  if (message is Map && message['error'] != null) {
+    throw Exception(message['error']);
+  }
+
+  if (message is! Map) {
+    throw StateError('chaos load generator returned invalid payload');
+  }
+
+  return message.map(
+    (key, value) => MapEntry('$key', (value as num).toInt()),
+  );
+}
+
+void _chaosLoadGeneratorIsolate(Map<String, dynamic> payload) async {
+  final sendPort = payload['sendPort'] as SendPort;
+  final config = (payload['config'] as Map)
+      .map((key, value) => MapEntry('$key', value));
+
+  try {
+    final result = await _runChaosLoadGenerator(config);
+    sendPort.send(result);
+  } catch (e) {
+    sendPort.send({'error': e.toString()});
+  }
+}
+
+Future<Map<String, int>> _runChaosLoadGenerator(
+  Map<String, dynamic> config,
+) async {
+  final targetUriRaw = config['targetUri']?.toString();
+  if (targetUriRaw == null || targetUriRaw.isEmpty) {
+    throw ArgumentError('targetUri is required');
+  }
+  final targetUri = Uri.parse(targetUriRaw);
+  final totalRequests = (config['totalRequests'] as num?)?.toInt() ?? 50;
+  final maxAttempts = (config['maxAttempts'] as num?)?.toInt() ?? 3;
+
+  final client = HttpClient();
+  client.connectionTimeout = const Duration(seconds: 5);
+  client.findProxy = (_) => 'DIRECT';
+
+  int successCount = 0;
+  int failureCount = 0;
+  int retryCount = 0;
+
+  for (int i = 0; i < totalRequests; i++) {
+    int attempts = 0;
+    bool succeeded = false;
+    while (attempts < maxAttempts && !succeeded) {
+      attempts++;
+      try {
+        final req = await client.getUrl(targetUri);
+        final resp = await req.close().timeout(const Duration(seconds: 10));
+        await resp.drain<void>();
+        if (resp.statusCode >= 200 && resp.statusCode < 400) {
+          succeeded = true;
+        }
+      } catch (_) {
+        // 请求失败
+      }
+      if (!succeeded && attempts < maxAttempts) {
+        retryCount++;
+      }
+    }
+    if (succeeded) {
+      successCount++;
+    } else {
+      failureCount++;
+    }
+  }
+
+  client.close();
+  return {
+    'successCount': successCount,
+    'failureCount': failureCount,
+    'retryCount': retryCount,
+  };
+}
+
+int _percentile(List<int> sorted, double percentile) {
+  if (sorted.isEmpty) return 0;
+  final index = ((percentile / 100.0) * (sorted.length - 1)).round();
+  return sorted[index];
 }
