@@ -27,6 +27,12 @@ echo   如果启动成功会自动打开浏览器
 echo   按 Ctrl+C 停止运行
 echo  ----------------------------------------
 echo.
+set "NO_PROXY=localhost,127.0.0.1"
+set "no_proxy=localhost,127.0.0.1"
+set "HTTP_PROXY="
+set "HTTPS_PROXY="
+set "http_proxy="
+set "https_proxy="
 call flutter run -d chrome
 
 pause
